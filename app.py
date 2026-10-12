@@ -1,36 +1,26 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+from datetime import timedelta
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="District Hub & Spoke Dashboard", page_icon="🏥", layout="wide")
 
-# --- CUSTOM CSS (Fixes Metric Card Text Visibility) ---
+# --- CUSTOM CSS (Fixed for Dark Mode) ---
 st.markdown("""
 <style>
-    /* Clean up main container spacing */
-    .block-container {padding-top: 2rem; padding-bottom: 2rem;}
-    
-    /* Style the Metric Cards */
+    /* Style the Metric Cards for Dark Mode */
     div[data-testid="stMetric"] {
-        background-color: #FFFFFF;
-        border: 1px solid #E9ECEF;
+        background-color: #1E1E1E;
+        border: 1px solid #333333;
         padding: 15px;
         border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.04);
     }
-    
-    /* Force Metric Card Text to be readable (Dark Slate) */
     div[data-testid="stMetric"] label {
-        color: #6C757D !important;
+        color: #AAAAAA !important;
     }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
-        color: #212529 !important;
-    }
-    
-    /* Style the Sidebar */
-    section[data-testid="stSidebar"] {
-        border-right: 1px solid #E9ECEF;
+        color: #FFFFFF !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -129,6 +119,14 @@ with st.sidebar:
             
             st.divider()
             
+            # --- NEW TIME RANGE FILTER ---
+            time_filter = st.selectbox(
+                "Select Time Range:",
+                ["All Available Data", "Last 30 Days", "Last 7 Days", "Single Day (Latest)"]
+            )
+            
+            st.divider()
+            
             target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
             sheet_found = False
             for s in available_sheets:
@@ -155,10 +153,7 @@ if uploaded_data_file is None:
 
 if not sheet_found:
     st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**")
-    st.info(
-        f"The data for this district will be added as soon as the new Excel sheet is shared. "
-        f"In the meantime, you can view data for other districts under **{selected_zm}**."
-    )
+    st.info(f"The data for this district will be added as soon as the new Excel sheet is shared.")
     st.stop()
 
 # --- LOAD AND PROCESS DATA ---
@@ -177,17 +172,45 @@ all_facilities = [f for f in all_facilities if 'TOTAL' not in str(f).upper()]
 date_cols = [c for c in df.columns if 'Total number of patients' in c]
 if not date_cols:
     st.warning(f"⏳ **Patient Data Not Yet Available for {selected_district_zm}**")
-    st.info("The sheet exists but daily patient data columns have not been added yet.")
     st.stop()
 
-plot_df = df[df[facility_col].isin(all_facilities)][[facility_col] + date_cols].copy()
+# --- EXTRACT DATES FROM COLUMN NAMES FOR FILTERING ---
+import re
+def extract_date(col_name):
+    match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', str(col_name))
+    if match:
+        return pd.to_datetime(match.group(1), dayfirst=True, errors='coerce')
+    return pd.NaT
 
-for col in date_cols:
+parsed_dates = [extract_date(c) for c in date_cols]
+valid_dates = [d for d in parsed_dates if pd.notna(d)]
+latest_date = max(valid_dates) if valid_dates else None
+
+# Filter columns based on selected time range
+if time_filter == "Last 30 Days" and latest_date:
+    start_date = latest_date - timedelta(days=30)
+    active_date_cols = [c for c, d in zip(date_cols, parsed_dates) if pd.notna(d) and d > start_date]
+elif time_filter == "Last 7 Days" and latest_date:
+    start_date = latest_date - timedelta(days=7)
+    active_date_cols = [c for c, d in zip(date_cols, parsed_dates) if pd.notna(d) and d > start_date]
+elif time_filter == "Single Day (Latest)" and latest_date:
+    active_date_cols = [c for c, d in zip(date_cols, parsed_dates) if pd.notna(d) and d == latest_date]
+else:
+    active_date_cols = date_cols
+
+# Ensure we have data to show
+if not active_date_cols:
+    st.warning(f"No data available for the selected time range ({time_filter}).")
+    st.stop()
+
+plot_df = df[df[facility_col].isin(all_facilities)][[facility_col] + active_date_cols].copy()
+
+for col in active_date_cols:
     plot_df[col] = pd.to_numeric(plot_df[col], errors='coerce').fillna(0)
 
-plot_df['Total Patients'] = plot_df[date_cols].sum(axis=1)
-plot_df['Average Patients'] = plot_df[date_cols].mean(axis=1).round(1)
-plot_df['Zero Days'] = (plot_df[date_cols] == 0).sum(axis=1)
+plot_df['Total Patients'] = plot_df[active_date_cols].sum(axis=1)
+plot_df['Average Patients'] = plot_df[active_date_cols].mean(axis=1).round(1)
+plot_df['Zero Days'] = (plot_df[active_date_cols] == 0).sum(axis=1)
 
 # --- METRIC CARDS ---
 total_patients = int(plot_df['Total Patients'].sum())
@@ -196,11 +219,11 @@ total_zero_days = int(plot_df['Zero Days'].sum())
 
 col1, col2, col3 = st.columns(3)
 with col1:
-    st.metric(label="Total Patients (District Wide)", value=f"{total_patients:,}")
+    st.metric(label=f"Total Patients ({time_filter})", value=f"{total_patients:,}")
 with col2:
     st.metric(label="Avg Daily Patients (Per Facility)", value=f"{avg_patients}")
 with col3:
-    st.metric(label="Total Zero-Footfall Days", value=f"{total_zero_days}")
+    st.metric(label=f"Zero-Footfall Days ({time_filter})", value=f"{total_zero_days}")
 
 st.divider()
 
@@ -212,7 +235,7 @@ with tab1:
     with col_ctrl1:
         metric_option = st.radio(
             "Select Metric to Display:",
-            ("Average Patients (30-Day Avg)", "Total Patients", "Zero Days"),
+            ("Average Patients", "Total Patients", "Zero Days"),
             horizontal=True
         )
     with col_ctrl2:
@@ -254,13 +277,13 @@ with tab1:
             orientation='h',
             color='Highlight_Group',
             color_discrete_map={
-                'Top 5 Performers': '#28A745',    # Emerald Green
-                'Bottom 5 Performers': '#DC3545', # Crimson Red
-                'Others (Average Performers)': '#6C757D' # Slate Gray
+                'Top 5 Performers': '#2ecc71',
+                'Bottom 5 Performers': '#e74c3c',
+                'Others (Average Performers)': '#95a5a6'
             },
             labels={facility_col: 'Facility (Spoke)', 'Highlight_Group': 'Performance', metric_col: metric_option},
             hover_data={'Highlight_Group': False, 'Total Patients': True, 'Average Patients': ':.1f', 'Zero Days': True},
-            title=f"{metric_option} per Facility in {selected_district_zm}"
+            title=f"{metric_option} per Facility ({time_filter})"
         )
         
         chart_height = max(500, len(plot_df_sorted) * 25)
@@ -279,7 +302,7 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
-    st.markdown("### Detailed Data Table")
+    st.markdown(f"### Detailed Data Table ({time_filter})")
     display_df = plot_df[[facility_col, 'Total Patients', 'Average Patients', 'Zero Days']].copy()
     display_df.columns = ['Facility Name', 'Total Patients', 'Avg Daily Patients', 'Zero-Footfall Days']
     display_df = display_df.sort_values(by='Avg Daily Patients', ascending=False)
@@ -305,8 +328,8 @@ with tab2:
     st.download_button(
         label="📥 Download Data as CSV",
         data=csv,
-        file_name=f'{selected_district_zm}_data.csv',
+        file_name=f'{selected_district_zm}_{time_filter.replace(" ", "_")}_data.csv',
         mime='text/csv',
     )
     
-    st.caption(f"Note: Average is calculated over the {len(date_cols)} days present in this sheet's data columns.")
+    st.caption(f"Note: Averages are calculated over the {len(active_date_cols)} days in the selected time range.")
