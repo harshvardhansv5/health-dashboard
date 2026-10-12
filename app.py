@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import timedelta
+import re
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="District Hub & Spoke Dashboard", page_icon="🏥", layout="wide")
@@ -9,7 +10,6 @@ st.set_page_config(page_title="District Hub & Spoke Dashboard", page_icon="🏥"
 # --- CUSTOM CSS (Fixed for Dark Mode) ---
 st.markdown("""
 <style>
-    /* Style the Metric Cards for Dark Mode */
     div[data-testid="stMetric"] {
         background-color: #1E1E1E;
         border: 1px solid #333333;
@@ -89,9 +89,16 @@ ZM_DATA = {
     }
 }
 
+# --- NAME DISCREPANCIES (ZM File vs Excel Sheet Names) ---
 DISTRICT_MAP = {
     "Seikhpura": "Sheikhpura",
     "Rohtas": "Sasaram"
+}
+
+# --- SPECIAL HUB OVERRIDES (For districts with multiple hubs/sheets) ---
+HUB_TO_SHEET_MAP = {
+    "SDH Barh Patna": "Barh",
+    "SDH Danapur Patna": "Danapur"
 }
 
 # --- SIDEBAR ---
@@ -119,7 +126,6 @@ with st.sidebar:
             
             st.divider()
             
-            # --- NEW TIME RANGE FILTER ---
             time_filter = st.selectbox(
                 "Select Time Range:",
                 ["All Available Data", "Last 30 Days", "Last 7 Days", "Single Day (Latest)"]
@@ -127,7 +133,13 @@ with st.sidebar:
             
             st.divider()
             
+            # --- RESOLVE SHEET NAME (Fixed Logic) ---
             target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
+            
+            # Override if the selected hub has a specific sheet
+            if selected_hub_zm in HUB_TO_SHEET_MAP:
+                target_district = HUB_TO_SHEET_MAP[selected_hub_zm]
+            
             sheet_found = False
             for s in available_sheets:
                 if s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower():
@@ -153,7 +165,6 @@ if uploaded_data_file is None:
 
 if not sheet_found:
     st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**")
-    st.info(f"The data for this district will be added as soon as the new Excel sheet is shared.")
     st.stop()
 
 # --- LOAD AND PROCESS DATA ---
@@ -174,8 +185,7 @@ if not date_cols:
     st.warning(f"⏳ **Patient Data Not Yet Available for {selected_district_zm}**")
     st.stop()
 
-# --- EXTRACT DATES FROM COLUMN NAMES FOR FILTERING ---
-import re
+# --- EXTRACT DATES FOR TIME FILTERING ---
 def extract_date(col_name):
     match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', str(col_name))
     if match:
@@ -198,7 +208,6 @@ elif time_filter == "Single Day (Latest)" and latest_date:
 else:
     active_date_cols = date_cols
 
-# Ensure we have data to show
 if not active_date_cols:
     st.warning(f"No data available for the selected time range ({time_filter}).")
     st.stop()
