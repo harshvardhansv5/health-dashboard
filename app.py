@@ -5,7 +5,7 @@ import plotly.express as px
 # --- PAGE SETUP ---
 st.set_page_config(page_title="District Hub & Spoke Dashboard", page_icon="🏥", layout="wide")
 
-# --- CUSTOM CSS (Works with Light Theme) ---
+# --- CUSTOM CSS (Fixes Metric Card Text Visibility) ---
 st.markdown("""
 <style>
     /* Clean up main container spacing */
@@ -18,6 +18,14 @@ st.markdown("""
         padding: 15px;
         border-radius: 10px;
         box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+    }
+    
+    /* Force Metric Card Text to be readable (Dark Slate) */
+    div[data-testid="stMetric"] label {
+        color: #6C757D !important;
+    }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
+        color: #212529 !important;
     }
     
     /* Style the Sidebar */
