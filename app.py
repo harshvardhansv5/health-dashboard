@@ -74,18 +74,8 @@ DISTRICT_MAP = {
     "Rohtas": "Sasaram"
 }
 
-# --- CUSTOM CSS FOR A CLEANER LOOK ---
-st.markdown("""
-<style>
-    .block-container {padding-top: 2rem; padding-bottom: 2rem;}
-    h1 {font-weight: 700; color: #2c3e50;}
-    .stMetric {background-color: #f8f9fa; padding: 15px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);}
-</style>
-""", unsafe_allow_html=True)
-
 # --- SIDEBAR ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2966/2966327.png", width=80)
     st.title("Control Panel")
     st.markdown("Upload the latest data file and select the filters below.")
     
@@ -109,7 +99,6 @@ with st.sidebar:
             
             st.divider()
             
-            # Data Availability Check
             target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
             sheet_found = False
             for s in available_sheets:
@@ -170,7 +159,7 @@ plot_df['Total Patients'] = plot_df[date_cols].sum(axis=1)
 plot_df['Average Patients'] = plot_df[date_cols].mean(axis=1).round(1)
 plot_df['Zero Days'] = (plot_df[date_cols] == 0).sum(axis=1)
 
-# --- METRIC CARDS ---
+# --- METRIC CARDS (Fixed for Dark Mode) ---
 total_patients = int(plot_df['Total Patients'].sum())
 avg_patients = round(plot_df['Average Patients'].mean(), 1)
 total_zero_days = int(plot_df['Zero Days'].sum())
@@ -189,7 +178,6 @@ st.divider()
 tab1, tab2 = st.tabs(["📊 Dashboard Graphs", "📋 Detailed Data Table"])
 
 with tab1:
-    # --- CONTROLS ---
     col_ctrl1, col_ctrl2 = st.columns([2, 1])
     with col_ctrl1:
         metric_option = st.radio(
@@ -210,7 +198,6 @@ with tab1:
     ascending = True if sort_option == "Lowest to Highest" else False
     plot_df_sorted = plot_df.sort_values(by=metric_col, ascending=ascending)
     
-    # --- TOP 5 & BOTTOM 5 HIGHLIGHT LOGIC ---
     plot_df_sorted['Highlight_Group'] = 'Others (Average Performers)'
     total_rows = len(plot_df_sorted)
     
@@ -221,7 +208,6 @@ with tab1:
         plot_df_sorted.loc[top_5_idx, 'Highlight_Group'] = 'Top 5 Performers'
         plot_df_sorted.loc[bottom_5_idx, 'Highlight_Group'] = 'Bottom 5 Performers'
     
-    # --- GRAPH GENERATION ---
     fig = px.bar(
         plot_df_sorted, 
         x=facility_col, 
@@ -272,7 +258,6 @@ with tab2:
         use_container_width=True
     )
     
-    # Download Button
     csv = display_df.to_csv(index=False).encode('utf-8')
     st.download_button(
         label="📥 Download Data as CSV",
