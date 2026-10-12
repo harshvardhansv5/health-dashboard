@@ -5,6 +5,28 @@ import plotly.express as px
 # --- PAGE SETUP ---
 st.set_page_config(page_title="District Hub & Spoke Dashboard", page_icon="🏥", layout="wide")
 
+# --- CUSTOM CSS (Works with Light Theme) ---
+st.markdown("""
+<style>
+    /* Clean up main container spacing */
+    .block-container {padding-top: 2rem; padding-bottom: 2rem;}
+    
+    /* Style the Metric Cards */
+    div[data-testid="stMetric"] {
+        background-color: #FFFFFF;
+        border: 1px solid #E9ECEF;
+        padding: 15px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.04);
+    }
+    
+    /* Style the Sidebar */
+    section[data-testid="stSidebar"] {
+        border-right: 1px solid #E9ECEF;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # --- HARDCODED ZM DATA ---
 ZM_DATA = {
     "Keshav Kumar (Patna)": {
@@ -159,7 +181,7 @@ plot_df['Total Patients'] = plot_df[date_cols].sum(axis=1)
 plot_df['Average Patients'] = plot_df[date_cols].mean(axis=1).round(1)
 plot_df['Zero Days'] = (plot_df[date_cols] == 0).sum(axis=1)
 
-# --- METRIC CARDS (Fixed for Dark Mode) ---
+# --- METRIC CARDS ---
 total_patients = int(plot_df['Total Patients'].sum())
 avg_patients = round(plot_df['Average Patients'].mean(), 1)
 total_zero_days = int(plot_df['Zero Days'].sum())
@@ -178,7 +200,7 @@ st.divider()
 tab1, tab2 = st.tabs(["📊 Dashboard Graphs", "📋 Detailed Data Table"])
 
 with tab1:
-    col_ctrl1, col_ctrl2 = st.columns([2, 1])
+    col_ctrl1, col_ctrl2, col_ctrl3 = st.columns([2, 1, 1])
     with col_ctrl1:
         metric_option = st.radio(
             "Select Metric to Display:",
@@ -187,6 +209,8 @@ with tab1:
         )
     with col_ctrl2:
         sort_option = st.selectbox("Sort Graph By:", ["Highest to Lowest", "Lowest to Highest"])
+    with col_ctrl3:
+        active_only = st.checkbox("Exclude Inactive Facilities", value=False)
 
     if "Average" in metric_option:
         metric_col = 'Average Patients'
@@ -195,45 +219,56 @@ with tab1:
     else:
         metric_col = 'Zero Days'
 
-    ascending = True if sort_option == "Lowest to Highest" else False
-    plot_df_sorted = plot_df.sort_values(by=metric_col, ascending=ascending)
-    
-    plot_df_sorted['Highlight_Group'] = 'Others (Average Performers)'
-    total_rows = len(plot_df_sorted)
-    
-    if total_rows > 10:
-        top_5_idx = plot_df_sorted.nlargest(5, metric_col).index
-        bottom_5_idx = plot_df_sorted.nsmallest(5, metric_col).index
+    plot_df_filtered = plot_df.copy()
+    if active_only:
+        plot_df_filtered = plot_df_filtered[plot_df_filtered['Total Patients'] > 0]
+
+    if plot_df_filtered.empty:
+        st.warning("No facilities match the current filters.")
+    else:
+        ascending = True if sort_option == "Lowest to Highest" else False
+        plot_df_sorted = plot_df_filtered.sort_values(by=metric_col, ascending=not ascending)
         
-        plot_df_sorted.loc[top_5_idx, 'Highlight_Group'] = 'Top 5 Performers'
-        plot_df_sorted.loc[bottom_5_idx, 'Highlight_Group'] = 'Bottom 5 Performers'
-    
-    fig = px.bar(
-        plot_df_sorted, 
-        x=facility_col, 
-        y=metric_col,
-        color='Highlight_Group',
-        color_discrete_map={
-            'Top 5 Performers': '#2ecc71',
-            'Bottom 5 Performers': '#e74c3c',
-            'Others (Average Performers)': '#95a5a6'
-        },
-        labels={facility_col: 'Facility (Spoke)', 'Highlight_Group': 'Performance', metric_col: metric_option},
-        hover_data={'Highlight_Group': False, 'Total Patients': True, 'Average Patients': ':.1f', 'Zero Days': True},
-        title=f"{metric_option} per Facility in {selected_district_zm}"
-    )
-    
-    fig.update_layout(
-        xaxis_tickangle=-45,
-        xaxis_title="Spokes (Facilities)",
-        yaxis_title=metric_option,
-        legend_title="Category",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        plot_bgcolor='rgba(0,0,0,0)',
-        paper_bgcolor='rgba(0,0,0,0)'
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
+        plot_df_sorted['Highlight_Group'] = 'Others (Average Performers)'
+        total_rows = len(plot_df_sorted)
+        
+        if total_rows > 10:
+            top_5_idx = plot_df_sorted.nlargest(5, metric_col).index
+            bottom_5_idx = plot_df_sorted.nsmallest(5, metric_col).index
+            
+            plot_df_sorted.loc[top_5_idx, 'Highlight_Group'] = 'Top 5 Performers'
+            plot_df_sorted.loc[bottom_5_idx, 'Highlight_Group'] = 'Bottom 5 Performers'
+        
+        fig = px.bar(
+            plot_df_sorted, 
+            y=facility_col,
+            x=metric_col,
+            orientation='h',
+            color='Highlight_Group',
+            color_discrete_map={
+                'Top 5 Performers': '#28A745',    # Emerald Green
+                'Bottom 5 Performers': '#DC3545', # Crimson Red
+                'Others (Average Performers)': '#6C757D' # Slate Gray
+            },
+            labels={facility_col: 'Facility (Spoke)', 'Highlight_Group': 'Performance', metric_col: metric_option},
+            hover_data={'Highlight_Group': False, 'Total Patients': True, 'Average Patients': ':.1f', 'Zero Days': True},
+            title=f"{metric_option} per Facility in {selected_district_zm}"
+        )
+        
+        chart_height = max(500, len(plot_df_sorted) * 25)
+        
+        fig.update_layout(
+            height=chart_height,
+            xaxis_title=metric_option,
+            yaxis_title="",
+            legend_title="Category",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            yaxis=dict(autorange="reversed")
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
     st.markdown("### Detailed Data Table")
