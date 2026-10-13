@@ -357,10 +357,10 @@ with tab4:
     else:
         st.success("✅ No operational issues reported.")
 
-# ===== TAB 5: BIHAR MAP (Circle Map) =====
+# ===== TAB 5: BIHAR MAP (Coordinate Plot) =====
 with tab5:
     st.markdown("### 🗺️ Bihar District Performance Map")
-    st.caption("Each circle represents a district. Larger circle = more patients. Color = performance.")
+    st.caption("Each circle is a district placed by its real latitude/longitude. Larger circle = more patients. Color = performance.")
     map_metric = st.radio("Color Map By:", ("Weighted Avg", "Uptime %", "Total Patients"), horizontal=True, key="map_metric")
     if st.button("🗺️ Generate Map", key="gen_map"):
         with st.spinner("Calculating..."):
@@ -377,23 +377,24 @@ with tab5:
             if merged.empty:
                 st.warning("No mappable data.")
             else:
-                # Use scatter_map (MapLibre) - no API key needed
-                fig_map = px.scatter_map(
+                fig_map = px.scatter(
                     merged,
-                    lat='Lat', lon='Lon',
+                    x='Lon', y='Lat',
                     size='Total Patients',
                     color=map_metric,
                     color_continuous_scale='RdYlGn' if map_metric == 'Uptime %' else 'Viridis',
                     hover_name='GeoDistrict',
                     hover_data={'Total Patients': True, 'Weighted Avg': True, 'Uptime %': True, 'Facilities': True, 'Lat': False, 'Lon': False},
-                    size_max=60, zoom=6.3,
+                    size_max=70,
                     title=f'Bihar District Performance — {map_metric}'
                 )
+                fig_map.update_traces(marker=dict(line=dict(width=1, color='white')))
                 fig_map.update_layout(
-                    map_style='carto-darkmatter',
                     height=700,
-                    margin={"r": 0, "t": 50, "l": 0, "b": 0},
-                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                    xaxis=dict(title="Longitude", showgrid=True, gridcolor='#222', zeroline=False, showticklabels=False),
+                    yaxis=dict(title="Latitude", showgrid=True, gridcolor='#222', zeroline=False, showticklabels=False, scaleanchor="x", scaleratio=1),
+                    plot_bgcolor='#0E1117',
+                    paper_bgcolor='rgba(0,0,0,0)',
                     coloraxis_colorbar=dict(title=map_metric)
                 )
                 st.plotly_chart(fig_map, use_container_width=True)
