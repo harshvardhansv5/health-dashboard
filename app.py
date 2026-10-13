@@ -114,13 +114,11 @@ def find_date_columns(df):
     return date_cols
 
 def get_facility_mask(df, facility_col):
-    """Returns a boolean mask excluding TOTAL rows and NaN facility rows."""
     mask = df[facility_col].notna()
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('TOTAL', na=False)
     return mask
 
 def get_week_indices(df, weeks_back):
-    """Returns (start_idx, end_idx) for the given week (1=latest). Returns None if not enough data."""
     date_cols = find_date_columns(df)
     if not date_cols:
         return None
@@ -143,7 +141,6 @@ def get_week_indices(df, weeks_back):
     if latest_data_idx < 0:
         return None
 
-    # FIXED: +1 on the end index so we get exactly 7 days per week (Python slicing is exclusive)
     start = max(0, latest_data_idx - (weeks_back * 7) + 1)
     end = latest_data_idx - ((weeks_back - 1) * 7) + 1
     end = min(end, latest_data_idx + 1)
@@ -159,7 +156,6 @@ def process_district_df(df, time_filter):
     if not facility_col:
         return None, None, None
 
-    # Filter out TOTAL rows IMMEDIATELY (fixes the double-counting bug)
     df = df[get_facility_mask(df, facility_col)].copy()
     all_facilities = df[facility_col].dropna().tolist()
 
@@ -172,7 +168,6 @@ def process_district_df(df, time_filter):
     paired.sort(key=lambda x: x[1])
     sorted_cols = [c for c, d in paired]
 
-    # Find latest col with data
     latest_data_idx = -1
     for i in range(len(sorted_cols) - 1, -1, -1):
         c = sorted_cols[i]
@@ -226,10 +221,6 @@ def calc_uptime(s):
     return round(((total_fd - s['zero_days']) / total_fd * 100), 1) if total_fd > 0 else 0
 
 def calculate_context_wow(df, time_filter):
-    """
-    Returns (current_week_label, current_total, previous_week_label, previous_total, change_pct) 
-    OR None if the current filter doesn't support comparison.
-    """
     if df is None:
         return None
     if time_filter not in ["Week 1", "Week 2", "Week 3"]:
@@ -266,21 +257,6 @@ def calculate_context_wow(df, time_filter):
     prev_label = f"Week {prev_week_num} (Previous 7 days)"
 
     return cur_label, cur_total, prev_label, prev_total, change
-
-def categorize_reason(note):
-    if pd.isna(note): return "No Data Entered"
-    note = str(note).lower()
-    if 'strike' in note: return "Doctor/Staff Strike"
-    if 'lt' in note and any(k in note for k in ['leave', 'not available', 'nhi', 'no lt', 'absent', 'chutti']): return "No Lab Technician"
-    if 'opd' in note or 'closed' in note or 'holiday' in note: return "OPD Closed/Holiday"
-    if 'doctor' in note and 'prescribe' in note: return "Doctor Did Not Prescribe"
-    if 'footfall' in note or 'patient not' in note: return "Low Footfall"
-    if 'operational' in note or 'merged' in note: return "Not Operational"
-    if 'runner' in note: return "Runner Issue"
-    if 'machine' in note or 'equipment' in note: return "Machine Issue"
-    if 'flood' in note or 'rain' in note or 'river' in note: return "Weather/Flood"
-    if 'recorded' in note or 'no data' in note or 'sample n/a' in note: return "No Data Entered"
-    return "Other Issue"
 
 def generate_news_items(plot_df, facility_col, active_date_cols, threshold=20):
     news = []
@@ -370,12 +346,11 @@ if news_items:
     ticker_html += '</div></div>'
     st.markdown(ticker_html, unsafe_allow_html=True)
 
-# --- TABS ---
-tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 District Dashboard", "🏆 State Leaderboard", "📈 Trends & Analytics", "🚨 Diagnostics", "⚖️ Compare Districts"])
+# --- TABS (Diagnostics removed) ---
+tab1, tab2, tab3, tab4 = st.tabs(["📊 District Dashboard", "🏆 State Leaderboard", "📈 Trends & Analytics", "⚖️ Compare Districts"])
 
 # ===== TAB 1: DISTRICT DASHBOARD =====
 with tab1:
-    # --- CONTEXT-AWARE WoW BANNER ---
     wow = calculate_context_wow(df_raw, time_filter)
     if wow:
         cur_label, cur_total, prev_label, prev_total, ch = wow
@@ -404,7 +379,6 @@ with tab1:
         '''
         st.markdown(wow_html, unsafe_allow_html=True)
 
-    # --- METRIC CARDS ---
     col1, col2, col3 = st.columns(3)
     with col1: st.metric(label=f"Total Patients ({time_filter})", value=f"{stats['total']:,}")
     with col2: st.metric(label="Weighted Avg Daily Patients", value=f"{stats['weighted_avg']}")
@@ -507,33 +481,8 @@ with tab3:
         if anomalies: st.error(f"⚠️ {len(anomalies)} anomalies detected!"); st.dataframe(pd.DataFrame(anomalies), use_container_width=True, hide_index=True)
         else: st.success("✅ No anomalies detected.")
 
-# ===== TAB 4: DIAGNOSTICS =====
+# ===== TAB 4: COMPARE DISTRICTS =====
 with tab4:
-    st.markdown(f"### 🚨 Operational Diagnostics for {selected_district_zm}")
-    st.markdown("#### Why Are Facilities Reporting Zero?")
-    st.caption("This chart reveals the primary blockers to patient care.")
-    all_reasons = []
-    for col in stats['active_date_cols']:
-        for val in raw_text_df[col]:
-            if pd.notna(val) and not isinstance(val, (int, float)): all_reasons.append(categorize_reason(val))
-            elif pd.notna(val) and isinstance(val, (int, float)) and val == 0: all_reasons.append("Reported Zero (No Note)")
-    if all_reasons:
-        reason_counts = pd.DataFrame(all_reasons, columns=['Reason'])['Reason'].value_counts().reset_index()
-        reason_counts.columns = ['Reason', 'Count']
-        cp, cb = st.columns(2)
-        with cp:
-            fig_p = px.pie(reason_counts, values='Count', names='Reason', hole=0.4, title='Share of Issues')
-            fig_p.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_p, use_container_width=True)
-        with cb:
-            fig_r = px.bar(reason_counts, x='Count', y='Reason', orientation='h', color='Count', color_continuous_scale='Reds', title='Count of Days Affected')
-            fig_r.update_layout(yaxis=dict(autorange="reversed"), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', coloraxis_showscale=False)
-            st.plotly_chart(fig_r, use_container_width=True)
-    else:
-        st.success("✅ No operational issues reported.")
-
-# ===== TAB 5: COMPARE DISTRICTS =====
-with tab5:
     st.markdown("### ⚖️ Compare Two Districts Head-to-Head")
     sorted_sheets = sorted(available_sheets)
     ca, cb = st.columns(2)
