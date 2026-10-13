@@ -220,25 +220,33 @@ with tab1:
             sorted_df.loc[sorted_df.nsmallest(5, metric_col).index, 'Highlight'] = 'Bottom 5'
         fig = px.bar(sorted_df, y=facility_col, x=metric_col, orientation='h', color='Highlight', color_discrete_map={'Top 5': '#2ecc71', 'Bottom 5': '#e74c3c', 'Others': '#95a5a6'}, title=f"{metric_option} per Facility")
         fig.update_layout(height=max(500, len(sorted_df) * 25), yaxis=dict(autorange="reversed"), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend_title="", xaxis_title=metric_option, yaxis_title="")
-        st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, use_container_width=True)
+    
+    st.divider()
+    st.caption(f"💡 Data: **{sheet_to_load}** | Range: **{time_filter}** | Refreshed: {pd.Timestamp.now().strftime('%d-%b-%Y %H:%M')}")
 
 # ===== TAB 2: LEADERBOARD =====
 with tab2:
     st.markdown("### 🏆 All Districts Ranked")
+    
+    # --- METRIC DEFINITIONS ---
+    with st.expander("ℹ️ What do 'Uptime %' and 'Weighted Avg' mean? Click to expand", expanded=False):
+        st.markdown("""
+        **📊 Uptime %** — *The reliability score.*  
+        The percentage of days each facility reported more than 0 patients. Higher is better.  
+        *Example: 80% Uptime means facilities were active 4 out of every 5 days.*
+
+        **⚖️ Weighted Avg** — *The efficiency score.*  
+        Total patients divided by (facilities × days). Big hospitals count more than small ones.  
+        *Example: 14.3 means the average facility saw 14.3 patients per day.*
+
+        **👥 Total Patients** — *The volume score.*  
+        Raw sum of all patients across every facility in the district.
+
+        **🏥 Facilities** — Number of reporting hospitals (SDH, CHC, PHC, UPHC) in the district.
+        """)
+    
     if st.button("🔄 Calculate Leaderboard", key="lb"):
-        with st.spinner("Processing..."):
-            lb_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
-        if not lb_df.empty:
-            lb_df = lb_df.sort_values('Total Patients', ascending=False).reset_index(drop=True)
-            lb_df.index = lb_df.index + 1; lb_df.index.name = 'Rank'
-            def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
-            lb_df['District'] = lb_df.apply(lambda row: f"{medal(row.name)} {row['District']}".strip(), axis=1)
-            st.dataframe(lb_df, use_container_width=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
-            top15 = lb_df.head(15)
-            fig_lb = px.bar(top15, x='Total Patients', y='District', orientation='h', color='Uptime %', color_continuous_scale='RdYlGn')
-            fig_lb.update_layout(yaxis=dict(autorange="reversed"), height=500, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-            st.plotly_chart(fig_lb, use_container_width=True)
-    else: st.info("Click the button above to generate the statewide leaderboard.")
 
 # ===== TAB 3: TRENDS =====
 with tab3:
@@ -407,6 +415,4 @@ with tab6:
                 top_b.columns = ['Facility', 'Avg/Day']
                 st.dataframe(top_b, hide_index=True, use_container_width=True)
 
-# --- Footer ---
-st.divider()
-st.caption(f"💡 Data: **{sheet_to_load}** | Range: **{time_filter}** | Refreshed: {pd.Timestamp.now().strftime('%d-%b-%Y %H:%M')}")
+# Footer moved inside individual tabs: {pd.Timestamp.now().strftime('%d-%b-%Y %H:%M')}")
