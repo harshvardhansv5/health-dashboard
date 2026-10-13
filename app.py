@@ -42,44 +42,35 @@ ZM_DATA = {
 DISTRICT_MAP = {"Seikhpura": "Sheikhpura", "Rohtas": "Sasaram"}
 HUB_TO_SHEET_MAP = {"SDH Barh Patna": "Barh", "SDH Danapur Patna": "Danapur"}
 
-# --- ROBUST SHEET READER ---
+# --- ROBUST HELPERS ---
 def read_sheet_robust(xls, sheet_name):
-    """Reads a sheet and finds the header row dynamically by looking for 'Name of the Hospital'."""
+    """Reads a sheet and finds the header row dynamically."""
     try:
         df_raw = pd.read_excel(xls, sheet_name=sheet_name, header=None)
         header_idx = None
-        # Scan first 15 rows to find the header
         for i in range(min(15, len(df_raw))):
             row = df_raw.iloc[i]
             for cell in row:
-                cell_str = str(cell).lower()
-                if 'name of the hospital' in cell_str:
+                if 'name of the hospital' in str(cell).lower():
                     header_idx = i
                     break
             if header_idx is not None:
                 break
-        
         if header_idx is None:
-            # Fallback: default read
             df = pd.read_excel(xls, sheet_name=sheet_name)
         else:
             df = pd.read_excel(xls, sheet_name=sheet_name, header=header_idx)
-        
         df.columns = [str(c).strip() for c in df.columns]
         return df
-    except Exception as e:
+    except Exception:
         return None
 
 def find_facility_column(df):
-    """Flexibly find the facility name column."""
     for c in df.columns:
-        c_low = str(c).lower()
-        if 'name of the hospital' in c_low:
+        if 'name of the hospital' in str(c).lower():
             return c
-    # Fallback searches
     for c in df.columns:
-        c_low = str(c).lower()
-        if 'hospital' in c_low and ('name' in c_low or 'facility' in c_low):
+        if 'hospital' in str(c).lower() and 'name' in str(c).lower():
             return c
     for c in df.columns:
         if 'hospital' in str(c).lower():
@@ -87,10 +78,38 @@ def find_facility_column(df):
     return None
 
 def extract_date(col_name):
-    match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', str(col_name))
+    """Extract date from a column name. Supports multiple formats."""
+    # If pandas already parsed it as a Timestamp
+    if isinstance(col_name, pd.Timestamp):
+        return col_name
+    s = str(col_name)
+    # YYYY-MM-DD format (Darbhanga style)
+    match = re.search(r'(\d{4}-\d{2}-\d{2})', s)
+    if match:
+        return pd.to_datetime(match.group(1), errors='coerce')
+    # DD/MM/YYYY or DD-MM-YYYY format
+    match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', s)
     if match:
         return pd.to_datetime(match.group(1), dayfirst=True, errors='coerce')
+    # DD-Mon-YY format
+    match = re.search(r'(\d{1,2}-\w{3}-\d{2,4})', s)
+    if match:
+        return pd.to_datetime(match.group(1), errors='coerce')
     return pd.NaT
+
+def find_date_columns(df):
+    """Find all date columns. First looks for 'Total number of patients', then falls back to date headers."""
+    # Priority 1: columns with "Total number of patients"
+    date_cols = [c for c in df.columns if 'Total number of patients' in str(c)]
+    if date_cols:
+        return date_cols
+    # Fallback: columns whose header can be parsed as a date
+    date_cols = []
+    for c in df.columns:
+        parsed = extract_date(c)
+        if pd.notna(parsed):
+            date_cols.append(c)
+    return date_cols
 
 def process_district_df(df, time_filter):
     if df is None:
@@ -100,7 +119,7 @@ def process_district_df(df, time_filter):
         return None, None, None
     all_facilities = df[facility_col].dropna().tolist()
     all_facilities = [f for f in all_facilities if 'TOTAL' not in str(f).upper()]
-    date_cols = [c for c in df.columns if 'Total number of patients' in c]
+    date_cols = find_date_columns(df)
     if not date_cols:
         return None, None, None
     parsed_dates = [extract_date(c) for c in date_cols]
@@ -226,8 +245,7 @@ if not sheet_found:
 df = read_sheet_robust(xls, sheet_to_load)
 plot_df, raw_text_df, stats = process_district_df(df, time_filter)
 if plot_df is None:
-    st.error(f"Could not process the sheet '{sheet_to_load}'. Please check if it has a 'Name of the Hospitals' column and 'Total number of patients' date columns.")
-    st.stop()
+    st.error(f"Could not process the sheet '{sheet_to_load}'."); st.stop()
 facility_col = stats['facility_col']
 
 news_items = generate_news_items(plot_df, facility_col, stats['active_date_cols'], threshold=20)
@@ -239,7 +257,7 @@ if news_items:
     ticker_html += '</div></div>'
     st.markdown(ticker_html, unsafe_allow_html=True)
 
-# --- TABS (Bihar Map removed) ---
+# --- TABS ---
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 District Dashboard", "🏆 State Leaderboard", "📈 Trends & Analytics", "🚨 Diagnostics", "⚖️ Compare Districts"])
 
 # ===== TAB 1: DISTRICT DASHBOARD =====
@@ -383,9 +401,9 @@ with tab5:
         pb, rb, sb = process_district_df(df_b, time_filter)
         
         if pa is None:
-            st.error(f"❌ Could not process **{district_a}**. Column names found: {list(df_a.columns)[:5] if df_a is not None else 'N/A'}")
+            st.error(f"❌ Could not process **{district_a}**. No date columns found.")
         elif pb is None:
-            st.error(f"❌ Could not process **{district_b}**. Column names found: {list(df_b.columns)[:5] if df_b is not None else 'N/A'}")
+            st.error(f"❌ Could not process **{district_b}**. No date columns found.")
         else:
             col1, col2 = st.columns(2)
             with col1:
