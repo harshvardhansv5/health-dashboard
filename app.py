@@ -21,6 +21,11 @@ st.markdown("""
     @keyframes scroll {0% {transform: translateX(0);} 100% {transform: translateX(-100%);}}
     .news-item-up {color: #2ecc71; font-weight: 600; padding: 0 30px;}
     .news-item-down {color: #e74c3c; font-weight: 600; padding: 0 30px;}
+    .wow-card {background: linear-gradient(135deg, #1a2a3a 0%, #0E1117 100%); border: 1px solid #333; border-left: 5px solid #00D4FF; border-radius: 10px; padding: 18px 24px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;}
+    .wow-label {color: #AAAAAA; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;}
+    .wow-value {color: #FFFFFF; font-size: 26px; font-weight: 700;}
+    .wow-up {color: #2ecc71; font-size: 22px; font-weight: 700;}
+    .wow-down {color: #e74c3c; font-size: 22px; font-weight: 700;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -119,21 +124,50 @@ def process_district_df(df, time_filter):
     date_cols = find_date_columns(df)
     if not date_cols:
         return None, None, None
-    parsed_dates = [extract_date(c) for c in date_cols]
-    valid_dates = [d for d in parsed_dates if pd.notna(d)]
-    latest_date = max(valid_dates) if valid_dates else None
-    if time_filter == "Last 30 Days" and latest_date:
-        start_date = latest_date - timedelta(days=30)
-        active_date_cols = [c for c, d in zip(date_cols, parsed_dates) if pd.notna(d) and d > start_date]
-    elif time_filter == "Last 7 Days" and latest_date:
-        start_date = latest_date - timedelta(days=7)
-        active_date_cols = [c for c, d in zip(date_cols, parsed_dates) if pd.notna(d) and d > start_date]
-    elif time_filter == "Single Day (Latest)" and latest_date:
-        active_date_cols = [c for c, d in zip(date_cols, parsed_dates) if pd.notna(d) and d == latest_date]
+
+    # Pair columns with dates and sort chronologically
+    paired = [(c, extract_date(c)) for c in date_cols]
+    paired = [(c, d) for c, d in paired if pd.notna(d)]
+    paired.sort(key=lambda x: x[1])
+    sorted_cols = [c for c, d in paired]
+
+    # Find the latest column that actually has data (skip empty future columns)
+    latest_data_idx = -1
+    for i in range(len(sorted_cols) - 1, -1, -1):
+        c = sorted_cols[i]
+        col_values = pd.to_numeric(df[c], errors='coerce').fillna(0)
+        if col_values.sum() > 0:
+            latest_data_idx = i
+            break
+    if latest_data_idx == -1 and sorted_cols:
+        latest_data_idx = len(sorted_cols) - 1
+
+    # Apply the selected time filter
+    if time_filter == "All Available Data":
+        active_date_cols = sorted_cols
+    elif time_filter == "Last 30 Days":
+        if paired:
+            latest_date = paired[latest_data_idx][1]
+            start_date = latest_date - timedelta(days=30)
+            active_date_cols = [c for c, d in paired if d > start_date and d <= latest_date]
+        else:
+            active_date_cols = sorted_cols
+    elif time_filter == "Week 1":
+        active_date_cols = sorted_cols[max(0, latest_data_idx - 6): latest_data_idx + 1]
+    elif time_filter == "Week 2":
+        active_date_cols = sorted_cols[max(0, latest_data_idx - 13): max(0, latest_data_idx - 6)]
+    elif time_filter == "Week 3":
+        active_date_cols = sorted_cols[max(0, latest_data_idx - 20): max(0, latest_data_idx - 13)]
+    elif time_filter == "Week 4":
+        active_date_cols = sorted_cols[max(0, latest_data_idx - 27): max(0, latest_data_idx - 20)]
+    elif time_filter == "Single Day (Latest)":
+        active_date_cols = [sorted_cols[latest_data_idx]] if sorted_cols and latest_data_idx >= 0 else []
     else:
-        active_date_cols = date_cols
+        active_date_cols = sorted_cols
+
     if not active_date_cols:
-        active_date_cols = date_cols
+        active_date_cols = sorted_cols
+
     plot_df = df[df[facility_col].isin(all_facilities)][[facility_col] + active_date_cols].copy()
     raw_text_df = plot_df.copy()
     for col in active_date_cols:
@@ -159,6 +193,47 @@ def process_district_df(df, time_filter):
 def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
     return round(((total_fd - s['zero_days']) / total_fd * 100), 1) if total_fd > 0 else 0
+
+def calculate_week_comparison(df):
+    """Returns (week1_total, week2_total, change_pct) or None if not enough data."""
+    if df is None:
+        return None
+    date_cols = find_date_columns(df)
+    if not date_cols:
+        return None
+    paired = [(c, extract_date(c)) for c in date_cols]
+    paired = [(c, d) for c, d in paired if pd.notna(d)]
+    paired.sort(key=lambda x: x[1])
+    sorted_cols = [c for c, d in paired]
+
+    latest_data_idx = -1
+    for i in range(len(sorted_cols) - 1, -1, -1):
+        c = sorted_cols[i]
+        col_values = pd.to_numeric(df[c], errors='coerce').fillna(0)
+        if col_values.sum() > 0:
+            latest_data_idx = i
+            break
+
+    if latest_data_idx < 7:
+        return None
+
+    week1_cols = sorted_cols[max(0, latest_data_idx - 6): latest_data_idx + 1]
+    week2_cols = sorted_cols[max(0, latest_data_idx - 13): max(0, latest_data_idx - 6)]
+
+    if not week1_cols or not week2_cols:
+        return None
+
+    week1_total = int(sum(pd.to_numeric(df[c], errors='coerce').fillna(0).sum() for c in week1_cols))
+    week2_total = int(sum(pd.to_numeric(df[c], errors='coerce').fillna(0).sum() for c in week2_cols))
+
+    if week2_total > 0:
+        change_pct = round(((week1_total - week2_total) / week2_total) * 100, 1)
+    elif week1_total > 0:
+        change_pct = 100.0
+    else:
+        change_pct = 0.0
+
+    return week1_total, week2_total, change_pct
 
 def categorize_reason(note):
     if pd.isna(note): return "No Data Entered"
@@ -204,7 +279,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
             pass
     return pd.DataFrame(data)
 
-# --- SIDEBAR (District first, then Hub, then ZM shown as info) ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.title("Control Panel")
     uploaded_data_file = st.file_uploader("Upload Main Data File", type=["xlsx", "csv"])
@@ -214,23 +289,20 @@ with st.sidebar:
             xls = pd.ExcelFile(uploaded_data_file)
             available_sheets = xls.sheet_names
             st.divider()
-            
-            # District dropdown (sorted)
+
             all_districts = sorted(DISTRICT_TO_ZM.keys())
             selected_district_zm = st.selectbox("Select District", all_districts)
-            
-            # Show ZM as info
+
             zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
             st.info(f"**👤 ZM:** {zm_name_for_district}")
-            
-            # Hub dropdown (sorted)
+
             hub_list = sorted(ZM_DATA[zm_name_for_district][selected_district_zm])
             selected_hub_zm = st.selectbox("Select Hub", hub_list)
-            
+
             st.divider()
-            time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Last 30 Days", "Last 7 Days", "Single Day (Latest)"])
+            time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Last 30 Days", "Week 1", "Week 2", "Week 3", "Week 4", "Single Day (Latest)"])
             st.divider()
-            
+
             target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
             if selected_hub_zm in HUB_TO_SHEET_MAP:
                 target_district = HUB_TO_SHEET_MAP[selected_hub_zm]
@@ -256,6 +328,7 @@ if plot_df is None:
     st.error(f"Could not process the sheet '{sheet_to_load}'."); st.stop()
 facility_col = stats['facility_col']
 
+# --- NEWS TICKER ---
 news_items = generate_news_items(plot_df, facility_col, stats['active_date_cols'], threshold=20)
 if news_items:
     ticker_html = '<div class="news-ticker-container"><div class="news-ticker-label">🔴 LIVE</div><div class="news-ticker-scroll">'
@@ -270,11 +343,43 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 District Dashboard", "🏆 State L
 
 # ===== TAB 1: DISTRICT DASHBOARD =====
 with tab1:
+    # --- WEEK-OVER-WEEK COMPARISON BANNER ---
+    week_comparison = calculate_week_comparison(df)
+    if week_comparison:
+        w1, w2, ch = week_comparison
+        if ch > 0:
+            arrow = f'<span class="wow-up">📈 +{ch}%</span>'
+        elif ch < 0:
+            arrow = f'<span class="wow-down">📉 {ch}%</span>'
+        else:
+            arrow = '<span class="wow-up">➡️ 0%</span>'
+
+        wow_html = f'''
+        <div class="wow-card">
+            <div>
+                <div class="wow-label">Week 1 (Latest 7 days)</div>
+                <div class="wow-value">{w1:,} patients</div>
+            </div>
+            <div>
+                <div class="wow-label">Week 2 (Previous 7 days)</div>
+                <div class="wow-value">{w2:,} patients</div>
+            </div>
+            <div>
+                <div class="wow-label">Week-over-Week Change</div>
+                <div>{arrow}</div>
+            </div>
+        </div>
+        '''
+        st.markdown(wow_html, unsafe_allow_html=True)
+
+    # --- METRIC CARDS ---
     col1, col2, col3 = st.columns(3)
     with col1: st.metric(label=f"Total Patients ({time_filter})", value=f"{stats['total']:,}")
     with col2: st.metric(label="Weighted Avg Daily Patients", value=f"{stats['weighted_avg']}")
     with col3: st.metric(label="Facility Uptime %", value=f"{calc_uptime(stats)}%")
+
     st.divider()
+
     c1, c2, c3 = st.columns([2, 1, 1])
     with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d1")
     with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d2")
