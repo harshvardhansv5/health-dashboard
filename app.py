@@ -79,19 +79,15 @@ def find_facility_column(df):
 
 def extract_date(col_name):
     """Extract date from a column name. Supports multiple formats."""
-    # If pandas already parsed it as a Timestamp
     if isinstance(col_name, pd.Timestamp):
         return col_name
     s = str(col_name)
-    # YYYY-MM-DD format (Darbhanga style)
     match = re.search(r'(\d{4}-\d{2}-\d{2})', s)
     if match:
         return pd.to_datetime(match.group(1), errors='coerce')
-    # DD/MM/YYYY or DD-MM-YYYY format
     match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', s)
     if match:
         return pd.to_datetime(match.group(1), dayfirst=True, errors='coerce')
-    # DD-Mon-YY format
     match = re.search(r'(\d{1,2}-\w{3}-\d{2,4})', s)
     if match:
         return pd.to_datetime(match.group(1), errors='coerce')
@@ -99,11 +95,9 @@ def extract_date(col_name):
 
 def find_date_columns(df):
     """Find all date columns. First looks for 'Total number of patients', then falls back to date headers."""
-    # Priority 1: columns with "Total number of patients"
     date_cols = [c for c in df.columns if 'Total number of patients' in str(c)]
     if date_cols:
         return date_cols
-    # Fallback: columns whose header can be parsed as a date
     date_cols = []
     for c in df.columns:
         parsed = extract_date(c)
@@ -217,9 +211,9 @@ with st.sidebar:
             xls = pd.ExcelFile(uploaded_data_file)
             available_sheets = xls.sheet_names
             st.divider()
-            selected_zm = st.selectbox("Select ZM Name", list(ZM_DATA.keys()))
-            selected_district_zm = st.selectbox("Select District", list(ZM_DATA[selected_zm].keys()))
-            selected_hub_zm = st.selectbox("Select Hub", ZM_DATA[selected_zm][selected_district_zm])
+            selected_zm = st.selectbox("Select ZM Name", sorted(ZM_DATA.keys()))
+            selected_district_zm = st.selectbox("Select District", sorted(ZM_DATA[selected_zm].keys()))
+            selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[selected_zm][selected_district_zm]))
             st.divider()
             time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Last 30 Days", "Last 7 Days", "Single Day (Latest)"])
             st.divider()
@@ -390,9 +384,10 @@ with tab4:
 # ===== TAB 5: COMPARE DISTRICTS =====
 with tab5:
     st.markdown("### ⚖️ Compare Two Districts Head-to-Head")
+    sorted_sheets = sorted(available_sheets)
     ca, cb = st.columns(2)
-    with ca: district_a = st.selectbox("🔵 District A", available_sheets, index=0, key='cmp_a')
-    with cb: district_b = st.selectbox("🔴 District B", available_sheets, index=min(1, len(available_sheets) - 1), key='cmp_b')
+    with ca: district_a = st.selectbox("🔵 District A", sorted_sheets, index=0, key='cmp_a')
+    with cb: district_b = st.selectbox("🔴 District B", sorted_sheets, index=min(1, len(sorted_sheets) - 1), key='cmp_b')
     
     if district_a and district_b:
         df_a = read_sheet_robust(xls, district_a)
