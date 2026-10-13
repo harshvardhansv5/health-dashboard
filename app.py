@@ -39,12 +39,17 @@ ZM_DATA = {
     "Krishna Prakash (Saran)": {"Gopalganj": ["DH Gopalganj"], "Saran": ["DH Saran"], "Siwan": ["DH Siwan"]}
 }
 
+# --- BUILD REVERSE MAPPING (District → ZM) ---
+DISTRICT_TO_ZM = {}
+for zm_name, districts in ZM_DATA.items():
+    for d in districts.keys():
+        DISTRICT_TO_ZM[d] = zm_name
+
 DISTRICT_MAP = {"Seikhpura": "Sheikhpura", "Rohtas": "Sasaram"}
 HUB_TO_SHEET_MAP = {"SDH Barh Patna": "Barh", "SDH Danapur Patna": "Danapur"}
 
 # --- ROBUST HELPERS ---
 def read_sheet_robust(xls, sheet_name):
-    """Reads a sheet and finds the header row dynamically."""
     try:
         df_raw = pd.read_excel(xls, sheet_name=sheet_name, header=None)
         header_idx = None
@@ -78,7 +83,6 @@ def find_facility_column(df):
     return None
 
 def extract_date(col_name):
-    """Extract date from a column name. Supports multiple formats."""
     if isinstance(col_name, pd.Timestamp):
         return col_name
     s = str(col_name)
@@ -94,7 +98,6 @@ def extract_date(col_name):
     return pd.NaT
 
 def find_date_columns(df):
-    """Find all date columns. First looks for 'Total number of patients', then falls back to date headers."""
     date_cols = [c for c in df.columns if 'Total number of patients' in str(c)]
     if date_cols:
         return date_cols
@@ -201,7 +204,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
             pass
     return pd.DataFrame(data)
 
-# --- SIDEBAR ---
+# --- SIDEBAR (District first, then Hub, then ZM shown as info) ---
 with st.sidebar:
     st.title("Control Panel")
     uploaded_data_file = st.file_uploader("Upload Main Data File", type=["xlsx", "csv"])
@@ -211,12 +214,23 @@ with st.sidebar:
             xls = pd.ExcelFile(uploaded_data_file)
             available_sheets = xls.sheet_names
             st.divider()
-            selected_zm = st.selectbox("Select ZM Name", sorted(ZM_DATA.keys()))
-            selected_district_zm = st.selectbox("Select District", sorted(ZM_DATA[selected_zm].keys()))
-            selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[selected_zm][selected_district_zm]))
+            
+            # District dropdown (sorted)
+            all_districts = sorted(DISTRICT_TO_ZM.keys())
+            selected_district_zm = st.selectbox("Select District", all_districts)
+            
+            # Show ZM as info
+            zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
+            st.info(f"**👤 ZM:** {zm_name_for_district}")
+            
+            # Hub dropdown (sorted)
+            hub_list = sorted(ZM_DATA[zm_name_for_district][selected_district_zm])
+            selected_hub_zm = st.selectbox("Select Hub", hub_list)
+            
             st.divider()
             time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Last 30 Days", "Last 7 Days", "Single Day (Latest)"])
             st.divider()
+            
             target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
             if selected_hub_zm in HUB_TO_SHEET_MAP:
                 target_district = HUB_TO_SHEET_MAP[selected_hub_zm]
@@ -403,18 +417,20 @@ with tab5:
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown(f"#### 🔵 {district_a}")
-                m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Total Patients", f"{sa['total']:,}")
-                m2.metric("Avg/Day", sa['weighted_avg'])
-                m3.metric("Uptime", f"{calc_uptime(sa)}%")
-                m4.metric("Spokes", f"{sa['num_facilities']}")
+                r1c1, r1c2 = st.columns(2)
+                r1c1.metric("Total Patients", f"{sa['total']:,}")
+                r1c2.metric("Avg/Day", sa['weighted_avg'])
+                r2c1, r2c2 = st.columns(2)
+                r2c1.metric("Uptime", f"{calc_uptime(sa)}%")
+                r2c2.metric("Spokes", f"{sa['num_facilities']}")
             with col2:
                 st.markdown(f"#### 🔴 {district_b}")
-                m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Total Patients", f"{sb['total']:,}")
-                m2.metric("Avg/Day", sb['weighted_avg'])
-                m3.metric("Uptime", f"{calc_uptime(sb)}%")
-                m4.metric("Spokes", f"{sb['num_facilities']}")
+                r1c1, r1c2 = st.columns(2)
+                r1c1.metric("Total Patients", f"{sb['total']:,}")
+                r1c2.metric("Avg/Day", sb['weighted_avg'])
+                r2c1, r2c2 = st.columns(2)
+                r2c1.metric("Uptime", f"{calc_uptime(sb)}%")
+                r2c2.metric("Spokes", f"{sb['num_facilities']}")
             st.divider()
             st.markdown("#### 📈 Daily Trend — Overlaid")
             def get_trend(p, cols, name):
