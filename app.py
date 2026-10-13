@@ -403,16 +403,18 @@ with tab5:
             col1, col2 = st.columns(2)
             with col1:
                 st.markdown(f"#### 🔵 {district_a}")
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Total", f"{sa['total']:,}")
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Total Patients", f"{sa['total']:,}")
                 m2.metric("Avg/Day", sa['weighted_avg'])
                 m3.metric("Uptime", f"{calc_uptime(sa)}%")
+                m4.metric("Spokes", f"{sa['num_facilities']}")
             with col2:
                 st.markdown(f"#### 🔴 {district_b}")
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Total", f"{sb['total']:,}")
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("Total Patients", f"{sb['total']:,}")
                 m2.metric("Avg/Day", sb['weighted_avg'])
                 m3.metric("Uptime", f"{calc_uptime(sb)}%")
+                m4.metric("Spokes", f"{sb['num_facilities']}")
             st.divider()
             st.markdown("#### 📈 Daily Trend — Overlaid")
             def get_trend(p, cols, name):
