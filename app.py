@@ -143,9 +143,9 @@ def get_week_indices(df, weeks_back):
     if latest_data_idx < 0:
         return None
 
-    start = latest_data_idx - (weeks_back * 7) + 1
-    end = latest_data_idx - ((weeks_back - 1) * 7)
-    start = max(0, start)
+    # FIXED: +1 on the end index so we get exactly 7 days per week (Python slicing is exclusive)
+    start = max(0, latest_data_idx - (weeks_back * 7) + 1)
+    end = latest_data_idx - ((weeks_back - 1) * 7) + 1
     end = min(end, latest_data_idx + 1)
 
     if start >= end:
