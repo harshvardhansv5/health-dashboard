@@ -26,6 +26,7 @@ st.markdown("""
     .wow-value {color: #FFFFFF; font-size: 26px; font-weight: 700;}
     .wow-up {color: #2ecc71; font-size: 22px; font-weight: 700;}
     .wow-down {color: #e74c3c; font-size: 22px; font-weight: 700;}
+    .wow-flat {color: #AAAAAA; font-size: 22px; font-weight: 700;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -44,7 +45,6 @@ ZM_DATA = {
     "Krishna Prakash (Saran)": {"Gopalganj": ["DH Gopalganj"], "Saran": ["DH Saran"], "Siwan": ["DH Siwan"]}
 }
 
-# --- BUILD REVERSE MAPPING (District → ZM) ---
 DISTRICT_TO_ZM = {}
 for zm_name, districts in ZM_DATA.items():
     for d in districts.keys():
@@ -113,25 +113,66 @@ def find_date_columns(df):
             date_cols.append(c)
     return date_cols
 
+def get_facility_mask(df, facility_col):
+    """Returns a boolean mask excluding TOTAL rows and NaN facility rows."""
+    mask = df[facility_col].notna()
+    mask &= ~df[facility_col].astype(str).str.upper().str.contains('TOTAL', na=False)
+    return mask
+
+def get_week_indices(df, weeks_back):
+    """Returns (start_idx, end_idx) for the given week (1=latest). Returns None if not enough data."""
+    date_cols = find_date_columns(df)
+    if not date_cols:
+        return None
+    paired = [(c, extract_date(c)) for c in date_cols]
+    paired = [(c, d) for c, d in paired if pd.notna(d)]
+    paired.sort(key=lambda x: x[1])
+    sorted_cols = [c for c, d in paired]
+
+    latest_data_idx = -1
+    facility_col = find_facility_column(df)
+    if facility_col:
+        mask = get_facility_mask(df, facility_col)
+        for i in range(len(sorted_cols) - 1, -1, -1):
+            c = sorted_cols[i]
+            col_values = pd.to_numeric(df.loc[mask, c], errors='coerce').fillna(0)
+            if col_values.sum() > 0:
+                latest_data_idx = i
+                break
+
+    if latest_data_idx < 0:
+        return None
+
+    start = latest_data_idx - (weeks_back * 7) + 1
+    end = latest_data_idx - ((weeks_back - 1) * 7)
+    start = max(0, start)
+    end = min(end, latest_data_idx + 1)
+
+    if start >= end:
+        return None
+    return sorted_cols[start:end], sorted_cols
+
 def process_district_df(df, time_filter):
     if df is None:
         return None, None, None
     facility_col = find_facility_column(df)
     if not facility_col:
         return None, None, None
+
+    # Filter out TOTAL rows IMMEDIATELY (fixes the double-counting bug)
+    df = df[get_facility_mask(df, facility_col)].copy()
     all_facilities = df[facility_col].dropna().tolist()
-    all_facilities = [f for f in all_facilities if 'TOTAL' not in str(f).upper()]
+
     date_cols = find_date_columns(df)
     if not date_cols:
         return None, None, None
 
-    # Pair columns with dates and sort chronologically
     paired = [(c, extract_date(c)) for c in date_cols]
     paired = [(c, d) for c, d in paired if pd.notna(d)]
     paired.sort(key=lambda x: x[1])
     sorted_cols = [c for c, d in paired]
 
-    # Find the latest column that actually has data (skip empty future columns)
+    # Find latest col with data
     latest_data_idx = -1
     for i in range(len(sorted_cols) - 1, -1, -1):
         c = sorted_cols[i]
@@ -142,16 +183,8 @@ def process_district_df(df, time_filter):
     if latest_data_idx == -1 and sorted_cols:
         latest_data_idx = len(sorted_cols) - 1
 
-    # Apply the selected time filter
     if time_filter == "All Available Data":
         active_date_cols = sorted_cols
-    elif time_filter == "Last 30 Days":
-        if paired:
-            latest_date = paired[latest_data_idx][1]
-            start_date = latest_date - timedelta(days=30)
-            active_date_cols = [c for c, d in paired if d > start_date and d <= latest_date]
-        else:
-            active_date_cols = sorted_cols
     elif time_filter == "Week 1":
         active_date_cols = sorted_cols[max(0, latest_data_idx - 6): latest_data_idx + 1]
     elif time_filter == "Week 2":
@@ -160,15 +193,13 @@ def process_district_df(df, time_filter):
         active_date_cols = sorted_cols[max(0, latest_data_idx - 20): max(0, latest_data_idx - 13)]
     elif time_filter == "Week 4":
         active_date_cols = sorted_cols[max(0, latest_data_idx - 27): max(0, latest_data_idx - 20)]
-    elif time_filter == "Single Day (Latest)":
-        active_date_cols = [sorted_cols[latest_data_idx]] if sorted_cols and latest_data_idx >= 0 else []
     else:
         active_date_cols = sorted_cols
 
     if not active_date_cols:
         active_date_cols = sorted_cols
 
-    plot_df = df[df[facility_col].isin(all_facilities)][[facility_col] + active_date_cols].copy()
+    plot_df = df[[facility_col] + active_date_cols].copy()
     raw_text_df = plot_df.copy()
     for col in active_date_cols:
         plot_df[col] = pd.to_numeric(plot_df[col], errors='coerce').fillna(0)
@@ -194,46 +225,47 @@ def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
     return round(((total_fd - s['zero_days']) / total_fd * 100), 1) if total_fd > 0 else 0
 
-def calculate_week_comparison(df):
-    """Returns (week1_total, week2_total, change_pct) or None if not enough data."""
+def calculate_context_wow(df, time_filter):
+    """
+    Returns (current_week_label, current_total, previous_week_label, previous_total, change_pct) 
+    OR None if the current filter doesn't support comparison.
+    """
     if df is None:
         return None
-    date_cols = find_date_columns(df)
-    if not date_cols:
-        return None
-    paired = [(c, extract_date(c)) for c in date_cols]
-    paired = [(c, d) for c, d in paired if pd.notna(d)]
-    paired.sort(key=lambda x: x[1])
-    sorted_cols = [c for c, d in paired]
-
-    latest_data_idx = -1
-    for i in range(len(sorted_cols) - 1, -1, -1):
-        c = sorted_cols[i]
-        col_values = pd.to_numeric(df[c], errors='coerce').fillna(0)
-        if col_values.sum() > 0:
-            latest_data_idx = i
-            break
-
-    if latest_data_idx < 7:
+    if time_filter not in ["Week 1", "Week 2", "Week 3"]:
         return None
 
-    week1_cols = sorted_cols[max(0, latest_data_idx - 6): latest_data_idx + 1]
-    week2_cols = sorted_cols[max(0, latest_data_idx - 13): max(0, latest_data_idx - 6)]
-
-    if not week1_cols or not week2_cols:
+    facility_col = find_facility_column(df)
+    if not facility_col:
         return None
+    df = df[get_facility_mask(df, facility_col)].copy()
 
-    week1_total = int(sum(pd.to_numeric(df[c], errors='coerce').fillna(0).sum() for c in week1_cols))
-    week2_total = int(sum(pd.to_numeric(df[c], errors='coerce').fillna(0).sum() for c in week2_cols))
+    weeks_back = {"Week 1": 1, "Week 2": 2, "Week 3": 3}[time_filter]
+    result = get_week_indices(df, weeks_back)
+    if not result:
+        return None
+    cur_cols, _ = result
 
-    if week2_total > 0:
-        change_pct = round(((week1_total - week2_total) / week2_total) * 100, 1)
-    elif week1_total > 0:
-        change_pct = 100.0
+    result_prev = get_week_indices(df, weeks_back + 1)
+    if not result_prev:
+        return None
+    prev_cols, _ = result_prev
+
+    cur_total = int(sum(pd.to_numeric(df[c], errors='coerce').fillna(0).sum() for c in cur_cols))
+    prev_total = int(sum(pd.to_numeric(df[c], errors='coerce').fillna(0).sum() for c in prev_cols))
+
+    if prev_total > 0:
+        change = round(((cur_total - prev_total) / prev_total) * 100, 1)
+    elif cur_total > 0:
+        change = 100.0
     else:
-        change_pct = 0.0
+        change = 0.0
 
-    return week1_total, week2_total, change_pct
+    cur_label = f"{time_filter} (Latest 7 days)" if time_filter == "Week 1" else f"{time_filter} (7 days)"
+    prev_week_num = weeks_back + 1
+    prev_label = f"Week {prev_week_num} (Previous 7 days)"
+
+    return cur_label, cur_total, prev_label, prev_total, change
 
 def categorize_reason(note):
     if pd.isna(note): return "No Data Entered"
@@ -300,7 +332,7 @@ with st.sidebar:
             selected_hub_zm = st.selectbox("Select Hub", hub_list)
 
             st.divider()
-            time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Last 30 Days", "Week 1", "Week 2", "Week 3", "Week 4", "Single Day (Latest)"])
+            time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Week 1", "Week 2", "Week 3", "Week 4"])
             st.divider()
 
             target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
@@ -322,8 +354,8 @@ if uploaded_data_file is None:
 if not sheet_found:
     st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**"); st.stop()
 
-df = read_sheet_robust(xls, sheet_to_load)
-plot_df, raw_text_df, stats = process_district_df(df, time_filter)
+df_raw = read_sheet_robust(xls, sheet_to_load)
+plot_df, raw_text_df, stats = process_district_df(df_raw, time_filter)
 if plot_df is None:
     st.error(f"Could not process the sheet '{sheet_to_load}'."); st.stop()
 facility_col = stats['facility_col']
@@ -343,26 +375,26 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 District Dashboard", "🏆 State L
 
 # ===== TAB 1: DISTRICT DASHBOARD =====
 with tab1:
-    # --- WEEK-OVER-WEEK COMPARISON BANNER ---
-    week_comparison = calculate_week_comparison(df)
-    if week_comparison:
-        w1, w2, ch = week_comparison
+    # --- CONTEXT-AWARE WoW BANNER ---
+    wow = calculate_context_wow(df_raw, time_filter)
+    if wow:
+        cur_label, cur_total, prev_label, prev_total, ch = wow
         if ch > 0:
             arrow = f'<span class="wow-up">📈 +{ch}%</span>'
         elif ch < 0:
             arrow = f'<span class="wow-down">📉 {ch}%</span>'
         else:
-            arrow = '<span class="wow-up">➡️ 0%</span>'
+            arrow = f'<span class="wow-flat">➡️ 0%</span>'
 
         wow_html = f'''
         <div class="wow-card">
             <div>
-                <div class="wow-label">Week 1 (Latest 7 days)</div>
-                <div class="wow-value">{w1:,} patients</div>
+                <div class="wow-label">{cur_label}</div>
+                <div class="wow-value">{cur_total:,} patients</div>
             </div>
             <div>
-                <div class="wow-label">Week 2 (Previous 7 days)</div>
-                <div class="wow-value">{w2:,} patients</div>
+                <div class="wow-label">{prev_label}</div>
+                <div class="wow-value">{prev_total:,} patients</div>
             </div>
             <div>
                 <div class="wow-label">Week-over-Week Change</div>
