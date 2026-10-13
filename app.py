@@ -27,6 +27,35 @@ st.markdown("""
     .wow-up {color: #2ecc71; font-size: 22px; font-weight: 700;}
     .wow-down {color: #e74c3c; font-size: 22px; font-weight: 700;}
     .wow-flat {color: #AAAAAA; font-size: 22px; font-weight: 700;}
+    .zm-card {
+        background: linear-gradient(135deg, #1e3a5f 0%, #0E1117 100%);
+        border: 1px solid #2a4a6f;
+        border-left: 4px solid #00D4FF;
+        border-radius: 10px;
+        padding: 14px 16px;
+        margin-top: 8px;
+        margin-bottom: 8px;
+    }
+    .zm-card-header {
+        color: #00D4FF;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 6px;
+    }
+    .zm-card-name {
+        color: #FFFFFF;
+        font-size: 15px;
+        font-weight: 700;
+        line-height: 1.3;
+        margin-bottom: 4px;
+    }
+    .zm-card-zone {
+        color: #8fa5bb;
+        font-size: 12px;
+        font-style: italic;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -302,7 +331,20 @@ with st.sidebar:
             selected_district_zm = st.selectbox("Select District", all_districts)
 
             zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
-            st.info(f"**👤 ZM:** {zm_name_for_district}")
+            zone_name = "Unknown Zone"
+            display_zm = zm_name_for_district
+            if "(" in zm_name_for_district and ")" in zm_name_for_district:
+                display_zm = zm_name_for_district.split("(")[0].strip()
+                zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone"
+
+            zm_card_html = f'''
+            <div class="zm-card">
+                <div class="zm-card-header">👤 Zone Manager</div>
+                <div class="zm-card-name">{display_zm}</div>
+                <div class="zm-card-zone">{zone_name}</div>
+            </div>
+            '''
+            st.markdown(zm_card_html, unsafe_allow_html=True)
 
             hub_list = sorted(ZM_DATA[zm_name_for_district][selected_district_zm])
             selected_hub_zm = st.selectbox("Select Hub", hub_list)
@@ -346,7 +388,7 @@ if news_items:
     ticker_html += '</div></div>'
     st.markdown(ticker_html, unsafe_allow_html=True)
 
-# --- TABS (Diagnostics removed) ---
+# --- TABS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📊 District Dashboard", "🏆 State Leaderboard", "📈 Trends & Analytics", "⚖️ Compare Districts"])
 
 # ===== TAB 1: DISTRICT DASHBOARD =====
