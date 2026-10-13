@@ -3,8 +3,6 @@ import pandas as pd
 import plotly.express as px
 from datetime import timedelta
 import re
-import json
-import urllib.request
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
@@ -42,6 +40,24 @@ ZM_DATA = {
 
 DISTRICT_MAP = {"Seikhpura": "Sheikhpura", "Rohtas": "Sasaram"}
 HUB_TO_SHEET_MAP = {"SDH Barh Patna": "Barh", "SDH Danapur Patna": "Danapur"}
+
+# --- BIHAR DISTRICT CENTROIDS (Lat, Lon) for Map Rendering ---
+BIHAR_COORDS = {
+    "Araria": (26.1350, 87.5132), "Arwal": (25.2446, 84.6665), "Aurangabad": (24.7520, 84.3730),
+    "Banka": (24.8830, 86.9216), "Begusarai": (25.4182, 86.1270), "Bhagalpur": (25.2447, 86.9893),
+    "Bhojpur": (25.5609, 84.6199), "Buxar": (25.5647, 83.9771), "Darbhanga": (26.1542, 85.8918),
+    "Purbi Champaran": (26.6472, 84.9217), "Gaya": (24.7955, 85.0002), "Gopalganj": (26.4673, 84.4392),
+    "Jamui": (24.9258, 86.2252), "Jehanabad": (25.2135, 84.9895), "Kaimur": (25.0405, 83.6037),
+    "Katihar": (25.5541, 87.5587), "Khagaria": (25.5016, 86.4667), "Kishanganj": (26.0892, 87.9415),
+    "Lakhisarai": (25.4061, 86.0906), "Madhepura": (25.9215, 86.7926), "Madhubani": (26.3548, 86.4907),
+    "Munger": (25.3812, 86.4728), "Muzaffarpur": (26.1209, 85.3647), "Nalanda": (25.2016, 85.5222),
+    "Nawada": (24.8845, 85.5430), "Patna": (25.5941, 85.1376), "Purnia": (25.7771, 87.4753),
+    "Rohtas": (24.9572, 84.0283), "Saharsa": (25.8798, 86.6027), "Samastipur": (25.8629, 85.7811),
+    "Saran": (25.7814, 84.7477), "Sheikhpura": (25.1392, 85.8500), "Sheohar": (26.5154, 85.2934),
+    "Sitamarhi": (26.5934, 85.4913), "Siwan": (26.2194, 84.3559), "Supaul": (26.1244, 86.6054),
+    "Vaishali": (25.6921, 85.2150), "Pashchim Champaran": (27.1041, 84.5099),
+}
+
 SHEET_TO_GEO = {
     "Sasaram": "Rohtas", "Danapur": "Patna", "Barh": "Patna", "Sheikhpura": "Sheikhpura", "Purnia": "Purnia", "Saharsa": "Saharsa",
     "Madhepura": "Madhepura", "Supaul": "Supaul", "Araria": "Araria", "Katihar": "Katihar", "Kishanganj": "Kishanganj", "Banka": "Banka",
@@ -112,8 +128,7 @@ def calc_uptime(s):
     return round(((total_fd - s['zero_days']) / total_fd * 100), 1) if total_fd > 0 else 0
 
 def categorize_reason(note):
-    if pd.isna(note):
-        return "No Data Entered"
+    if pd.isna(note): return "No Data Entered"
     note = str(note).lower()
     if 'strike' in note: return "Doctor/Staff Strike"
     if 'lt' in note and any(k in note for k in ['leave', 'not available', 'nhi', 'no lt', 'absent', 'chutti']): return "No Lab Technician"
@@ -129,8 +144,7 @@ def categorize_reason(note):
 
 def generate_news_items(plot_df, facility_col, active_date_cols, threshold=20):
     news = []
-    if len(active_date_cols) < 14:
-        return news
+    if len(active_date_cols) < 14: return news
     recent_cols = active_date_cols[-7:]
     previous_cols = active_date_cols[-14:-7]
     for _, row in plot_df.iterrows():
@@ -153,13 +167,8 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
             sdf = pd.read_excel(xls, sheet_name=sheet)
             _, _, s = process_district_df(sdf, time_filter)
             if s:
-                data.append({
-                    'District': sheet, 'Total Patients': s['total'],
-                    'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s),
-                    'Facilities': s['num_facilities']
-                })
-        except Exception:
-            pass
+                data.append({'District': sheet, 'Total Patients': s['total'], 'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s), 'Facilities': s['num_facilities']})
+        except Exception: pass
     return pd.DataFrame(data)
 
 # --- SIDEBAR ---
@@ -184,76 +193,51 @@ with st.sidebar:
             sheet_found = False
             for s in available_sheets:
                 if s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower():
-                    sheet_to_load = s
-                    sheet_found = True
-                    break
-            if sheet_found:
-                st.success(f"✅ Data Available: {selected_district_zm}")
-            else:
-                st.warning(f"⏳ Data Pending: {selected_district_zm}")
+                    sheet_to_load = s; sheet_found = True; break
+            if sheet_found: st.success(f"✅ Data Available: {selected_district_zm}")
+            else: st.warning(f"⏳ Data Pending: {selected_district_zm}")
         except Exception as e:
             st.error(f"Error: {e}")
 
 # --- MAIN AREA ---
 st.title("🏥 Bihar District Hub & Spoke Dashboard")
 if uploaded_data_file is None:
-    st.info("👈 Please upload the Main Data File from the sidebar to begin.")
-    st.stop()
+    st.info("👈 Please upload the Main Data File from the sidebar to begin."); st.stop()
 if not sheet_found:
-    st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**")
-    st.stop()
+    st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**"); st.stop()
 
 df = pd.read_excel(xls, sheet_name=sheet_to_load)
 plot_df, raw_text_df, stats = process_district_df(df, time_filter)
 if plot_df is None:
-    st.error("This sheet does not have the expected columns.")
-    st.stop()
+    st.error("This sheet does not have the expected columns."); st.stop()
 facility_col = stats['facility_col']
 
-# --- NEWS TICKER ---
 news_items = generate_news_items(plot_df, facility_col, stats['active_date_cols'], threshold=20)
 if news_items:
     ticker_html = '<div class="news-ticker-container"><div class="news-ticker-label">🔴 LIVE</div><div class="news-ticker-scroll">'
     for item in news_items:
-        if item['change'] > 0:
-            ticker_html += f'<span class="news-item-up">📈 {item["facility"]} | +{item["change"]}% | ({item["previous"]} → {item["recent"]}) &nbsp;&nbsp;◆&nbsp;&nbsp;</span>'
-        else:
-            ticker_html += f'<span class="news-item-down">📉 {item["facility"]} | {item["change"]}% | ({item["previous"]} → {item["recent"]}) &nbsp;&nbsp;◆&nbsp;&nbsp;</span>'
+        if item['change'] > 0: ticker_html += f'<span class="news-item-up">📈 {item["facility"]} | +{item["change"]}% | ({item["previous"]} → {item["recent"]}) &nbsp;&nbsp;◆&nbsp;&nbsp;</span>'
+        else: ticker_html += f'<span class="news-item-down">📉 {item["facility"]} | {item["change"]}% | ({item["previous"]} → {item["recent"]}) &nbsp;&nbsp;◆&nbsp;&nbsp;</span>'
     ticker_html += '</div></div>'
     st.markdown(ticker_html, unsafe_allow_html=True)
 
 # --- TABS ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-    "📊 District Dashboard", "🏆 State Leaderboard", "📈 Trends & Analytics",
-    "🚨 Diagnostics", "🗺️ Bihar Map", "⚖️ Compare Districts"
-])
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 District Dashboard", "🏆 State Leaderboard", "📈 Trends & Analytics", "🚨 Diagnostics", "🗺️ Bihar Map", "⚖️ Compare Districts"])
 
 # ===== TAB 1: DISTRICT DASHBOARD =====
 with tab1:
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(label=f"Total Patients ({time_filter})", value=f"{stats['total']:,}")
-    with col2:
-        st.metric(label="Weighted Avg Daily Patients", value=f"{stats['weighted_avg']}")
-    with col3:
-        st.metric(label="Facility Uptime %", value=f"{calc_uptime(stats)}%")
-
+    with col1: st.metric(label=f"Total Patients ({time_filter})", value=f"{stats['total']:,}")
+    with col2: st.metric(label="Weighted Avg Daily Patients", value=f"{stats['weighted_avg']}")
+    with col3: st.metric(label="Facility Uptime %", value=f"{calc_uptime(stats)}%")
     st.divider()
-
     c1, c2, c3 = st.columns([2, 1, 1])
-    with c1:
-        metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d1")
-    with c2:
-        sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d2")
-    with c3:
-        active_only = st.checkbox("Exclude Inactive", value=False, key="d3")
-
+    with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d1")
+    with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d2")
+    with c3: active_only = st.checkbox("Exclude Inactive", value=False, key="d3")
     metric_col = {'Average Patients': 'Average Patients', 'Total Patients': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
-
     filtered = plot_df.copy()
-    if active_only:
-        filtered = filtered[filtered['Total Patients'] > 0]
-
+    if active_only: filtered = filtered[filtered['Total Patients'] > 0]
     if filtered.empty:
         st.warning("No data matches the filters.")
     else:
@@ -262,31 +246,15 @@ with tab1:
         if len(sorted_df) > 10:
             sorted_df.loc[sorted_df.nlargest(5, metric_col).index, 'Highlight'] = 'Top 5'
             sorted_df.loc[sorted_df.nsmallest(5, metric_col).index, 'Highlight'] = 'Bottom 5'
-
-        fig = px.bar(
-            sorted_df, y=facility_col, x=metric_col, orientation='h',
-            color='Highlight',
-            color_discrete_map={'Top 5': '#2ecc71', 'Bottom 5': '#e74c3c', 'Others': '#95a5a6'},
-            title=f"{metric_option} per Facility"
-        )
-        fig.update_layout(
-            height=max(500, len(sorted_df) * 25),
-            yaxis=dict(autorange="reversed"),
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)',
-            legend_title="",
-            xaxis_title=metric_option,
-            yaxis_title=""
-        )
+        fig = px.bar(sorted_df, y=facility_col, x=metric_col, orientation='h', color='Highlight', color_discrete_map={'Top 5': '#2ecc71', 'Bottom 5': '#e74c3c', 'Others': '#95a5a6'}, title=f"{metric_option} per Facility")
+        fig.update_layout(height=max(500, len(sorted_df) * 25), yaxis=dict(autorange="reversed"), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend_title="", xaxis_title=metric_option, yaxis_title="")
         st.plotly_chart(fig, use_container_width=True)
-
     st.divider()
     st.caption(f"💡 Data: **{sheet_to_load}** | Range: **{time_filter}** | Refreshed: {pd.Timestamp.now().strftime('%d-%b-%Y %H:%M')}")
 
 # ===== TAB 2: LEADERBOARD =====
 with tab2:
     st.markdown("### 🏆 All Districts Ranked")
-
     with st.expander("ℹ️ What do 'Uptime %' and 'Weighted Avg' mean? Click to expand", expanded=False):
         st.markdown("""
         **📊 Uptime %** — *The reliability score.*  
@@ -302,36 +270,31 @@ with tab2:
 
         **🏥 Facilities** — Number of reporting hospitals (SDH, CHC, PHC, UPHC) in the district.
         """)
-
     if st.button("🔄 Calculate Leaderboard", key="lb"):
         with st.spinner("Processing..."):
             lb_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
         if not lb_df.empty:
             lb_df = lb_df.sort_values('Total Patients', ascending=False).reset_index(drop=True)
-            lb_df.index = lb_df.index + 1
-            lb_df.index.name = 'Rank'
-            def medal(r):
-                return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
+            lb_df.index = lb_df.index + 1; lb_df.index.name = 'Rank'
+            def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
             lb_df['District'] = lb_df.apply(lambda row: f"{medal(row.name)} {row['District']}".strip(), axis=1)
             st.dataframe(lb_df, use_container_width=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             top15 = lb_df.head(15)
             fig_lb = px.bar(top15, x='Total Patients', y='District', orientation='h', color='Uptime %', color_continuous_scale='RdYlGn')
             fig_lb.update_layout(yaxis=dict(autorange="reversed"), height=500, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig_lb, use_container_width=True)
-    else:
-        st.info("Click the button above to generate the statewide leaderboard.")
+    else: st.info("Click the button above to generate the statewide leaderboard.")
 
 # ===== TAB 3: TRENDS =====
 with tab3:
     st.markdown(f"### 📈 Trends for {selected_district_zm}")
-    st.markdown("#### Daily Patient Trend (Mapped to Indian Calendar)")
+    st.markdown("#### Daily Patient Trend")
     if stats['active_date_cols']:
         trend_data = []
         for col in stats['active_date_cols']:
             d = extract_date(col)
             dt = pd.to_numeric(plot_df[col], errors='coerce').fillna(0).sum()
-            if pd.notna(d):
-                trend_data.append({'Date': d, 'Patients': dt})
+            if pd.notna(d): trend_data.append({'Date': d, 'Patients': dt})
         if trend_data:
             trend_df = pd.DataFrame(trend_data).sort_values('Date')
             trend_df['Day'] = trend_df['Date'].dt.day_name()
@@ -347,20 +310,18 @@ with tab3:
                     fig_t.add_annotation(x=row['Date'], y=row['Patients'], text=row['Holiday'], showarrow=True, yshift=20, font=dict(color="#e74c3c"))
             fig_t.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig_t, use_container_width=True)
-
     st.divider()
     st.markdown("#### Spoke Heatmap (Facility vs. Date)")
+    st.caption("Red = 0 patients. Green = High volume. Look for horizontal (facility down) or vertical (district down) red streaks.")
     heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
     heatmap_df.columns = [extract_date(c).strftime('%d-%b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
     fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale='RdYlGn')
     fig_h.update_layout(height=max(600, len(heatmap_df) * 20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', coloraxis_colorbar=dict(title="Patients"))
     st.plotly_chart(fig_h, use_container_width=True)
-
     st.divider()
     st.markdown("#### ⚠️ Anomaly Detector")
     if len(stats['active_date_cols']) >= 8:
-        rc = stats['active_date_cols'][-8:-1]
-        lc = stats['active_date_cols'][-1]
+        rc = stats['active_date_cols'][-8:-1]; lc = stats['active_date_cols'][-1]
         anomalies = []
         for _, row in plot_df.iterrows():
             pa = pd.to_numeric(row[rc], errors='coerce').fillna(0).mean()
@@ -368,54 +329,39 @@ with tab3:
             lv = 0 if pd.isna(lv) else lv
             if pa > 5 and lv < (pa * 0.2):
                 anomalies.append({'Facility': row[facility_col], 'Prev 7-day Avg': round(pa, 1), 'Latest Day': int(lv), 'Drop %': f"-{round((1 - lv/pa) * 100)}%"})
-        if anomalies:
-            st.error(f"⚠️ {len(anomalies)} anomalies detected!")
-            st.dataframe(pd.DataFrame(anomalies), use_container_width=True, hide_index=True)
-        else:
-            st.success("✅ No anomalies detected.")
+        if anomalies: st.error(f"⚠️ {len(anomalies)} anomalies detected!"); st.dataframe(pd.DataFrame(anomalies), use_container_width=True, hide_index=True)
+        else: st.success("✅ No anomalies detected.")
 
 # ===== TAB 4: DIAGNOSTICS =====
 with tab4:
     st.markdown(f"### 🚨 Operational Diagnostics for {selected_district_zm}")
     st.markdown("#### Why Are Facilities Reporting Zero?")
+    st.caption("This chart reveals the primary blockers to patient care. Focus on the biggest slice.")
     all_reasons = []
     for col in stats['active_date_cols']:
         for val in raw_text_df[col]:
-            if pd.notna(val) and not isinstance(val, (int, float)):
-                all_reasons.append(categorize_reason(val))
-            elif pd.notna(val) and isinstance(val, (int, float)) and val == 0:
-                all_reasons.append("Reported Zero (No Note)")
+            if pd.notna(val) and not isinstance(val, (int, float)): all_reasons.append(categorize_reason(val))
+            elif pd.notna(val) and isinstance(val, (int, float)) and val == 0: all_reasons.append("Reported Zero (No Note)")
     if all_reasons:
         reason_counts = pd.DataFrame(all_reasons, columns=['Reason'])['Reason'].value_counts().reset_index()
         reason_counts.columns = ['Reason', 'Count']
         cp, cb = st.columns(2)
         with cp:
-            fig_p = px.pie(reason_counts, values='Count', names='Reason', hole=0.4)
+            fig_p = px.pie(reason_counts, values='Count', names='Reason', hole=0.4, title='Share of Issues')
             fig_p.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig_p, use_container_width=True)
         with cb:
-            fig_r = px.bar(reason_counts, x='Count', y='Reason', orientation='h', color='Count', color_continuous_scale='Reds')
+            fig_r = px.bar(reason_counts, x='Count', y='Reason', orientation='h', color='Count', color_continuous_scale='Reds', title='Count of Days Affected')
             fig_r.update_layout(yaxis=dict(autorange="reversed"), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', coloraxis_showscale=False)
             st.plotly_chart(fig_r, use_container_width=True)
-
-    st.divider()
-    st.markdown("#### Distance from Hub vs. Performance")
-    distance_col = next((c for c in df.columns if 'Spokes Distance' in str(c) or 'Distance From Hub' in str(c)), None)
-    if distance_col:
-        scatter_df = plot_df.copy()
-        scatter_df['Distance'] = pd.to_numeric(df.loc[scatter_df.index, distance_col], errors='coerce')
-        scatter_df = scatter_df.dropna(subset=['Distance'])
-        if not scatter_df.empty:
-            fig_s = px.scatter(scatter_df, x='Distance', y='Average Patients', size='Total Patients', hover_name=facility_col, color='Average Patients', color_continuous_scale='RdYlGn')
-            fig_s.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', coloraxis_showscale=False)
-            st.plotly_chart(fig_s, use_container_width=True)
     else:
-        st.info("No 'Distance From Hub' column found.")
+        st.success("✅ No operational issues reported.")
 
-# ===== TAB 5: BIHAR MAP =====
+# ===== TAB 5: BIHAR MAP (Circle Map) =====
 with tab5:
     st.markdown("### 🗺️ Bihar District Performance Map")
-    map_metric = st.radio("Color Map By:", ("Total Patients", "Weighted Avg", "Uptime %"), horizontal=True, key="map_metric")
+    st.caption("Each circle represents a district. Larger circle = more patients. Color = performance.")
+    map_metric = st.radio("Color Map By:", ("Weighted Avg", "Uptime %", "Total Patients"), horizontal=True, key="map_metric")
     if st.button("🗺️ Generate Map", key="gen_map"):
         with st.spinner("Calculating..."):
             map_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
@@ -424,24 +370,37 @@ with tab5:
         else:
             map_df['GeoDistrict'] = map_df['District'].map(SHEET_TO_GEO)
             merged = map_df.dropna(subset=['GeoDistrict']).groupby('GeoDistrict').agg({'Total Patients': 'sum', 'Facilities': 'sum', 'Weighted Avg': 'mean', 'Uptime %': 'mean'}).round(1).reset_index()
-            try:
-                with urllib.request.urlopen("https://raw.githubusercontent.com/geohacker/india/master/district/india_district.geojson", timeout=10) as url:
-                    india_geojson = json.load(url)
-                bihar_features = [f for f in india_geojson['features'] if f['properties'].get('st_nm') == 'Bihar']
-                bihar_geojson = {'type': 'FeatureCollection', 'features': bihar_features}
-                if not bihar_features:
-                    st.dataframe(merged, use_container_width=True, hide_index=True)
-                else:
-                    fig_map = px.choropleth(merged, geojson=bihar_geojson, locations='GeoDistrict', featureidkey='properties.district', color=map_metric,
-                                            color_continuous_scale='RdYlGn' if map_metric == 'Uptime %' else 'Viridis', hover_name='GeoDistrict',
-                                            hover_data={'Total Patients': True, 'Weighted Avg': True, 'Uptime %': True, 'Facilities': True})
-                    fig_map.update_geos(fitbounds='locations', visible=False)
-                    fig_map.update_layout(height=700, margin={"r": 0, "t": 50, "l": 0, "b": 0}, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-                    st.plotly_chart(fig_map, use_container_width=True)
-                    st.dataframe(merged.sort_values(map_metric, ascending=False), use_container_width=True, hide_index=True)
-            except Exception as e:
-                st.error(f"Could not load map: {e}")
-                st.dataframe(merged.sort_values(map_metric, ascending=False), use_container_width=True, hide_index=True)
+            merged['Lat'] = merged['GeoDistrict'].map(lambda x: BIHAR_COORDS.get(x, (None, None))[0])
+            merged['Lon'] = merged['GeoDistrict'].map(lambda x: BIHAR_COORDS.get(x, (None, None))[1])
+            merged = merged.dropna(subset=['Lat', 'Lon'])
+            
+            if merged.empty:
+                st.warning("No mappable data.")
+            else:
+                # Use scatter_map (MapLibre) - no API key needed
+                fig_map = px.scatter_map(
+                    merged,
+                    lat='Lat', lon='Lon',
+                    size='Total Patients',
+                    color=map_metric,
+                    color_continuous_scale='RdYlGn' if map_metric == 'Uptime %' else 'Viridis',
+                    hover_name='GeoDistrict',
+                    hover_data={'Total Patients': True, 'Weighted Avg': True, 'Uptime %': True, 'Facilities': True, 'Lat': False, 'Lon': False},
+                    size_max=60, zoom=6.3,
+                    title=f'Bihar District Performance — {map_metric}'
+                )
+                fig_map.update_layout(
+                    map_style='carto-darkmatter',
+                    height=700,
+                    margin={"r": 0, "t": 50, "l": 0, "b": 0},
+                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                    coloraxis_colorbar=dict(title=map_metric)
+                )
+                st.plotly_chart(fig_map, use_container_width=True)
+                
+                st.divider()
+                st.markdown("#### 📊 District Data Table")
+                st.dataframe(merged.sort_values(map_metric, ascending=False).drop(columns=['Lat', 'Lon']), use_container_width=True, hide_index=True)
     else:
         st.info("Click 'Generate Map' to visualize district performance.")
 
@@ -449,10 +408,8 @@ with tab5:
 with tab6:
     st.markdown("### ⚖️ Compare Two Districts Head-to-Head")
     ca, cb = st.columns(2)
-    with ca:
-        district_a = st.selectbox("🔵 District A", available_sheets, index=0, key='cmp_a')
-    with cb:
-        district_b = st.selectbox("🔴 District B", available_sheets, index=min(1, len(available_sheets) - 1), key='cmp_b')
+    with ca: district_a = st.selectbox("🔵 District A", available_sheets, index=0, key='cmp_a')
+    with cb: district_b = st.selectbox("🔴 District B", available_sheets, index=min(1, len(available_sheets) - 1), key='cmp_b')
     if district_a and district_b:
         df_a = pd.read_excel(xls, sheet_name=district_a)
         df_b = pd.read_excel(xls, sheet_name=district_b)
@@ -474,7 +431,6 @@ with tab6:
                 m1.metric("Total", f"{sb['total']:,}")
                 m2.metric("Avg/Day", sb['weighted_avg'])
                 m3.metric("Uptime", f"{calc_uptime(sb)}%")
-
             st.divider()
             st.markdown("#### 📈 Daily Trend — Overlaid")
             def get_trend(p, cols, name):
@@ -482,14 +438,12 @@ with tab6:
                 for c in cols:
                     dv = extract_date(c)
                     t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
-                    if pd.notna(dv):
-                        d.append({'Date': dv, 'Patients': t, 'District': name})
+                    if pd.notna(dv): d.append({'Date': dv, 'Patients': t, 'District': name})
                 return pd.DataFrame(d)
             combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
             fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#3498db', district_b: '#e74c3c'})
             fig_c.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', height=450)
             st.plotly_chart(fig_c, use_container_width=True)
-
             st.divider()
             st.markdown("#### 🏥 Top 10 Facilities — Side-by-Side")
             cA, cB = st.columns(2)
