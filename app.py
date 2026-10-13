@@ -36,26 +36,9 @@ st.markdown("""
         margin-top: 8px;
         margin-bottom: 8px;
     }
-    .zm-card-header {
-        color: #00D4FF;
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1.5px;
-        margin-bottom: 6px;
-    }
-    .zm-card-name {
-        color: #FFFFFF;
-        font-size: 15px;
-        font-weight: 700;
-        line-height: 1.3;
-        margin-bottom: 4px;
-    }
-    .zm-card-zone {
-        color: #8fa5bb;
-        font-size: 12px;
-        font-style: italic;
-    }
+    .zm-card-header {color: #00D4FF; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;}
+    .zm-card-name {color: #FFFFFF; font-size: 15px; font-weight: 700; line-height: 1.3; margin-bottom: 4px;}
+    .zm-card-zone {color: #8fa5bb; font-size: 12px; font-style: italic;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -289,16 +272,26 @@ def calculate_context_wow(df, time_filter):
 
 def generate_news_items(plot_df, facility_col, active_date_cols, threshold=20):
     news = []
-    if len(active_date_cols) < 14: return news
+    if len(active_date_cols) < 14:
+        return news
     recent_cols = active_date_cols[-7:]
     previous_cols = active_date_cols[-14:-7]
     for _, row in plot_df.iterrows():
         ra = pd.to_numeric(row[recent_cols], errors='coerce').fillna(0).mean()
         pa = pd.to_numeric(row[previous_cols], errors='coerce').fillna(0).mean()
-        if pa >= 3:
-            ch = ((ra - pa) / pa) * 100
-            if abs(ch) >= threshold:
-                news.append({'facility': row[facility_col], 'change': round(ch, 1), 'recent': round(ra, 1), 'previous': round(pa, 1)})
+        # Round FIRST so the displayed % matches the displayed averages
+        ra_r = round(ra, 1)
+        pa_r = round(pa, 1)
+        if pa_r >= 3:
+            ch = ((ra_r - pa_r) / pa_r) * 100
+            ch_r = round(ch, 1)
+            if abs(ch_r) >= threshold:
+                news.append({
+                    'facility': row[facility_col],
+                    'change': ch_r,
+                    'recent': ra_r,
+                    'previous': pa_r
+                })
     news.sort(key=lambda x: abs(x['change']), reverse=True)
     return news
 
@@ -311,7 +304,13 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
             sdf = read_sheet_robust(xls, sheet)
             _, _, s = process_district_df(sdf, time_filter)
             if s:
-                data.append({'District': sheet, 'Total Patients': s['total'], 'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s), 'Facilities': s['num_facilities']})
+                data.append({
+                    'District': sheet,
+                    'Total Patients': s['total'],
+                    'Weighted Avg': s['weighted_avg'],
+                    'Uptime %': calc_uptime(s),
+                    'Facilities': s['num_facilities']
+                })
         except Exception:
             pass
     return pd.DataFrame(data)
@@ -359,23 +358,30 @@ with st.sidebar:
             sheet_found = False
             for s in available_sheets:
                 if s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower():
-                    sheet_to_load = s; sheet_found = True; break
-            if sheet_found: st.success(f"✅ Data Available: {selected_district_zm}")
-            else: st.warning(f"⏳ Data Pending: {selected_district_zm}")
+                    sheet_to_load = s
+                    sheet_found = True
+                    break
+            if sheet_found:
+                st.success(f"✅ Data Available: {selected_district_zm}")
+            else:
+                st.warning(f"⏳ Data Pending: {selected_district_zm}")
         except Exception as e:
             st.error(f"Error: {e}")
 
 # --- MAIN AREA ---
 st.title("🏥 Bihar District Hub & Spoke Dashboard")
 if uploaded_data_file is None:
-    st.info("👈 Please upload the Main Data File from the sidebar to begin."); st.stop()
+    st.info("👈 Please upload the Main Data File from the sidebar to begin.")
+    st.stop()
 if not sheet_found:
-    st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**"); st.stop()
+    st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**")
+    st.stop()
 
 df_raw = read_sheet_robust(xls, sheet_to_load)
 plot_df, raw_text_df, stats = process_district_df(df_raw, time_filter)
 if plot_df is None:
-    st.error(f"Could not process the sheet '{sheet_to_load}'."); st.stop()
+    st.error(f"Could not process the sheet '{sheet_to_load}'.")
+    st.stop()
 facility_col = stats['facility_col']
 
 # --- NEWS TICKER ---
@@ -383,8 +389,10 @@ news_items = generate_news_items(plot_df, facility_col, stats['active_date_cols'
 if news_items:
     ticker_html = '<div class="news-ticker-container"><div class="news-ticker-label">🔴 LIVE</div><div class="news-ticker-scroll">'
     for item in news_items:
-        if item['change'] > 0: ticker_html += f'<span class="news-item-up">📈 {item["facility"]} | +{item["change"]}% | ({item["previous"]} → {item["recent"]}) &nbsp;&nbsp;◆&nbsp;&nbsp;</span>'
-        else: ticker_html += f'<span class="news-item-down">📉 {item["facility"]} | {item["change"]}% | ({item["previous"]} → {item["recent"]}) &nbsp;&nbsp;◆&nbsp;&nbsp;</span>'
+        if item['change'] > 0:
+            ticker_html += f'<span class="news-item-up">📈 {item["facility"]} | +{item["change"]}% | ({item["previous"]} → {item["recent"]} /day) &nbsp;&nbsp;◆&nbsp;&nbsp;</span>'
+        else:
+            ticker_html += f'<span class="news-item-down">📉 {item["facility"]} | {item["change"]}% | ({item["previous"]} → {item["recent"]} /day) &nbsp;&nbsp;◆&nbsp;&nbsp;</span>'
     ticker_html += '</div></div>'
     st.markdown(ticker_html, unsafe_allow_html=True)
 
@@ -434,7 +442,8 @@ with tab1:
     with c3: active_only = st.checkbox("Exclude Inactive", value=False, key="d3")
     metric_col = {'Average Patients': 'Average Patients', 'Total Patients': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
     filtered = plot_df.copy()
-    if active_only: filtered = filtered[filtered['Total Patients'] > 0]
+    if active_only:
+        filtered = filtered[filtered['Total Patients'] > 0]
     if filtered.empty:
         st.warning("No data matches the filters.")
     else:
@@ -467,7 +476,8 @@ with tab2:
             lb_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
         if not lb_df.empty:
             lb_df = lb_df.sort_values('Total Patients', ascending=False).reset_index(drop=True)
-            lb_df.index = lb_df.index + 1; lb_df.index.name = 'Rank'
+            lb_df.index = lb_df.index + 1
+            lb_df.index.name = 'Rank'
             def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
             lb_df['District'] = lb_df.apply(lambda row: f"{medal(row.name)} {row['District']}".strip(), axis=1)
             st.dataframe(lb_df, use_container_width=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
@@ -475,7 +485,8 @@ with tab2:
             fig_lb = px.bar(top15, x='Total Patients', y='District', orientation='h', color='Uptime %', color_continuous_scale='RdYlGn')
             fig_lb.update_layout(yaxis=dict(autorange="reversed"), height=500, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
             st.plotly_chart(fig_lb, use_container_width=True)
-    else: st.info("Click the button above to generate the statewide leaderboard.")
+    else:
+        st.info("Click the button above to generate the statewide leaderboard.")
 
 # ===== TAB 3: TRENDS =====
 with tab3:
@@ -486,7 +497,8 @@ with tab3:
         for col in stats['active_date_cols']:
             d = extract_date(col)
             dt = pd.to_numeric(plot_df[col], errors='coerce').fillna(0).sum()
-            if pd.notna(d): trend_data.append({'Date': d, 'Patients': dt})
+            if pd.notna(d):
+                trend_data.append({'Date': d, 'Patients': dt})
         if trend_data:
             trend_df = pd.DataFrame(trend_data).sort_values('Date')
             trend_df['Day'] = trend_df['Date'].dt.day_name()
@@ -512,7 +524,8 @@ with tab3:
     st.divider()
     st.markdown("#### ⚠️ Anomaly Detector")
     if len(stats['active_date_cols']) >= 8:
-        rc = stats['active_date_cols'][-8:-1]; lc = stats['active_date_cols'][-1]
+        rc = stats['active_date_cols'][-8:-1]
+        lc = stats['active_date_cols'][-1]
         anomalies = []
         for _, row in plot_df.iterrows():
             pa = pd.to_numeric(row[rc], errors='coerce').fillna(0).mean()
@@ -520,8 +533,11 @@ with tab3:
             lv = 0 if pd.isna(lv) else lv
             if pa > 5 and lv < (pa * 0.2):
                 anomalies.append({'Facility': row[facility_col], 'Prev 7-day Avg': round(pa, 1), 'Latest Day': int(lv), 'Drop %': f"-{round((1 - lv/pa) * 100)}%"})
-        if anomalies: st.error(f"⚠️ {len(anomalies)} anomalies detected!"); st.dataframe(pd.DataFrame(anomalies), use_container_width=True, hide_index=True)
-        else: st.success("✅ No anomalies detected.")
+        if anomalies:
+            st.error(f"⚠️ {len(anomalies)} anomalies detected!")
+            st.dataframe(pd.DataFrame(anomalies), use_container_width=True, hide_index=True)
+        else:
+            st.success("✅ No anomalies detected.")
 
 # ===== TAB 4: COMPARE DISTRICTS =====
 with tab4:
@@ -566,7 +582,8 @@ with tab4:
                 for c in cols:
                     dv = extract_date(c)
                     t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
-                    if pd.notna(dv): d.append({'Date': dv, 'Patients': t, 'District': name})
+                    if pd.notna(dv):
+                        d.append({'Date': dv, 'Patients': t, 'District': name})
                 return pd.DataFrame(d)
             combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
             fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#3498db', district_b: '#e74c3c'})
