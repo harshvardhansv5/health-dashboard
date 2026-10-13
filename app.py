@@ -3,6 +3,7 @@ import pandas as pd
 import plotly.express as px
 from datetime import timedelta
 import re
+import io
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
@@ -41,34 +42,50 @@ ZM_DATA = {
 DISTRICT_MAP = {"Seikhpura": "Sheikhpura", "Rohtas": "Sasaram"}
 HUB_TO_SHEET_MAP = {"SDH Barh Patna": "Barh", "SDH Danapur Patna": "Danapur"}
 
-# --- BIHAR DISTRICT CENTROIDS (Lat, Lon) for Map Rendering ---
-BIHAR_COORDS = {
-    "Araria": (26.1350, 87.5132), "Arwal": (25.2446, 84.6665), "Aurangabad": (24.7520, 84.3730),
-    "Banka": (24.8830, 86.9216), "Begusarai": (25.4182, 86.1270), "Bhagalpur": (25.2447, 86.9893),
-    "Bhojpur": (25.5609, 84.6199), "Buxar": (25.5647, 83.9771), "Darbhanga": (26.1542, 85.8918),
-    "Purbi Champaran": (26.6472, 84.9217), "Gaya": (24.7955, 85.0002), "Gopalganj": (26.4673, 84.4392),
-    "Jamui": (24.9258, 86.2252), "Jehanabad": (25.2135, 84.9895), "Kaimur": (25.0405, 83.6037),
-    "Katihar": (25.5541, 87.5587), "Khagaria": (25.5016, 86.4667), "Kishanganj": (26.0892, 87.9415),
-    "Lakhisarai": (25.4061, 86.0906), "Madhepura": (25.9215, 86.7926), "Madhubani": (26.3548, 86.4907),
-    "Munger": (25.3812, 86.4728), "Muzaffarpur": (26.1209, 85.3647), "Nalanda": (25.2016, 85.5222),
-    "Nawada": (24.8845, 85.5430), "Patna": (25.5941, 85.1376), "Purnia": (25.7771, 87.4753),
-    "Rohtas": (24.9572, 84.0283), "Saharsa": (25.8798, 86.6027), "Samastipur": (25.8629, 85.7811),
-    "Saran": (25.7814, 84.7477), "Sheikhpura": (25.1392, 85.8500), "Sheohar": (26.5154, 85.2934),
-    "Sitamarhi": (26.5934, 85.4913), "Siwan": (26.2194, 84.3559), "Supaul": (26.1244, 86.6054),
-    "Vaishali": (25.6921, 85.2150), "Pashchim Champaran": (27.1041, 84.5099),
-}
+# --- ROBUST SHEET READER ---
+def read_sheet_robust(xls, sheet_name):
+    """Reads a sheet and finds the header row dynamically by looking for 'Name of the Hospital'."""
+    try:
+        df_raw = pd.read_excel(xls, sheet_name=sheet_name, header=None)
+        header_idx = None
+        # Scan first 15 rows to find the header
+        for i in range(min(15, len(df_raw))):
+            row = df_raw.iloc[i]
+            for cell in row:
+                cell_str = str(cell).lower()
+                if 'name of the hospital' in cell_str:
+                    header_idx = i
+                    break
+            if header_idx is not None:
+                break
+        
+        if header_idx is None:
+            # Fallback: default read
+            df = pd.read_excel(xls, sheet_name=sheet_name)
+        else:
+            df = pd.read_excel(xls, sheet_name=sheet_name, header=header_idx)
+        
+        df.columns = [str(c).strip() for c in df.columns]
+        return df
+    except Exception as e:
+        return None
 
-SHEET_TO_GEO = {
-    "Sasaram": "Rohtas", "Danapur": "Patna", "Barh": "Patna", "Sheikhpura": "Sheikhpura", "Purnia": "Purnia", "Saharsa": "Saharsa",
-    "Madhepura": "Madhepura", "Supaul": "Supaul", "Araria": "Araria", "Katihar": "Katihar", "Kishanganj": "Kishanganj", "Banka": "Banka",
-    "Bhagalpur": "Bhagalpur", "Jamui": "Jamui", "Munger": "Munger", "Begusarai": "Begusarai", "Khagaria": "Khagaria", "Lakhisarai": "Lakhisarai",
-    "Muzaffarpur": "Muzaffarpur", "Sheohar": "Sheohar", "Vaishali": "Vaishali", "Bhojpur": "Bhojpur", "Nalanda": "Nalanda", "Patna": "Patna",
-    "East Champaran": "Purbi Champaran", "West Champaran": "Pashchim Champaran", "Sitamarhi": "Sitamarhi", "Darbhanga": "Darbhanga",
-    "Madhubani": "Madhubani", "Samastipur": "Samastipur", "Aurangabad": "Aurangabad", "Gaya": "Gaya", "Nawada": "Nawada", "Arwal": "Arwal",
-    "Jehanabad": "Jehanabad", "Buxar": "Buxar", "Kaimur": "Kaimur", "Gopalganj": "Gopalganj", "Saran": "Saran", "Siwan": "Siwan"
-}
+def find_facility_column(df):
+    """Flexibly find the facility name column."""
+    for c in df.columns:
+        c_low = str(c).lower()
+        if 'name of the hospital' in c_low:
+            return c
+    # Fallback searches
+    for c in df.columns:
+        c_low = str(c).lower()
+        if 'hospital' in c_low and ('name' in c_low or 'facility' in c_low):
+            return c
+    for c in df.columns:
+        if 'hospital' in str(c).lower():
+            return c
+    return None
 
-# --- HELPER FUNCTIONS ---
 def extract_date(col_name):
     match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', str(col_name))
     if match:
@@ -76,11 +93,11 @@ def extract_date(col_name):
     return pd.NaT
 
 def process_district_df(df, time_filter):
-    df.columns = [str(c).strip() for c in df.columns]
-    facility_col = [c for c in df.columns if 'Name of the Hospital' in c]
+    if df is None:
+        return None, None, None
+    facility_col = find_facility_column(df)
     if not facility_col:
         return None, None, None
-    facility_col = facility_col[0]
     all_facilities = df[facility_col].dropna().tolist()
     all_facilities = [f for f in all_facilities if 'TOTAL' not in str(f).upper()]
     date_cols = [c for c in df.columns if 'Total number of patients' in c]
@@ -159,16 +176,16 @@ def generate_news_items(plot_df, facility_col, active_date_cols, threshold=20):
 
 @st.cache_data(show_spinner=False)
 def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter):
-    import io
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     data = []
     for sheet in sheet_names_tuple:
         try:
-            sdf = pd.read_excel(xls, sheet_name=sheet)
+            sdf = read_sheet_robust(xls, sheet)
             _, _, s = process_district_df(sdf, time_filter)
             if s:
                 data.append({'District': sheet, 'Total Patients': s['total'], 'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s), 'Facilities': s['num_facilities']})
-        except Exception: pass
+        except Exception:
+            pass
     return pd.DataFrame(data)
 
 # --- SIDEBAR ---
@@ -206,10 +223,11 @@ if uploaded_data_file is None:
 if not sheet_found:
     st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**"); st.stop()
 
-df = pd.read_excel(xls, sheet_name=sheet_to_load)
+df = read_sheet_robust(xls, sheet_to_load)
 plot_df, raw_text_df, stats = process_district_df(df, time_filter)
 if plot_df is None:
-    st.error("This sheet does not have the expected columns."); st.stop()
+    st.error(f"Could not process the sheet '{sheet_to_load}'. Please check if it has a 'Name of the Hospitals' column and 'Total number of patients' date columns.")
+    st.stop()
 facility_col = stats['facility_col']
 
 news_items = generate_news_items(plot_df, facility_col, stats['active_date_cols'], threshold=20)
@@ -221,8 +239,8 @@ if news_items:
     ticker_html += '</div></div>'
     st.markdown(ticker_html, unsafe_allow_html=True)
 
-# --- TABS ---
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 District Dashboard", "🏆 State Leaderboard", "📈 Trends & Analytics", "🚨 Diagnostics", "🗺️ Bihar Map", "⚖️ Compare Districts"])
+# --- TABS (Bihar Map removed) ---
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 District Dashboard", "🏆 State Leaderboard", "📈 Trends & Analytics", "🚨 Diagnostics", "⚖️ Compare Districts"])
 
 # ===== TAB 1: DISTRICT DASHBOARD =====
 with tab1:
@@ -257,18 +275,13 @@ with tab2:
     st.markdown("### 🏆 All Districts Ranked")
     with st.expander("ℹ️ What do 'Uptime %' and 'Weighted Avg' mean? Click to expand", expanded=False):
         st.markdown("""
-        **📊 Uptime %** — *The reliability score.*  
-        The percentage of days each facility reported more than 0 patients. Higher is better.  
-        *Example: 80% Uptime means facilities were active 4 out of every 5 days.*
-
-        **⚖️ Weighted Avg** — *The efficiency score.*  
-        Total patients divided by (facilities × days). Big hospitals count more than small ones.  
-        *Example: 14.3 means the average facility saw 14.3 patients per day.*
-
-        **👥 Total Patients** — *The volume score.*  
-        Raw sum of all patients across every facility in the district.
-
-        **🏥 Facilities** — Number of reporting hospitals (SDH, CHC, PHC, UPHC) in the district.
+        **📊 Uptime %** — *The reliability score.* The percentage of days each facility reported more than 0 patients.
+        
+        **⚖️ Weighted Avg** — *The efficiency score.* Total patients divided by (facilities × days).
+        
+        **👥 Total Patients** — *The volume score.* Raw sum of all patients across every facility in the district.
+        
+        **🏥 Facilities** — Number of reporting hospitals in the district.
         """)
     if st.button("🔄 Calculate Leaderboard", key="lb"):
         with st.spinner("Processing..."):
@@ -312,7 +325,6 @@ with tab3:
             st.plotly_chart(fig_t, use_container_width=True)
     st.divider()
     st.markdown("#### Spoke Heatmap (Facility vs. Date)")
-    st.caption("Red = 0 patients. Green = High volume. Look for horizontal (facility down) or vertical (district down) red streaks.")
     heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
     heatmap_df.columns = [extract_date(c).strftime('%d-%b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
     fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale='RdYlGn')
@@ -336,7 +348,7 @@ with tab3:
 with tab4:
     st.markdown(f"### 🚨 Operational Diagnostics for {selected_district_zm}")
     st.markdown("#### Why Are Facilities Reporting Zero?")
-    st.caption("This chart reveals the primary blockers to patient care. Focus on the biggest slice.")
+    st.caption("This chart reveals the primary blockers to patient care.")
     all_reasons = []
     for col in stats['active_date_cols']:
         for val in raw_text_df[col]:
@@ -357,67 +369,23 @@ with tab4:
     else:
         st.success("✅ No operational issues reported.")
 
-# ===== TAB 5: BIHAR MAP (Coordinate Plot) =====
+# ===== TAB 5: COMPARE DISTRICTS =====
 with tab5:
-    st.markdown("### 🗺️ Bihar District Performance Map")
-    st.caption("Each circle is a district placed by its real latitude/longitude. Larger circle = more patients. Color = performance.")
-    map_metric = st.radio("Color Map By:", ("Weighted Avg", "Uptime %", "Total Patients"), horizontal=True, key="map_metric")
-    if st.button("🗺️ Generate Map", key="gen_map"):
-        with st.spinner("Calculating..."):
-            map_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
-        if map_df.empty:
-            st.warning("No data available to map.")
-        else:
-            map_df['GeoDistrict'] = map_df['District'].map(SHEET_TO_GEO)
-            merged = map_df.dropna(subset=['GeoDistrict']).groupby('GeoDistrict').agg({'Total Patients': 'sum', 'Facilities': 'sum', 'Weighted Avg': 'mean', 'Uptime %': 'mean'}).round(1).reset_index()
-            merged['Lat'] = merged['GeoDistrict'].map(lambda x: BIHAR_COORDS.get(x, (None, None))[0])
-            merged['Lon'] = merged['GeoDistrict'].map(lambda x: BIHAR_COORDS.get(x, (None, None))[1])
-            merged = merged.dropna(subset=['Lat', 'Lon'])
-            
-            if merged.empty:
-                st.warning("No mappable data.")
-            else:
-                fig_map = px.scatter(
-                    merged,
-                    x='Lon', y='Lat',
-                    size='Total Patients',
-                    color=map_metric,
-                    color_continuous_scale='RdYlGn' if map_metric == 'Uptime %' else 'Viridis',
-                    hover_name='GeoDistrict',
-                    hover_data={'Total Patients': True, 'Weighted Avg': True, 'Uptime %': True, 'Facilities': True, 'Lat': False, 'Lon': False},
-                    size_max=70,
-                    title=f'Bihar District Performance — {map_metric}'
-                )
-                fig_map.update_traces(marker=dict(line=dict(width=1, color='white')))
-                fig_map.update_layout(
-                    height=700,
-                    xaxis=dict(title="Longitude", showgrid=True, gridcolor='#222', zeroline=False, showticklabels=False),
-                    yaxis=dict(title="Latitude", showgrid=True, gridcolor='#222', zeroline=False, showticklabels=False, scaleanchor="x", scaleratio=1),
-                    plot_bgcolor='#0E1117',
-                    paper_bgcolor='rgba(0,0,0,0)',
-                    coloraxis_colorbar=dict(title=map_metric)
-                )
-                st.plotly_chart(fig_map, use_container_width=True)
-                
-                st.divider()
-                st.markdown("#### 📊 District Data Table")
-                st.dataframe(merged.sort_values(map_metric, ascending=False).drop(columns=['Lat', 'Lon']), use_container_width=True, hide_index=True)
-    else:
-        st.info("Click 'Generate Map' to visualize district performance.")
-
-# ===== TAB 6: COMPARE DISTRICTS =====
-with tab6:
     st.markdown("### ⚖️ Compare Two Districts Head-to-Head")
     ca, cb = st.columns(2)
     with ca: district_a = st.selectbox("🔵 District A", available_sheets, index=0, key='cmp_a')
     with cb: district_b = st.selectbox("🔴 District B", available_sheets, index=min(1, len(available_sheets) - 1), key='cmp_b')
+    
     if district_a and district_b:
-        df_a = pd.read_excel(xls, sheet_name=district_a)
-        df_b = pd.read_excel(xls, sheet_name=district_b)
+        df_a = read_sheet_robust(xls, district_a)
+        df_b = read_sheet_robust(xls, district_b)
         pa, ra, sa = process_district_df(df_a, time_filter)
         pb, rb, sb = process_district_df(df_b, time_filter)
-        if pa is None or pb is None:
-            st.error("One of the sheets does not have the expected columns.")
+        
+        if pa is None:
+            st.error(f"❌ Could not process **{district_a}**. Column names found: {list(df_a.columns)[:5] if df_a is not None else 'N/A'}")
+        elif pb is None:
+            st.error(f"❌ Could not process **{district_b}**. Column names found: {list(df_b.columns)[:5] if df_b is not None else 'N/A'}")
         else:
             col1, col2 = st.columns(2)
             with col1:
