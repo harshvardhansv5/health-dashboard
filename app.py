@@ -21,24 +21,20 @@ st.markdown("""
     @keyframes scroll {0% {transform: translateX(0);} 100% {transform: translateX(-100%);}}
     .news-item-up {color: #2ecc71; font-weight: 600; padding: 0 30px;}
     .news-item-down {color: #e74c3c; font-weight: 600; padding: 0 30px;}
-    .wow-card {background: linear-gradient(135deg, #1a2a3a 0%, #0E1117 100%); border: 1px solid #333; border-left: 5px solid #00D4FF; border-radius: 10px; padding: 18px 24px; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;}
-    .wow-label {color: #AAAAAA; font-size: 13px; text-transform: uppercase; letter-spacing: 1px;}
-    .wow-value {color: #FFFFFF; font-size: 26px; font-weight: 700;}
-    .wow-up {color: #2ecc71; font-size: 22px; font-weight: 700;}
-    .wow-down {color: #e74c3c; font-size: 22px; font-weight: 700;}
-    .wow-flat {color: #AAAAAA; font-size: 22px; font-weight: 700;}
-    .zm-card {
-        background: linear-gradient(135deg, #1e3a5f 0%, #0E1117 100%);
-        border: 1px solid #2a4a6f;
-        border-left: 4px solid #00D4FF;
-        border-radius: 10px;
-        padding: 14px 16px;
-        margin-top: 8px;
-        margin-bottom: 8px;
-    }
+    .zm-card {background: linear-gradient(135deg, #1e3a5f 0%, #0E1117 100%); border: 1px solid #2a4a6f; border-left: 4px solid #00D4FF; border-radius: 10px; padding: 14px 16px; margin-top: 8px; margin-bottom: 8px;}
     .zm-card-header {color: #00D4FF; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;}
     .zm-card-name {color: #FFFFFF; font-size: 15px; font-weight: 700; line-height: 1.3; margin-bottom: 4px;}
     .zm-card-zone {color: #8fa5bb; font-size: 12px; font-style: italic;}
+    .report-header {background: linear-gradient(135deg, #1a2a3a 0%, #0E1117 100%); border: 1px solid #333; border-left: 5px solid #00D4FF; border-radius: 10px; padding: 20px 28px; margin-bottom: 20px;}
+    .report-title {color: #FFFFFF; font-size: 24px; font-weight: 700; margin-bottom: 8px;}
+    .report-meta {color: #8fa5bb; font-size: 14px; line-height: 1.6;}
+    .report-meta strong {color: #CCCCCC;}
+    .district-grade-badge {display: inline-block; padding: 6px 18px; border-radius: 8px; font-size: 22px; font-weight: 800; margin-left: 10px;}
+    .grade-A {background-color: #2ecc71; color: #000;}
+    .grade-B {background-color: #a3e635; color: #000;}
+    .grade-C {background-color: #fbbf24; color: #000;}
+    .grade-D {background-color: #f97316; color: #FFF;}
+    .grade-F {background-color: #e74c3c; color: #FFF;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -130,37 +126,6 @@ def get_facility_mask(df, facility_col):
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('TOTAL', na=False)
     return mask
 
-def get_week_indices(df, weeks_back):
-    date_cols = find_date_columns(df)
-    if not date_cols:
-        return None
-    paired = [(c, extract_date(c)) for c in date_cols]
-    paired = [(c, d) for c, d in paired if pd.notna(d)]
-    paired.sort(key=lambda x: x[1])
-    sorted_cols = [c for c, d in paired]
-
-    latest_data_idx = -1
-    facility_col = find_facility_column(df)
-    if facility_col:
-        mask = get_facility_mask(df, facility_col)
-        for i in range(len(sorted_cols) - 1, -1, -1):
-            c = sorted_cols[i]
-            col_values = pd.to_numeric(df.loc[mask, c], errors='coerce').fillna(0)
-            if col_values.sum() > 0:
-                latest_data_idx = i
-                break
-
-    if latest_data_idx < 0:
-        return None
-
-    start = max(0, latest_data_idx - (weeks_back * 7) + 1)
-    end = latest_data_idx - ((weeks_back - 1) * 7) + 1
-    end = min(end, latest_data_idx + 1)
-
-    if start >= end:
-        return None
-    return sorted_cols[start:end], sorted_cols
-
 def process_district_df(df, time_filter):
     if df is None:
         return None, None, None
@@ -190,16 +155,12 @@ def process_district_df(df, time_filter):
     if latest_data_idx == -1 and sorted_cols:
         latest_data_idx = len(sorted_cols) - 1
 
-    if time_filter == "All Available Data":
-        active_date_cols = sorted_cols
-    elif time_filter == "Week 1":
+    if time_filter == "Last 7 Days":
         active_date_cols = sorted_cols[max(0, latest_data_idx - 6): latest_data_idx + 1]
-    elif time_filter == "Week 2":
-        active_date_cols = sorted_cols[max(0, latest_data_idx - 13): max(0, latest_data_idx - 6)]
-    elif time_filter == "Week 3":
-        active_date_cols = sorted_cols[max(0, latest_data_idx - 20): max(0, latest_data_idx - 13)]
-    elif time_filter == "Week 4":
-        active_date_cols = sorted_cols[max(0, latest_data_idx - 27): max(0, latest_data_idx - 20)]
+    elif time_filter == "Last 15 Days":
+        active_date_cols = sorted_cols[max(0, latest_data_idx - 14): latest_data_idx + 1]
+    elif time_filter == "Last 30 Days":
+        active_date_cols = sorted_cols[max(0, latest_data_idx - 29): latest_data_idx + 1]
     else:
         active_date_cols = sorted_cols
 
@@ -232,54 +193,65 @@ def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
     return round(((total_fd - s['zero_days']) / total_fd * 100), 1) if total_fd > 0 else 0
 
-def calculate_context_wow(df, time_filter):
-    if df is None:
-        return None
-    if time_filter not in ["Week 1", "Week 2", "Week 3"]:
-        return None
+def calculate_grade(uptime_pct, avg_per_day):
+    """Grade a spoke based on reliability + volume."""
+    if avg_per_day == 0 or uptime_pct < 30:
+        return "F"
+    if uptime_pct > 85 and avg_per_day > 10:
+        return "A"
+    if uptime_pct > 70 and avg_per_day > 5:
+        return "B"
+    if uptime_pct > 50 and avg_per_day > 2:
+        return "C"
+    if uptime_pct > 30 and avg_per_day > 1:
+        return "D"
+    return "F"
 
-    facility_col = find_facility_column(df)
-    if not facility_col:
-        return None
-    df = df[get_facility_mask(df, facility_col)].copy()
-
-    weeks_back = {"Week 1": 1, "Week 2": 2, "Week 3": 3}[time_filter]
-    result = get_week_indices(df, weeks_back)
-    if not result:
-        return None
-    cur_cols, _ = result
-
-    result_prev = get_week_indices(df, weeks_back + 1)
-    if not result_prev:
-        return None
-    prev_cols, _ = result_prev
-
-    cur_total = int(sum(pd.to_numeric(df[c], errors='coerce').fillna(0).sum() for c in cur_cols))
-    prev_total = int(sum(pd.to_numeric(df[c], errors='coerce').fillna(0).sum() for c in prev_cols))
-
-    if prev_total > 0:
-        change = round(((cur_total - prev_total) / prev_total) * 100, 1)
-    elif cur_total > 0:
-        change = 100.0
-    else:
-        change = 0.0
-
-    cur_label = f"{time_filter} (Latest 7 days)" if time_filter == "Week 1" else f"{time_filter} (7 days)"
-    prev_week_num = weeks_back + 1
-    prev_label = f"Week {prev_week_num} (Previous 7 days)"
-
-    return cur_label, cur_total, prev_label, prev_total, change
-
-def generate_news_items(plot_df, facility_col, active_date_cols, threshold=20):
-    news = []
-    if len(active_date_cols) < 14:
-        return news
-    recent_cols = active_date_cols[-7:]
-    previous_cols = active_date_cols[-14:-7]
+def district_grade(plot_df):
+    if plot_df is None or plot_df.empty:
+        return "F"
+    grade_map = {"A": 5, "B": 4, "C": 3, "D": 2, "F": 1}
+    reverse_map = {5: "A", 4: "B", 3: "C", 2: "D", 1: "F"}
+    grades = []
     for _, row in plot_df.iterrows():
+        grades.append(grade_map[calculate_grade(row['Uptime %'], row['Average Patients'])])
+    if not grades:
+        return "F"
+    avg = sum(grades) / len(grades)
+    rounded = max(1, min(5, int(round(avg))))
+    return reverse_map[rounded]
+
+def grade_emoji(g):
+    return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
+
+def generate_news_items(df, facility_col, threshold=20):
+    """Compute news items using the last 14 days of data, independent of the time filter."""
+    date_cols = find_date_columns(df)
+    if len(date_cols) < 14:
+        return []
+    paired = [(c, extract_date(c)) for c in date_cols]
+    paired = [(c, d) for c, d in paired if pd.notna(d)]
+    paired.sort(key=lambda x: x[1])
+    sorted_cols = [c for c, d in paired]
+
+    latest_data_idx = -1
+    for i in range(len(sorted_cols) - 1, -1, -1):
+        c = sorted_cols[i]
+        col_values = pd.to_numeric(df[c], errors='coerce').fillna(0)
+        if col_values.sum() > 0:
+            latest_data_idx = i
+            break
+
+    if latest_data_idx < 13:
+        return []
+
+    recent_cols = sorted_cols[latest_data_idx - 6: latest_data_idx + 1]
+    previous_cols = sorted_cols[latest_data_idx - 13: latest_data_idx - 6]
+
+    news = []
+    for _, row in df.iterrows():
         ra = pd.to_numeric(row[recent_cols], errors='coerce').fillna(0).mean()
         pa = pd.to_numeric(row[previous_cols], errors='coerce').fillna(0).mean()
-        # Round FIRST so the displayed % matches the displayed averages
         ra_r = round(ra, 1)
         pa_r = round(pa, 1)
         if pa_r >= 3:
@@ -349,7 +321,7 @@ with st.sidebar:
             selected_hub_zm = st.selectbox("Select Hub", hub_list)
 
             st.divider()
-            time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Week 1", "Week 2", "Week 3", "Week 4"])
+            time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"])
             st.divider()
 
             target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
@@ -385,7 +357,7 @@ if plot_df is None:
 facility_col = stats['facility_col']
 
 # --- NEWS TICKER ---
-news_items = generate_news_items(plot_df, facility_col, stats['active_date_cols'], threshold=20)
+news_items = generate_news_items(df_raw, facility_col, threshold=20)
 if news_items:
     ticker_html = '<div class="news-ticker-container"><div class="news-ticker-label">🔴 LIVE</div><div class="news-ticker-scroll">'
     for item in news_items:
@@ -397,38 +369,16 @@ if news_items:
     st.markdown(ticker_html, unsafe_allow_html=True)
 
 # --- TABS ---
-tab1, tab2, tab3, tab4 = st.tabs(["📊 District Dashboard", "🏆 State Leaderboard", "📈 Trends & Analytics", "⚖️ Compare Districts"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊 District Dashboard",
+    "📋 Report Card",
+    "🏆 State Leaderboard",
+    "📈 Trends & Analytics",
+    "⚖️ Compare Districts"
+])
 
 # ===== TAB 1: DISTRICT DASHBOARD =====
 with tab1:
-    wow = calculate_context_wow(df_raw, time_filter)
-    if wow:
-        cur_label, cur_total, prev_label, prev_total, ch = wow
-        if ch > 0:
-            arrow = f'<span class="wow-up">📈 +{ch}%</span>'
-        elif ch < 0:
-            arrow = f'<span class="wow-down">📉 {ch}%</span>'
-        else:
-            arrow = f'<span class="wow-flat">➡️ 0%</span>'
-
-        wow_html = f'''
-        <div class="wow-card">
-            <div>
-                <div class="wow-label">{cur_label}</div>
-                <div class="wow-value">{cur_total:,} patients</div>
-            </div>
-            <div>
-                <div class="wow-label">{prev_label}</div>
-                <div class="wow-value">{prev_total:,} patients</div>
-            </div>
-            <div>
-                <div class="wow-label">Week-over-Week Change</div>
-                <div>{arrow}</div>
-            </div>
-        </div>
-        '''
-        st.markdown(wow_html, unsafe_allow_html=True)
-
     col1, col2, col3 = st.columns(3)
     with col1: st.metric(label=f"Total Patients ({time_filter})", value=f"{stats['total']:,}")
     with col2: st.metric(label="Weighted Avg Daily Patients", value=f"{stats['weighted_avg']}")
@@ -458,8 +408,100 @@ with tab1:
     st.divider()
     st.caption(f"💡 Data: **{sheet_to_load}** | Range: **{time_filter}** | Refreshed: {pd.Timestamp.now().strftime('%d-%b-%Y %H:%M')}")
 
-# ===== TAB 2: LEADERBOARD =====
+# ===== TAB 2: REPORT CARD =====
 with tab2:
+    # Compute the period dates
+    period_str = "N/A"
+    if stats['active_date_cols']:
+        fd = extract_date(stats['active_date_cols'][0])
+        ld = extract_date(stats['active_date_cols'][-1])
+        if pd.notna(fd) and pd.notna(ld):
+            period_str = f"{fd.strftime('%d %b %Y')} – {ld.strftime('%d %b %Y')}"
+            if fd == ld:
+                period_str = fd.strftime('%d %b %Y')
+
+    d_grade = district_grade(plot_df)
+    grade_class = f"grade-{d_grade}"
+
+    # --- REPORT HEADER ---
+    header_html = f'''
+    <div class="report-header">
+        <div class="report-title">📋 District Report Card — {selected_district_zm}</div>
+        <div class="report-meta">
+            <strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; 
+            <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; 
+            <strong>Period:</strong> {period_str} <span style="color: #666;">({stats['num_days']} days)</span>
+            <br>
+            <strong>Generated:</strong> {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}
+        </div>
+    </div>
+    '''
+    st.markdown(header_html, unsafe_allow_html=True)
+
+    # --- DISTRICT GRADE CARD ---
+    col1, col2, col3, col4 = st.columns(4)
+    with col1: st.metric("Total Patients", f"{stats['total']:,}")
+    with col2: st.metric("Weighted Avg / Day", f"{stats['weighted_avg']}")
+    with col3: st.metric("Facility Uptime", f"{calc_uptime(stats)}%")
+    with col4:
+        st.markdown(f'''
+        <div style="background-color:#1E1E1E; border:1px solid #333; padding:15px; border-radius:10px; text-align:center;">
+            <div style="color:#AAAAAA; font-size:13px; text-transform:uppercase; letter-spacing:1px;">District Grade</div>
+            <div style="margin-top:8px;"><span class="district-grade-badge {grade_class}">{d_grade}</span></div>
+        </div>
+        ''', unsafe_allow_html=True)
+
+    st.divider()
+
+    # --- SPOKE SCORECARD TABLE ---
+    st.markdown("### 🏥 Spoke Scorecard")
+    st.caption("Every facility in the district, graded on reliability (60%) and volume (40%). Sorted best to worst.")
+
+    scorecard = plot_df.copy()
+    scorecard['Grade'] = scorecard.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
+    scorecard = scorecard.sort_values(by=['Grade', 'Uptime %', 'Average Patients'], ascending=[True, False, False])
+
+    # Build display table
+    display = pd.DataFrame()
+    display['Facility'] = scorecard[facility_col]
+    display['Grade'] = scorecard['Grade'].apply(grade_emoji)
+    display['Uptime %'] = scorecard['Uptime %']
+    display['Avg / Day'] = scorecard['Average Patients']
+    display['Total Patients'] = scorecard['Total Patients'].astype(int)
+    display['Zero Days'] = scorecard['Zero Days'].astype(int)
+
+    st.dataframe(
+        display,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Facility": st.column_config.TextColumn("Facility", width="large"),
+            "Grade": st.column_config.TextColumn("Grade", width="small"),
+            "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
+            "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
+            "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"),
+            "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d"),
+        }
+    )
+
+    st.divider()
+
+    # --- DOWNLOAD BUTTON ---
+    export = scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
+    export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Patients', 'Zero Days']
+    csv = export.to_csv(index=False).encode('utf-8')
+    period_file = pd.Timestamp.now().strftime('%b_%Y')
+
+    st.download_button(
+        label=f"📥 Download Report Card ({selected_district_zm})",
+        data=csv,
+        file_name=f'{selected_district_zm}_ReportCard_{time_filter.replace(" ", "_")}_{period_file}.csv',
+        mime='text/csv',
+        key='download_report'
+    )
+
+# ===== TAB 3: LEADERBOARD =====
+with tab3:
     st.markdown("### 🏆 All Districts Ranked")
     with st.expander("ℹ️ What do 'Uptime %' and 'Weighted Avg' mean? Click to expand", expanded=False):
         st.markdown("""
@@ -488,8 +530,8 @@ with tab2:
     else:
         st.info("Click the button above to generate the statewide leaderboard.")
 
-# ===== TAB 3: TRENDS =====
-with tab3:
+# ===== TAB 4: TRENDS =====
+with tab4:
     st.markdown(f"### 📈 Trends for {selected_district_zm}")
     st.markdown("#### Daily Patient Trend")
     if stats['active_date_cols']:
@@ -539,8 +581,8 @@ with tab3:
         else:
             st.success("✅ No anomalies detected.")
 
-# ===== TAB 4: COMPARE DISTRICTS =====
-with tab4:
+# ===== TAB 5: COMPARE DISTRICTS =====
+with tab5:
     st.markdown("### ⚖️ Compare Two Districts Head-to-Head")
     sorted_sheets = sorted(available_sheets)
     ca, cb = st.columns(2)
