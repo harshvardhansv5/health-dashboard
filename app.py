@@ -14,13 +14,6 @@ st.markdown("""
     div[data-testid="stMetric"] {background-color: #1E1E1E; border: 1px solid #333333; padding: 15px; border-radius: 10px;}
     div[data-testid="stMetric"] label {color: #AAAAAA !important;}
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {color: #FFFFFF !important;}
-    .news-ticker-container {background-color: #1a1a1a; border: 1px solid #333; border-left: 5px solid #00D4FF; border-radius: 8px; padding: 12px 0; margin-bottom: 15px; overflow: hidden; position: relative;}
-    .news-ticker-label {position: absolute; left: 0; top: 0; bottom: 0; background-color: #00D4FF; color: #000; font-weight: bold; padding: 12px 15px; z-index: 10; font-size: 14px;}
-    .news-ticker-scroll {display: inline-block; white-space: nowrap; padding-left: 100%; animation: scroll 60s linear infinite; font-size: 14px;}
-    .news-ticker-scroll:hover {animation-play-state: paused;}
-    @keyframes scroll {0% {transform: translateX(0);} 100% {transform: translateX(-100%);}}
-    .news-item-up {color: #2ecc71; font-weight: 600; padding: 0 30px;}
-    .news-item-down {color: #e74c3c; font-weight: 600; padding: 0 30px;}
     .zm-card {background: linear-gradient(135deg, #1e3a5f 0%, #0E1117 100%); border: 1px solid #2a4a6f; border-left: 4px solid #00D4FF; border-radius: 10px; padding: 14px 16px; margin-top: 8px; margin-bottom: 8px;}
     .zm-card-header {color: #00D4FF; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;}
     .zm-card-name {color: #FFFFFF; font-size: 15px; font-weight: 700; line-height: 1.3; margin-bottom: 4px;}
@@ -35,6 +28,11 @@ st.markdown("""
     .grade-C {background-color: #fbbf24; color: #000;}
     .grade-D {background-color: #f97316; color: #FFF;}
     .grade-F {background-color: #e74c3c; color: #FFF;}
+    .info-bar {display: flex; gap: 12px; margin-bottom: 15px;}
+    .info-card {flex: 1; background: linear-gradient(135deg, #1a2a3a 0%, #0E1117 100%); border: 1px solid #333; border-left: 4px solid #00D4FF; border-radius: 10px; padding: 14px 20px;}
+    .info-label {color: #8fa5bb; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;}
+    .info-value {color: #FFFFFF; font-size: 18px; font-weight: 700; line-height: 1.3;}
+    .info-sub {color: #00D4FF; font-size: 13px; font-weight: 500; margin-top: 2px;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -124,6 +122,8 @@ def find_date_columns(df):
 def get_facility_mask(df, facility_col):
     mask = df[facility_col].notna()
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('TOTAL', na=False)
+    # Remove rows with empty / nan / none facility names
+    mask &= ~df[facility_col].astype(str).str.strip().str.lower().isin(['nan', 'none', ''])
     return mask
 
 def process_district_df(df, time_filter):
@@ -194,7 +194,6 @@ def calc_uptime(s):
     return round(((total_fd - s['zero_days']) / total_fd * 100), 1) if total_fd > 0 else 0
 
 def calculate_grade(uptime_pct, avg_per_day):
-    """Grade a spoke based on reliability + volume."""
     if avg_per_day == 0 or uptime_pct < 30:
         return "F"
     if uptime_pct > 85 and avg_per_day > 10:
@@ -223,49 +222,6 @@ def district_grade(plot_df):
 
 def grade_emoji(g):
     return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
-
-def generate_news_items(df, facility_col, threshold=20):
-    """Compute news items using the last 14 days of data, independent of the time filter."""
-    date_cols = find_date_columns(df)
-    if len(date_cols) < 14:
-        return []
-    paired = [(c, extract_date(c)) for c in date_cols]
-    paired = [(c, d) for c, d in paired if pd.notna(d)]
-    paired.sort(key=lambda x: x[1])
-    sorted_cols = [c for c, d in paired]
-
-    latest_data_idx = -1
-    for i in range(len(sorted_cols) - 1, -1, -1):
-        c = sorted_cols[i]
-        col_values = pd.to_numeric(df[c], errors='coerce').fillna(0)
-        if col_values.sum() > 0:
-            latest_data_idx = i
-            break
-
-    if latest_data_idx < 13:
-        return []
-
-    recent_cols = sorted_cols[latest_data_idx - 6: latest_data_idx + 1]
-    previous_cols = sorted_cols[latest_data_idx - 13: latest_data_idx - 6]
-
-    news = []
-    for _, row in df.iterrows():
-        ra = pd.to_numeric(row[recent_cols], errors='coerce').fillna(0).mean()
-        pa = pd.to_numeric(row[previous_cols], errors='coerce').fillna(0).mean()
-        ra_r = round(ra, 1)
-        pa_r = round(pa, 1)
-        if pa_r >= 3:
-            ch = ((ra_r - pa_r) / pa_r) * 100
-            ch_r = round(ch, 1)
-            if abs(ch_r) >= threshold:
-                news.append({
-                    'facility': row[facility_col],
-                    'change': ch_r,
-                    'recent': ra_r,
-                    'previous': pa_r
-                })
-    news.sort(key=lambda x: abs(x['change']), reverse=True)
-    return news
 
 @st.cache_data(show_spinner=False)
 def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter):
@@ -356,17 +312,40 @@ if plot_df is None:
     st.stop()
 facility_col = stats['facility_col']
 
-# --- NEWS TICKER ---
-news_items = generate_news_items(df_raw, facility_col, threshold=20)
-if news_items:
-    ticker_html = '<div class="news-ticker-container"><div class="news-ticker-label">🔴 LIVE</div><div class="news-ticker-scroll">'
-    for item in news_items:
-        if item['change'] > 0:
-            ticker_html += f'<span class="news-item-up">📈 {item["facility"]} | +{item["change"]}% | ({item["previous"]} → {item["recent"]} /day) &nbsp;&nbsp;◆&nbsp;&nbsp;</span>'
-        else:
-            ticker_html += f'<span class="news-item-down">📉 {item["facility"]} | {item["change"]}% | ({item["previous"]} → {item["recent"]} /day) &nbsp;&nbsp;◆&nbsp;&nbsp;</span>'
-    ticker_html += '</div></div>'
-    st.markdown(ticker_html, unsafe_allow_html=True)
+# --- SPOKE INFO BAR (replaces news ticker) ---
+best_name, best_grade, best_avg = "N/A", "—", 0
+if not plot_df.empty:
+    scorecard_tmp = plot_df.copy()
+    scorecard_tmp['Grade'] = scorecard_tmp.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
+    grade_order = {'A': 1, 'B': 2, 'C': 3, 'D': 4, 'F': 5}
+    scorecard_tmp['Grade_Order'] = scorecard_tmp['Grade'].map(grade_order)
+    scorecard_tmp = scorecard_tmp.sort_values(by=['Grade_Order', 'Average Patients'], ascending=[True, False])
+    if not scorecard_tmp.empty:
+        best_row = scorecard_tmp.iloc[0]
+        best_name = best_row[facility_col]
+        best_grade = best_row['Grade']
+        best_avg = best_row['Average Patients']
+
+info_html = f'''
+<div class="info-bar">
+    <div class="info-card">
+        <div class="info-label">📍 Total Spokes</div>
+        <div class="info-value">{stats['num_facilities']}</div>
+        <div class="info-sub">Reporting facilities</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label">🏥 Hub Lab</div>
+        <div class="info-value">{selected_hub_zm}</div>
+        <div class="info-sub">{selected_district_zm} District</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label">⭐ Best Performing Spoke</div>
+        <div class="info-value">{best_name}</div>
+        <div class="info-sub">Grade {best_grade} · {best_avg} /day</div>
+    </div>
+</div>
+'''
+st.markdown(info_html, unsafe_allow_html=True)
 
 # --- TABS ---
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
@@ -410,7 +389,6 @@ with tab1:
 
 # ===== TAB 2: REPORT CARD =====
 with tab2:
-    # Compute the period dates
     period_str = "N/A"
     if stats['active_date_cols']:
         fd = extract_date(stats['active_date_cols'][0])
@@ -423,7 +401,6 @@ with tab2:
     d_grade = district_grade(plot_df)
     grade_class = f"grade-{d_grade}"
 
-    # --- REPORT HEADER ---
     header_html = f'''
     <div class="report-header">
         <div class="report-title">📋 District Report Card — {selected_district_zm}</div>
@@ -438,7 +415,6 @@ with tab2:
     '''
     st.markdown(header_html, unsafe_allow_html=True)
 
-    # --- DISTRICT GRADE CARD ---
     col1, col2, col3, col4 = st.columns(4)
     with col1: st.metric("Total Patients", f"{stats['total']:,}")
     with col2: st.metric("Weighted Avg / Day", f"{stats['weighted_avg']}")
@@ -453,7 +429,6 @@ with tab2:
 
     st.divider()
 
-    # --- SPOKE SCORECARD TABLE ---
     st.markdown("### 🏥 Spoke Scorecard")
     st.caption("Every facility in the district, graded on reliability (60%) and volume (40%). Sorted best to worst.")
 
@@ -461,7 +436,6 @@ with tab2:
     scorecard['Grade'] = scorecard.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
     scorecard = scorecard.sort_values(by=['Grade', 'Uptime %', 'Average Patients'], ascending=[True, False, False])
 
-    # Build display table
     display = pd.DataFrame()
     display['Facility'] = scorecard[facility_col]
     display['Grade'] = scorecard['Grade'].apply(grade_emoji)
@@ -486,7 +460,6 @@ with tab2:
 
     st.divider()
 
-    # --- DOWNLOAD BUTTON ---
     export = scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
     export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Patients', 'Zero Days']
     csv = export.to_csv(index=False).encode('utf-8')
