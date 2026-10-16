@@ -56,8 +56,17 @@ for zm_name, districts in ZM_DATA.items():
     for d in districts.keys():
         DISTRICT_TO_ZM[d] = zm_name
 
+# Short name lookup (strip parentheses)
+ZM_SHORT = {full: full.split("(")[0].strip() for full in ZM_DATA.keys()}
+
 DISTRICT_MAP = {"Seikhpura": "Sheikhpura", "Rohtas": "Sasaram"}
-REVERSE_DISTRICT_MAP = {"Sheikhpura": "Seikhpura", "Sasaram": "Rohtas"}
+# Extended reverse map: Barh/Danapur are also Patna's hubs
+REVERSE_DISTRICT_MAP = {
+    "Sheikhpura": "Seikhpura",
+    "Sasaram": "Rohtas",
+    "Barh": "Patna",
+    "Danapur": "Patna"
+}
 HUB_TO_SHEET_MAP = {"SDH Barh Patna": "Barh", "SDH Danapur Patna": "Danapur"}
 
 # --- ROBUST HELPERS ---
@@ -234,10 +243,12 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
             if s:
                 d_grade = district_grade(pdf) if pdf is not None else "F"
                 lookup_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
-                zm = DISTRICT_TO_ZM.get(lookup_name, "—")
+                zm_full = DISTRICT_TO_ZM.get(lookup_name, "—")
+                zm_display = ZM_SHORT.get(zm_full, zm_full) if zm_full != "—" else "—"
                 data.append({
                     'District': sheet,
-                    'ZM': zm,
+                    'ZM': zm_display,
+                    'ZM_Full': zm_full,
                     'Grade': d_grade,
                     'Total Patients': s['total'],
                     'Weighted Avg': s['weighted_avg'],
@@ -487,7 +498,7 @@ with tab3:
         - **Efficiency (Weighted Avg)** — Avg patients per facility per day. Higher = better throughput.
         - **Volume (Total Patients)** — Raw total across all facilities. Higher = more overall activity.
         - **Grade** — A/B/C/D/F combined score (Uptime % + Avg/Day).
-        - **Top 5 / Bottom 5** are highlighted based on the selected ranking metric.
+        - **Top 5 / Bottom 5** are highlighted when "All Zones" is selected.
         """)
 
     ctrl1, ctrl2 = st.columns([2, 1])
@@ -509,13 +520,6 @@ with tab3:
         if lb_df.empty:
             st.warning("No districts with data found.")
         else:
-            # Apply ZM filter
-            if selected_zm_filter != "🏢 All Zones":
-                lb_df = lb_df[lb_df['ZM'] == selected_zm_filter].reset_index(drop=True)
-                if lb_df.empty:
-                    st.warning(f"No districts found for {selected_zm_filter}.")
-                    st.stop()
-
             # Determine sort column
             if "Reliability" in rank_by:
                 sort_col = 'Uptime %'
@@ -524,34 +528,55 @@ with tab3:
             else:
                 sort_col = 'Total Patients'
 
-            # Sort and re-rank within the filtered set
+            # Step 1: Sort ALL districts globally and assign global ranks
             lb_df = lb_df.sort_values(sort_col, ascending=False).reset_index(drop=True)
-            n = len(lb_df)
-            lb_df.insert(0, 'Rank', range(1, n + 1))
+            n_total = len(lb_df)
+            lb_df.insert(0, 'Rank', range(1, n_total + 1))
+            lb_df['Total_Count'] = n_total
 
-            # Adaptive Top/Bottom highlighting
-            if n >= 10:
-                top_n, bottom_n = 5, 5
-            elif n >= 6:
-                top_n, bottom_n = 3, 3
-            elif n >= 4:
-                top_n, bottom_n = 2, 2
+            # Step 2: Apply ZM filter (keeps original rank)
+            is_filtered = selected_zm_filter != "🏢 All Zones"
+            if is_filtered:
+                lb_df_display = lb_df[lb_df['ZM_Full'] == selected_zm_filter].reset_index(drop=True)
+                if lb_df_display.empty:
+                    st.warning(f"No districts found for {selected_zm_filter}.")
+                    st.stop()
+                n = len(lb_df_display)
             else:
-                top_n, bottom_n = 1, 1
+                lb_df_display = lb_df.copy()
+                n = n_total
 
+            # Step 3: Medals based on GLOBAL rank (always 1, 2, 3 medals)
             def add_medal(row):
                 r = row['Rank']
                 m = '🥇' if r == 1 else '🥈' if r == 2 else '🥉' if r == 3 else ''
                 return f"{m} {row['District']}".strip()
-            lb_df['District'] = lb_df.apply(add_medal, axis=1)
+            lb_df_display['District'] = lb_df_display.apply(add_medal, axis=1)
 
-            lb_df['Highlight'] = ''
-            lb_df.loc[lb_df['Rank'] <= top_n, 'Highlight'] = f'🟢 Top {top_n}'
-            lb_df.loc[lb_df['Rank'] > n - bottom_n, 'Highlight'] = f'🔴 Bottom {bottom_n}'
+            # Step 4: Highlighting only if ALL ZONES is selected
+            if not is_filtered:
+                if n >= 10:
+                    top_n, bottom_n = 5, 5
+                elif n >= 6:
+                    top_n, bottom_n = 3, 3
+                elif n >= 4:
+                    top_n, bottom_n = 2, 2
+                else:
+                    top_n, bottom_n = 1, 1
 
-            lb_df = lb_df[['Rank', 'District', 'ZM', 'Grade', 'Highlight', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']]
+                lb_df_display['Highlight'] = ''
+                lb_df_display.loc[lb_df_display['Rank'] <= top_n, 'Highlight'] = f'🟢 Top {top_n}'
+                lb_df_display.loc[lb_df_display['Rank'] > n - bottom_n, 'Highlight'] = f'🔴 Bottom {bottom_n}'
+            else:
+                lb_df_display['Highlight'] = ''
 
+            # Build display table
+            lb_df_display = lb_df_display[['Rank', 'District', 'ZM', 'Grade', 'Highlight', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']]
+
+            # Style
             def style_row(row):
+                if is_filtered:
+                    return [''] * len(row)
                 rank = row['Rank']
                 if rank <= top_n:
                     return ['background-color: #0e2a1a; color: #e8f5e9;'] * len(row)
@@ -577,7 +602,7 @@ with tab3:
                     return 'color: #e74c3c; font-weight: bold;'
                 return ''
 
-            styled = lb_df.style.apply(style_row, axis=1)
+            styled = lb_df_display.style.apply(style_row, axis=1)
             try:
                 styled = styled.map(style_grade, subset=['Grade'])
                 styled = styled.map(style_highlight, subset=['Highlight'])
@@ -591,15 +616,29 @@ with tab3:
                 'Total Patients': '{:,}',
             })
 
+            if is_filtered:
+                st.caption(f"Showing **{n}** districts managed by **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** — ranks preserve their position in the statewide leaderboard.")
+
             st.dataframe(styled, use_container_width=True, hide_index=True)
 
             st.divider()
-            chart_title = f"#### 📊 Top {min(15, n)} Districts" + (f" — {selected_zm_filter}" if selected_zm_filter != "🏢 All Zones" else "")
+
+            # Chart
+            if is_filtered:
+                chart_title = f"#### 📊 {ZM_SHORT.get(selected_zm_filter, selected_zm_filter)} — Districts Ranked"
+            else:
+                chart_title = "#### 📊 Top 15 Districts — Statewide"
             st.markdown(chart_title)
 
-            top15_chart = lb_df.head(min(15, n)).copy()
-            top15_chart = top15_chart.sort_values(sort_col, ascending=True)
-            top15_chart['Color'] = top15_chart['Rank'].apply(lambda r: f'Top {top_n}' if r <= top_n else 'Others')
+            top15_chart = lb_df_display.head(min(15, n)).copy()
+            top15_chart = top15_chart.sort_values('Rank', ascending=False)
+
+            if is_filtered:
+                top15_chart['Color'] = 'Neutral'
+                color_map = {'Neutral': '#3498db'}
+            else:
+                top15_chart['Color'] = top15_chart['Rank'].apply(lambda r: f'Top {top_n}' if r <= top_n else 'Others')
+                color_map = {f'Top {top_n}': '#2ecc71', 'Others': '#95a5a6'}
 
             fig_lb = px.bar(
                 top15_chart,
@@ -607,7 +646,7 @@ with tab3:
                 y='District',
                 orientation='h',
                 color='Color',
-                color_discrete_map={f'Top {top_n}': '#2ecc71', 'Others': '#95a5a6'},
+                color_discrete_map=color_map,
                 labels={sort_col: sort_col, 'District': ''},
                 height=max(350, 40 * len(top15_chart)),
             )
