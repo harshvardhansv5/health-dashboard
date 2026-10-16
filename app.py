@@ -12,11 +12,16 @@ st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
-    .info-card, .metric-card, .zm-card, .report-header {
+    /* === BASE === */
+    .block-container {padding-top: 2rem; padding-bottom: 2rem; max-width: 1500px;}
+
+    /* === CARDS === */
+    .info-card, .metric-card, .zm-card, .report-header, .kpi-chip {
         background: linear-gradient(135deg, #1a2a3a 0%, #0E1117 100%);
         border: 1px solid #2a3a4a;
-        border-radius: 10px;
+        border-radius: 12px;
         padding: 16px 20px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     .info-card {border-left: 4px solid #00D4FF;}
     .info-card.green {border-left: 4px solid #2ecc71;}
@@ -38,17 +43,32 @@ st.markdown("""
     .metric-progress-bg {background: #1a2a3a; height: 6px; border-radius: 3px; margin-top: 12px; overflow: hidden;}
     .metric-progress-fill {height: 100%; border-radius: 3px;}
 
+    /* === KPI CHIP (Compact summary cards) === */
+    .kpi-chip {padding: 14px 18px; text-align: left;}
+    .kpi-chip-label {color: #8fa5bb; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;}
+    .kpi-chip-value {color: #FFFFFF; font-size: 20px; font-weight: 700; line-height: 1.2;}
+    .kpi-chip-sub {color: #6c8095; font-size: 11px; margin-top: 2px;}
+    .kpi-chip.green {border-left: 3px solid #2ecc71;}
+    .kpi-chip.green .kpi-chip-value {color: #2ecc71;}
+    .kpi-chip.red {border-left: 3px solid #e74c3c;}
+    .kpi-chip.red .kpi-chip-value {color: #e74c3c;}
+    .kpi-chip.blue {border-left: 3px solid #3498db;}
+    .kpi-chip.purple {border-left: 3px solid #9b59b6;}
+
+    /* === ZM CARD === */
     .zm-card {background: linear-gradient(135deg, #1e3a5f 0%, #0E1117 100%); border: 1px solid #2a4a6f; border-left: 4px solid #00D4FF; padding: 14px 16px; margin-top: 8px; margin-bottom: 8px;}
     .zm-card-header {color: #00D4FF; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;}
     .zm-card-name {color: #FFFFFF; font-size: 15px; font-weight: 700; line-height: 1.3; margin-bottom: 4px;}
     .zm-card-zone {color: #8fa5bb; font-size: 12px; font-style: italic;}
     .zm-card-stats {color: #00D4FF; font-size: 12px; font-weight: 600; margin-top: 6px;}
 
+    /* === REPORT HEADER === */
     .report-header {border-left: 5px solid #00D4FF; padding: 20px 28px; margin-bottom: 20px;}
     .report-title {color: #FFFFFF; font-size: 24px; font-weight: 700; margin-bottom: 8px;}
     .report-meta {color: #8fa5bb; font-size: 14px; line-height: 1.6;}
     .report-meta strong {color: #CCCCCC;}
 
+    /* === GRADE BADGES === */
     .district-grade-badge {display: inline-block; padding: 6px 18px; border-radius: 8px; font-size: 22px; font-weight: 800; margin-left: 10px;}
     .grade-A {background-color: #2ecc71; color: #000;}
     .grade-B {background-color: #a3e635; color: #000;}
@@ -56,17 +76,47 @@ st.markdown("""
     .grade-D {background-color: #f97316; color: #FFF;}
     .grade-F {background-color: #e74c3c; color: #FFF;}
 
+    /* === BOTTOM SPOKE CARDS === */
     .bottom-spoke {background: #1a1010; border: 1px solid #4a2a2a; border-left: 4px solid #e74c3c; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;}
     .bottom-spoke-name {color: #FFFFFF; font-size: 13px; font-weight: 600;}
     .bottom-spoke-meta {color: #f97316; font-size: 11px; margin-top: 2px;}
 
-    hr {border-color: #2a3a4a !important; margin: 12px 0 !important;}
+    /* === SPACING === */
+    hr {border-color: #2a3a4a !important; margin: 14px 0 !important; opacity: 0.5;}
 
+    /* === NATIVE STREAMLIT METRIC === */
     div[data-testid="stMetric"] {background-color: #1E1E1E; border: 1px solid #333333; padding: 15px; border-radius: 10px;}
     div[data-testid="stMetric"] label {color: #AAAAAA !important;}
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {color: #FFFFFF !important;}
 
-    .view-mode-title {color: #8fa5bb; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px;}
+    /* === SEGMENTED CONTROL STYLING === */
+    div[data-testid="stRadio"] > div[role="radiogroup"] > label {
+        background-color: #1a2a3a;
+        border: 1px solid #2a3a4a;
+        padding: 8px 16px;
+        border-radius: 8px;
+        margin-right: 6px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+    div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
+        border-color: #00D4FF;
+        background-color: #1e3a5f;
+    }
+    div[data-testid="stRadio"] > div[role="radiogroup"] > label[data-checked="true"] {
+        background-color: #00D4FF;
+        border-color: #00D4FF;
+        color: #000;
+    }
+
+    /* === SECTION HEADERS === */
+    h2 {font-size: 1.35rem !important; letter-spacing: -0.3px;}
+    h3 {font-size: 1.15rem !important; letter-spacing: -0.2px; color: #E5E7EB;}
+    .section-subtitle {color: #8fa5bb; font-size: 13px; margin-top: -8px; margin-bottom: 16px;}
+
+    /* === SIDEBAR POLISH === */
+    section[data-testid="stSidebar"] {background-color: #0a0f16;}
+    section[data-testid="stSidebar"] .block-container {padding-top: 1.5rem;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -214,7 +264,6 @@ def calc_uptime(s):
 
 # --- SCORE-BASED GRADING ---
 def calculate_score(uptime_pct, avg_per_day):
-    """0-100 score: 60% reliability + 40% volume (capped at 15/day)."""
     uptime_component = 60.0 * (uptime_pct / 100.0)
     volume_component = 40.0 * min(avg_per_day / 15.0, 1.0)
     return round(uptime_component + volume_component, 1)
@@ -230,14 +279,9 @@ def calculate_grade(uptime_pct, avg_per_day):
     return score_to_grade(calculate_score(uptime_pct, avg_per_day))
 
 def district_grade(plot_df):
-    if plot_df is None or plot_df.empty:
-        return "F"
-    scores = [
-        calculate_score(row['Uptime %'], row['Average Patients'])
-        for _, row in plot_df.iterrows()
-    ]
-    if not scores:
-        return "F"
+    if plot_df is None or plot_df.empty: return "F"
+    scores = [calculate_score(row['Uptime %'], row['Average Patients']) for _, row in plot_df.iterrows()]
+    if not scores: return "F"
     return score_to_grade(sum(scores) / len(scores))
 
 def grade_emoji(g):
@@ -255,16 +299,14 @@ def uptime_hex(uptime_pct):
     if uptime_pct >= 50: return "#f97316"
     return "#e74c3c"
 
-# --- SHARED STYLING FUNCTIONS (module level so all tabs can use them) ---
+# --- SHARED STYLING FUNCTIONS ---
 def style_grade(val):
-    """Shared grade-cell styler used across tabs."""
     colors = {'A': ('#2ecc71', '#000'), 'B': ('#a3e635', '#000'), 'C': ('#fbbf24', '#000'),
               'D': ('#f97316', '#FFF'), 'F': ('#e74c3c', '#FFF')}
     bg, txt = colors.get(val, ('#333', '#FFF'))
     return f'background-color: {bg}; color: {txt}; font-weight: bold; text-align: center;'
 
 def make_rank_styler(top_n, bottom_n, n):
-    """Returns a function that styles the Rank cell as a badge."""
     def styler(val):
         try:
             rank = int(val)
@@ -308,24 +350,16 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
     return pd.DataFrame(data)
 
 def compute_zm_rankings(lb_df):
-    """Aggregate district-level data into ZM-level metrics."""
-    if lb_df.empty or 'ZM_Full' not in lb_df.columns:
-        return pd.DataFrame()
+    if lb_df.empty or 'ZM_Full' not in lb_df.columns: return pd.DataFrame()
     df = lb_df[lb_df['ZM_Full'] != "—"].copy()
-    if df.empty:
-        return pd.DataFrame()
+    if df.empty: return pd.DataFrame()
     df['Facility_Days'] = df['Facilities'] * df['Num Days']
     df['With_Patient_Days'] = df['Facility_Days'] - df['Zero Days']
-
     zm = df.groupby('ZM_Full').agg(
-        Districts=('District', 'count'),
-        Total_Patients=('Total Patients', 'sum'),
-        Facilities=('Facilities', 'sum'),
-        Facility_Days=('Facility_Days', 'sum'),
-        With_Patient_Days=('With_Patient_Days', 'sum'),
-        Avg_Score=('Score', 'mean')
+        Districts=('District', 'count'), Total_Patients=('Total Patients', 'sum'),
+        Facilities=('Facilities', 'sum'), Facility_Days=('Facility_Days', 'sum'),
+        With_Patient_Days=('With_Patient_Days', 'sum'), Avg_Score=('Score', 'mean')
     ).reset_index()
-
     zm['Uptime %'] = (zm['With_Patient_Days'] / zm['Facility_Days'] * 100).round(1)
     zm['Weighted Avg'] = (zm['Total_Patients'] / zm['Facility_Days']).round(1)
     zm['Score'] = zm['Avg_Score'].round(1)
@@ -564,18 +598,22 @@ if view_mode == "🏥 District View":
                 color='Grade',
                 color_discrete_map={'A': '#2ecc71', 'B': '#a3e635', 'C': '#fbbf24', 'D': '#f97316', 'F': '#e74c3c'},
                 labels={facility_col: '', metric_col: metric_option, 'Grade': 'Grade'},
-                title=chart_title
+                title=chart_title,
+                text=metric_col
             )
+            fig.update_traces(texttemplate='%{text:.1f}', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
             avg_val = sorted_df[metric_col].mean()
             fig.add_vline(x=avg_val, line_dash="dash", line_color="#e74c3c", line_width=2,
                           annotation_text=f"Avg: {avg_val:.1f}", annotation_position="top")
-            chart_height = max(340, len(sorted_df) * 34)
+            chart_height = max(360, len(sorted_df) * 36)
             fig.update_layout(
                 height=chart_height, yaxis=dict(autorange="reversed"),
                 plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
                 legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1, title=""),
-                margin=dict(l=0, r=20, t=60, b=20), font=dict(size=12)
+                margin=dict(l=0, r=60, t=60, b=20), font=dict(size=12)
             )
+            fig.update_xaxes(showgrid=True, gridcolor='#1f2a35', zeroline=False)
+            fig.update_yaxes(showgrid=False)
             st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("---")
@@ -601,7 +639,7 @@ if view_mode == "🏥 District View":
                 column_config={
                     "Facility": st.column_config.TextColumn("Facility", width="large"),
                     "Grade": st.column_config.TextColumn("Grade", width="small"),
-                    "Score": st.column_config.NumberColumn("Score", format="%.1f"),
+                    "Score": st.column_config.ProgressColumn("Score", format="%.1f", min_value=0, max_value=100),
                     "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                     "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
                     "Total": st.column_config.NumberColumn("Total", format="%d"),
@@ -671,13 +709,7 @@ if view_mode == "🏥 District View":
             column_config={
                 "Facility": st.column_config.TextColumn("Facility", width="large"),
                 "Grade": st.column_config.TextColumn("Grade", width="small"),
-                "Score": st.column_config.ProgressColumn(
-                    "Score",
-                    help="0-100: 60% reliability + 40% volume (capped at 15/day)",
-                    format="%.1f",
-                    min_value=0,
-                    max_value=100,
-                ),
+                "Score": st.column_config.ProgressColumn("Score", format="%.1f", min_value=0, max_value=100),
                 "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                 "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
                 "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"),
@@ -757,6 +789,7 @@ else:
     # ===== TAB 1: STATE LEADERBOARD =====
     with tab1:
         st.markdown("### 🏆 All Districts Ranked")
+
         with st.expander("ℹ️ How is this ranked?", expanded=False):
             st.markdown("""
             - **Reliability (Uptime %)** — % of facility-days with at least 1 patient.
@@ -777,6 +810,50 @@ else:
             if lb_df.empty:
                 st.warning("No districts with data found.")
             else:
+                # ============ KPI SUMMARY STRIP ============
+                total_districts = len(lb_df)
+                avg_uptime_all = round(lb_df['Uptime %'].mean(), 1)
+                avg_score_all = round(lb_df['Score'].mean(), 1)
+                top_row = lb_df.sort_values('Score', ascending=False).iloc[0]
+                worst_row = lb_df.sort_values('Score', ascending=False).iloc[-1]
+
+                k1, k2, k3, k4 = st.columns(4)
+                with k1:
+                    st.markdown(f'''
+                    <div class="kpi-chip blue">
+                        <div class="kpi-chip-label">📍 Districts</div>
+                        <div class="kpi-chip-value">{total_districts}</div>
+                        <div class="kpi-chip-sub">Statewide reporting</div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                with k2:
+                    st.markdown(f'''
+                    <div class="kpi-chip purple">
+                        <div class="kpi-chip-label">📊 Avg Uptime</div>
+                        <div class="kpi-chip-value">{avg_uptime_all}%</div>
+                        <div class="kpi-chip-sub">Across all districts</div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                with k3:
+                    st.markdown(f'''
+                    <div class="kpi-chip green">
+                        <div class="kpi-chip-label">🏆 Top Performer</div>
+                        <div class="kpi-chip-value">{top_row['District']}</div>
+                        <div class="kpi-chip-sub">Score {top_row['Score']} · Grade {top_row['Grade']}</div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+                with k4:
+                    st.markdown(f'''
+                    <div class="kpi-chip red">
+                        <div class="kpi-chip-label">⚠️ Needs Attention</div>
+                        <div class="kpi-chip-value">{worst_row['District']}</div>
+                        <div class="kpi-chip-sub">Score {worst_row['Score']} · Grade {worst_row['Grade']}</div>
+                    </div>
+                    ''', unsafe_allow_html=True)
+
+                st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+
+                # ============ SORT & RANK ============
                 if "Reliability" in rank_by: sort_col = 'Uptime %'
                 elif "Efficiency" in rank_by: sort_col = 'Weighted Avg'
                 else: sort_col = 'Total Patients'
@@ -810,7 +887,6 @@ else:
                 else:
                     top_n, bottom_n = 0, 0
 
-                # No more Highlight column
                 lb_df_display = lb_df_display[['Rank', 'District', 'ZM', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']]
 
                 styled = lb_df_display.style
@@ -819,7 +895,6 @@ else:
                 except AttributeError:
                     styled = styled.applymap(style_grade, subset=['Grade'])
 
-                # Rank column gets the badge styling
                 if not is_filtered:
                     rank_styler = make_rank_styler(top_n, bottom_n, n)
                     try:
@@ -840,7 +915,7 @@ else:
                 if is_filtered:
                     st.caption(f"Showing **{n}** districts managed by **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** — ranks preserve their position in the statewide leaderboard.")
                 else:
-                    st.caption(f"🟢 Top {top_n} ranks are highlighted in green. 🔴 Bottom {bottom_n} ranks are highlighted in red.")
+                    st.caption(f"🟢 Top {top_n} ranks highlighted in green. 🔴 Bottom {bottom_n} in red.")
 
                 st.dataframe(styled, use_container_width=True, hide_index=True)
 
@@ -860,12 +935,28 @@ else:
                     top15_chart['Color'] = top15_chart['Rank'].apply(lambda r: f'Top {top_n}' if r <= top_n else 'Others')
                     color_map = {f'Top {top_n}': '#2ecc71', 'Others': '#95a5a6'}
 
-                fig_lb = px.bar(top15_chart, x=sort_col, y='District', orientation='h',
-                                color='Color', color_discrete_map=color_map,
-                                labels={sort_col: sort_col, 'District': ''},
-                                height=max(350, 40 * len(top15_chart)))
-                fig_lb.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                                     legend_title="", showlegend=False, margin=dict(l=0, r=20, t=20, b=20))
+                fig_lb = px.bar(
+                    top15_chart, x=sort_col, y='District', orientation='h',
+                    color='Color', color_discrete_map=color_map,
+                    labels={sort_col: sort_col, 'District': ''},
+                    height=max(380, 40 * len(top15_chart)),
+                    text=sort_col
+                )
+                # Add value labels at end of bars
+                if "Uptime" in sort_col:
+                    fig_lb.update_traces(texttemplate='%{text:.1f}%', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
+                elif "Patients" in sort_col:
+                    fig_lb.update_traces(texttemplate='%{text:,.0f}', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
+                else:
+                    fig_lb.update_traces(texttemplate='%{text:.1f}', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
+
+                fig_lb.update_layout(
+                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                    legend_title="", showlegend=False,
+                    margin=dict(l=0, r=70, t=20, b=20),
+                    xaxis=dict(showgrid=True, gridcolor='#1f2a35', zeroline=False),
+                    yaxis=dict(showgrid=False)
+                )
                 st.plotly_chart(fig_lb, use_container_width=True)
         else:
             st.info("Click the button above to generate the statewide leaderboard.")
@@ -873,7 +964,7 @@ else:
     # ===== TAB 2: ZONE MANAGER LEADERBOARD =====
     with tab2:
         st.markdown("### 👥 Zone Manager Leaderboard")
-        st.caption("Each Zone Manager's aggregated performance across all their districts. Ranked by Total Patients.")
+        st.caption("Each Zone Manager's aggregated performance across all their districts.")
 
         if st.button("🔄 Calculate Zone Rankings", key="zm_rank_btn"):
             with st.spinner("Processing all districts..."):
@@ -889,6 +980,39 @@ else:
                     zm_rank = zm_rank.sort_values('Total_Patients', ascending=False).reset_index(drop=True)
                     zm_rank.insert(0, 'Rank', range(1, len(zm_rank) + 1))
 
+                    # KPI summary strip
+                    top_zm = zm_rank.iloc[0]
+                    best_uptime_zm = zm_rank.sort_values('Uptime %', ascending=False).iloc[0]
+                    total_zms = len(zm_rank)
+
+                    k1, k2, k3 = st.columns(3)
+                    with k1:
+                        st.markdown(f'''
+                        <div class="kpi-chip blue">
+                            <div class="kpi-chip-label">👥 Zone Managers</div>
+                            <div class="kpi-chip-value">{total_zms}</div>
+                            <div class="kpi-chip-sub">Across all districts</div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+                    with k2:
+                        st.markdown(f'''
+                        <div class="kpi-chip green">
+                            <div class="kpi-chip-label">🏆 Top by Volume</div>
+                            <div class="kpi-chip-value">{top_zm['Zone Manager']}</div>
+                            <div class="kpi-chip-sub">{int(top_zm['Total_Patients']):,} patients</div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+                    with k3:
+                        st.markdown(f'''
+                        <div class="kpi-chip purple">
+                            <div class="kpi-chip-label">📊 Most Reliable</div>
+                            <div class="kpi-chip-value">{best_uptime_zm['Zone Manager']}</div>
+                            <div class="kpi-chip-sub">{best_uptime_zm['Uptime %']:.1f}% uptime</div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+
+                    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
+
                     is_filtered = selected_zm_filter != "🏢 All Zones"
 
                     zm_display = zm_rank[['Rank', 'Zone Manager', 'Districts', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total_Patients', 'Facilities']].copy()
@@ -901,17 +1025,11 @@ else:
                         zm_styled = zm_styled.applymap(style_grade, subset=['Grade'])
 
                     if is_filtered:
-                        # Highlight the selected ZM's rank cell in blue
-                        zm_filter_short = ZM_SHORT.get(selected_zm_filter, selected_zm_filter)
-                        def rank_styler_filtered(val, row_zm_name=zm_filter_short):
-                            return 'text-align: center; font-weight: bold;'
-                        # Simpler: just style all rank cells normally
                         try:
                             zm_styled = zm_styled.map(lambda v: 'text-align: center; font-weight: bold;', subset=['Rank'])
                         except AttributeError:
                             zm_styled = zm_styled.applymap(lambda v: 'text-align: center; font-weight: bold;', subset=['Rank'])
                     else:
-                        # Top 3 = green badge, bottom 2 = red badge
                         zm_rank_styler = make_rank_styler(3, 2, len(zm_display))
                         try:
                             zm_styled = zm_styled.map(zm_rank_styler, subset=['Rank'])
@@ -919,10 +1037,8 @@ else:
                             zm_styled = zm_styled.applymap(zm_rank_styler, subset=['Rank'])
 
                     zm_styled = zm_styled.format({
-                        'Uptime %': '{:.1f}%',
-                        'Weighted Avg': '{:.1f}',
-                        'Total Patients': '{:,}',
-                        'Score': '{:.1f}'
+                        'Uptime %': '{:.1f}%', 'Weighted Avg': '{:.1f}',
+                        'Total Patients': '{:,}', 'Score': '{:.1f}'
                     })
 
                     if is_filtered:
@@ -940,13 +1056,19 @@ else:
 
                     fig_zm = px.bar(
                         top10_zm_chart, x='Total_Patients', y='Zone Manager', orientation='h',
-                        color='Color',
-                        color_discrete_map={'Top 3': '#2ecc71', 'Others': '#95a5a6'},
+                        color='Color', color_discrete_map={'Top 3': '#2ecc71', 'Others': '#95a5a6'},
                         labels={'Total_Patients': 'Total Patients', 'Zone Manager': ''},
-                        height=max(350, 40 * len(top10_zm_chart))
+                        height=max(380, 40 * len(top10_zm_chart)),
+                        text='Total_Patients'
                     )
-                    fig_zm.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                                         legend_title="", showlegend=False, margin=dict(l=0, r=20, t=20, b=20))
+                    fig_zm.update_traces(texttemplate='%{text:,.0f}', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
+                    fig_zm.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                        legend_title="", showlegend=False,
+                        margin=dict(l=0, r=70, t=20, b=20),
+                        xaxis=dict(showgrid=True, gridcolor='#1f2a35', zeroline=False),
+                        yaxis=dict(showgrid=False)
+                    )
                     st.plotly_chart(fig_zm, use_container_width=True)
 
                     st.markdown("---")
@@ -960,13 +1082,19 @@ else:
 
                     fig_zm_u = px.bar(
                         top10_uptime_chart, x='Uptime %', y='Zone Manager', orientation='h',
-                        color='Color',
-                        color_discrete_map={'Top 3': '#2ecc71', 'Others': '#95a5a6'},
+                        color='Color', color_discrete_map={'Top 3': '#2ecc71', 'Others': '#95a5a6'},
                         labels={'Uptime %': 'Uptime %', 'Zone Manager': ''},
-                        height=max(350, 40 * len(top10_uptime_chart))
+                        height=max(380, 40 * len(top10_uptime_chart)),
+                        text='Uptime %'
                     )
-                    fig_zm_u.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                                           legend_title="", showlegend=False, margin=dict(l=0, r=20, t=20, b=20))
+                    fig_zm_u.update_traces(texttemplate='%{text:.1f}%', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
+                    fig_zm_u.update_layout(
+                        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                        legend_title="", showlegend=False,
+                        margin=dict(l=0, r=70, t=20, b=20),
+                        xaxis=dict(showgrid=True, gridcolor='#1f2a35', zeroline=False),
+                        yaxis=dict(showgrid=False)
+                    )
                     st.plotly_chart(fig_zm_u, use_container_width=True)
         else:
             st.info("Click the button above to generate Zone Manager rankings.")
