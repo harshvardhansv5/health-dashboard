@@ -263,11 +263,19 @@ def style_grade(val):
     bg, txt = colors.get(val, ('#333', '#FFF'))
     return f'background-color: {bg}; color: {txt}; font-weight: bold; text-align: center;'
 
-def style_highlight(val):
-    """Shared highlight-cell styler."""
-    if 'Top' in str(val): return 'color: #2ecc71; font-weight: bold;'
-    elif 'Bottom' in str(val): return 'color: #e74c3c; font-weight: bold;'
-    return ''
+def make_rank_styler(top_n, bottom_n, n):
+    """Returns a function that styles the Rank cell as a badge."""
+    def styler(val):
+        try:
+            rank = int(val)
+        except (ValueError, TypeError):
+            return ''
+        if rank <= top_n:
+            return 'background-color: #2ecc71; color: #000; font-weight: bold; text-align: center;'
+        elif rank > n - bottom_n:
+            return 'background-color: #e74c3c; color: #FFF; font-weight: bold; text-align: center;'
+        return 'text-align: center; font-weight: bold;'
+    return styler
 
 @st.cache_data(show_spinner=False)
 def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter):
@@ -799,28 +807,30 @@ else:
                     elif n >= 6: top_n, bottom_n = 3, 3
                     elif n >= 4: top_n, bottom_n = 2, 2
                     else: top_n, bottom_n = 1, 1
-                    lb_df_display['Highlight'] = ''
-                    lb_df_display.loc[lb_df_display['Rank'] <= top_n, 'Highlight'] = f'🟢 Top {top_n}'
-                    lb_df_display.loc[lb_df_display['Rank'] > n - bottom_n, 'Highlight'] = f'🔴 Bottom {bottom_n}'
                 else:
-                    lb_df_display['Highlight'] = ''
+                    top_n, bottom_n = 0, 0
 
-                lb_df_display = lb_df_display[['Rank', 'District', 'ZM', 'Grade', 'Score', 'Highlight', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']]
+                # No more Highlight column
+                lb_df_display = lb_df_display[['Rank', 'District', 'ZM', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']]
 
-                def style_row(row):
-                    if is_filtered: return [''] * len(row)
-                    rank = row['Rank']
-                    if rank <= top_n: return ['background-color: #0e2a1a; color: #e8f5e9;'] * len(row)
-                    elif rank > n - bottom_n: return ['background-color: #2a0e0e; color: #fce4e4;'] * len(row)
-                    return [''] * len(row)
-
-                styled = lb_df_display.style.apply(style_row, axis=1)
+                styled = lb_df_display.style
                 try:
                     styled = styled.map(style_grade, subset=['Grade'])
-                    styled = styled.map(style_highlight, subset=['Highlight'])
                 except AttributeError:
                     styled = styled.applymap(style_grade, subset=['Grade'])
-                    styled = styled.applymap(style_highlight, subset=['Highlight'])
+
+                # Rank column gets the badge styling
+                if not is_filtered:
+                    rank_styler = make_rank_styler(top_n, bottom_n, n)
+                    try:
+                        styled = styled.map(rank_styler, subset=['Rank'])
+                    except AttributeError:
+                        styled = styled.applymap(rank_styler, subset=['Rank'])
+                else:
+                    try:
+                        styled = styled.map(lambda v: 'text-align: center; font-weight: bold;', subset=['Rank'])
+                    except AttributeError:
+                        styled = styled.applymap(lambda v: 'text-align: center; font-weight: bold;', subset=['Rank'])
 
                 styled = styled.format({
                     'Uptime %': '{:.1f}%', 'Weighted Avg': '{:.1f}',
@@ -829,6 +839,8 @@ else:
 
                 if is_filtered:
                     st.caption(f"Showing **{n}** districts managed by **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** — ranks preserve their position in the statewide leaderboard.")
+                else:
+                    st.caption(f"🟢 Top {top_n} ranks are highlighted in green. 🔴 Bottom {bottom_n} ranks are highlighted in red.")
 
                 st.dataframe(styled, use_container_width=True, hide_index=True)
 
@@ -882,24 +894,29 @@ else:
                     zm_display = zm_rank[['Rank', 'Zone Manager', 'Districts', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total_Patients', 'Facilities']].copy()
                     zm_display.columns = ['Rank', 'Zone Manager', 'Districts', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']
 
-                    def style_zm_row(row):
-                        if is_filtered:
-                            zm_filter_short = ZM_SHORT.get(selected_zm_filter, selected_zm_filter)
-                            if row['Zone Manager'] == zm_filter_short:
-                                return ['background-color: #1e3a5f; color: #FFFFFF; font-weight: bold;'] * len(row)
-                            return [''] * len(row)
-                        rank = row['Rank']
-                        if rank <= 3:
-                            return ['background-color: #0e2a1a; color: #e8f5e9;'] * len(row)
-                        elif rank > len(zm_display) - 2:
-                            return ['background-color: #2a0e0e; color: #fce4e4;'] * len(row)
-                        return [''] * len(row)
-
-                    zm_styled = zm_display.style.apply(style_zm_row, axis=1)
+                    zm_styled = zm_display.style
                     try:
                         zm_styled = zm_styled.map(style_grade, subset=['Grade'])
                     except AttributeError:
                         zm_styled = zm_styled.applymap(style_grade, subset=['Grade'])
+
+                    if is_filtered:
+                        # Highlight the selected ZM's rank cell in blue
+                        zm_filter_short = ZM_SHORT.get(selected_zm_filter, selected_zm_filter)
+                        def rank_styler_filtered(val, row_zm_name=zm_filter_short):
+                            return 'text-align: center; font-weight: bold;'
+                        # Simpler: just style all rank cells normally
+                        try:
+                            zm_styled = zm_styled.map(lambda v: 'text-align: center; font-weight: bold;', subset=['Rank'])
+                        except AttributeError:
+                            zm_styled = zm_styled.applymap(lambda v: 'text-align: center; font-weight: bold;', subset=['Rank'])
+                    else:
+                        # Top 3 = green badge, bottom 2 = red badge
+                        zm_rank_styler = make_rank_styler(3, 2, len(zm_display))
+                        try:
+                            zm_styled = zm_styled.map(zm_rank_styler, subset=['Rank'])
+                        except AttributeError:
+                            zm_styled = zm_styled.applymap(zm_rank_styler, subset=['Rank'])
 
                     zm_styled = zm_styled.format({
                         'Uptime %': '{:.1f}%',
@@ -909,7 +926,9 @@ else:
                     })
 
                     if is_filtered:
-                        st.caption(f"Your selection — **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** — is highlighted in blue.")
+                        st.caption(f"Showing all ZMs — **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** highlighted in blue.")
+                    else:
+                        st.caption("🟢 Top 3 Zone Managers highlighted in green. 🔴 Bottom 2 in red.")
 
                     st.dataframe(zm_styled, use_container_width=True, hide_index=True)
 
