@@ -122,7 +122,6 @@ def find_date_columns(df):
 def get_facility_mask(df, facility_col):
     mask = df[facility_col].notna()
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('TOTAL', na=False)
-    # Remove rows with empty / nan / none facility names
     mask &= ~df[facility_col].astype(str).str.strip().str.lower().isin(['nan', 'none', ''])
     return mask
 
@@ -230,10 +229,14 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
     for sheet in sheet_names_tuple:
         try:
             sdf = read_sheet_robust(xls, sheet)
-            _, _, s = process_district_df(sdf, time_filter)
+            pdf, _, s = process_district_df(sdf, time_filter)
             if s:
+                d_grade = district_grade(pdf) if pdf is not None else "F"
+                zm = DISTRICT_TO_ZM.get(sheet, "—")
                 data.append({
                     'District': sheet,
+                    'ZM': zm,
+                    'Grade': d_grade,
                     'Total Patients': s['total'],
                     'Weighted Avg': s['weighted_avg'],
                     'Uptime %': calc_uptime(s),
@@ -312,7 +315,7 @@ if plot_df is None:
     st.stop()
 facility_col = stats['facility_col']
 
-# --- SPOKE INFO BAR (replaces news ticker) ---
+# --- SPOKE INFO BAR ---
 best_name, best_grade, best_avg = "N/A", "—", 0
 if not plot_df.empty:
     scorecard_tmp = plot_df.copy()
@@ -476,29 +479,117 @@ with tab2:
 # ===== TAB 3: LEADERBOARD =====
 with tab3:
     st.markdown("### 🏆 All Districts Ranked")
-    with st.expander("ℹ️ What do 'Uptime %' and 'Weighted Avg' mean? Click to expand", expanded=False):
+    with st.expander("ℹ️ How is this ranked?", expanded=False):
         st.markdown("""
-        **📊 Uptime %** — *The reliability score.* The percentage of days each facility reported more than 0 patients.
-        
-        **⚖️ Weighted Avg** — *The efficiency score.* Total patients divided by (facilities × days).
-        
-        **👥 Total Patients** — *The volume score.* Raw sum of all patients across every facility in the district.
-        
-        **🏥 Facilities** — Number of reporting hospitals in the district.
+        - **Reliability (Uptime %)** — % of facility-days with at least 1 patient. Higher = more consistent service.
+        - **Efficiency (Weighted Avg)** — Avg patients per facility per day. Higher = better throughput.
+        - **Volume (Total Patients)** — Raw total across all facilities. Higher = more overall activity.
+        - **Grade** — A/B/C/D/F combined score (Uptime % + Avg/Day).
+        - **Top 5 / Bottom 5** are highlighted based on the selected ranking metric.
         """)
+
+    rank_by = st.radio(
+        "Rank by:",
+        ("Reliability (Uptime %)", "Efficiency (Weighted Avg)", "Volume (Total Patients)"),
+        horizontal=True
+    )
+
     if st.button("🔄 Calculate Leaderboard", key="lb"):
-        with st.spinner("Processing..."):
+        with st.spinner("Processing all districts..."):
             lb_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
-        if not lb_df.empty:
-            lb_df = lb_df.sort_values('Total Patients', ascending=False).reset_index(drop=True)
-            lb_df.index = lb_df.index + 1
-            lb_df.index.name = 'Rank'
-            def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
-            lb_df['District'] = lb_df.apply(lambda row: f"{medal(row.name)} {row['District']}".strip(), axis=1)
-            st.dataframe(lb_df, use_container_width=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
-            top15 = lb_df.head(15)
-            fig_lb = px.bar(top15, x='Total Patients', y='District', orientation='h', color='Uptime %', color_continuous_scale='RdYlGn')
-            fig_lb.update_layout(yaxis=dict(autorange="reversed"), height=500, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+
+        if lb_df.empty:
+            st.warning("No districts with data found.")
+        else:
+            if "Reliability" in rank_by:
+                sort_col = 'Uptime %'
+            elif "Efficiency" in rank_by:
+                sort_col = 'Weighted Avg'
+            else:
+                sort_col = 'Total Patients'
+
+            lb_df = lb_df.sort_values(sort_col, ascending=False).reset_index(drop=True)
+            n = len(lb_df)
+            lb_df.insert(0, 'Rank', range(1, n + 1))
+
+            def add_medal(row):
+                r = row['Rank']
+                m = '🥇' if r == 1 else '🥈' if r == 2 else '🥉' if r == 3 else ''
+                return f"{m} {row['District']}".strip()
+            lb_df['District'] = lb_df.apply(add_medal, axis=1)
+
+            lb_df['Highlight'] = ''
+            lb_df.loc[lb_df['Rank'] <= 5, 'Highlight'] = '🟢 Top 5'
+            lb_df.loc[lb_df['Rank'] > n - 5, 'Highlight'] = '🔴 Bottom 5'
+
+            lb_df = lb_df[['Rank', 'District', 'ZM', 'Grade', 'Highlight', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']]
+
+            def style_row(row):
+                rank = row['Rank']
+                if rank <= 5:
+                    return ['background-color: #0e2a1a; color: #e8f5e9;'] * len(row)
+                elif rank > n - 5:
+                    return ['background-color: #2a0e0e; color: #fce4e4;'] * len(row)
+                return [''] * len(row)
+
+            def style_grade(val):
+                colors = {
+                    'A': ('#2ecc71', '#000'),
+                    'B': ('#a3e635', '#000'),
+                    'C': ('#fbbf24', '#000'),
+                    'D': ('#f97316', '#FFF'),
+                    'F': ('#e74c3c', '#FFF'),
+                }
+                bg, txt = colors.get(val, ('#333', '#FFF'))
+                return f'background-color: {bg}; color: {txt}; font-weight: bold; text-align: center;'
+
+            def style_highlight(val):
+                if 'Top 5' in str(val):
+                    return 'color: #2ecc71; font-weight: bold;'
+                elif 'Bottom 5' in str(val):
+                    return 'color: #e74c3c; font-weight: bold;'
+                return ''
+
+            styled = lb_df.style.apply(style_row, axis=1)
+            try:
+                styled = styled.map(style_grade, subset=['Grade'])
+                styled = styled.map(style_highlight, subset=['Highlight'])
+            except AttributeError:
+                styled = styled.applymap(style_grade, subset=['Grade'])
+                styled = styled.applymap(style_highlight, subset=['Highlight'])
+
+            styled = styled.format({
+                'Uptime %': '{:.1f}%',
+                'Weighted Avg': '{:.1f}',
+                'Total Patients': '{:,}',
+            })
+
+            st.dataframe(styled, use_container_width=True, hide_index=True)
+
+            st.divider()
+            st.markdown(f"#### 📊 Top 15 Districts — Ranked by {rank_by.split(' ')[0]}")
+
+            top15_chart = lb_df.head(15).copy()
+            top15_chart = top15_chart.sort_values(sort_col, ascending=True)
+            top15_chart['Color'] = top15_chart['Rank'].apply(lambda r: 'Top 5' if r <= 5 else 'Others')
+
+            fig_lb = px.bar(
+                top15_chart,
+                x=sort_col,
+                y='District',
+                orientation='h',
+                color='Color',
+                color_discrete_map={'Top 5': '#2ecc71', 'Others': '#95a5a6'},
+                labels={sort_col: sort_col, 'District': ''},
+                height=550,
+            )
+            fig_lb.update_layout(
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                legend_title="",
+                showlegend=False,
+                margin=dict(l=0, r=20, t=20, b=20),
+            )
             st.plotly_chart(fig_lb, use_container_width=True)
     else:
         st.info("Click the button above to generate the statewide leaderboard.")
