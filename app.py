@@ -12,10 +12,8 @@ st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
-    /* === BASE === */
     .block-container {padding-top: 2rem; padding-bottom: 2rem; max-width: 1500px;}
 
-    /* === CARDS === */
     .info-card, .metric-card, .zm-card, .report-header, .kpi-chip {
         background: linear-gradient(135deg, #1a2a3a 0%, #0E1117 100%);
         border: 1px solid #2a3a4a;
@@ -43,7 +41,6 @@ st.markdown("""
     .metric-progress-bg {background: #1a2a3a; height: 6px; border-radius: 3px; margin-top: 12px; overflow: hidden;}
     .metric-progress-fill {height: 100%; border-radius: 3px;}
 
-    /* === KPI CHIP (Compact summary cards) === */
     .kpi-chip {padding: 14px 18px; text-align: left;}
     .kpi-chip-label {color: #8fa5bb; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;}
     .kpi-chip-value {color: #FFFFFF; font-size: 20px; font-weight: 700; line-height: 1.2;}
@@ -55,20 +52,17 @@ st.markdown("""
     .kpi-chip.blue {border-left: 3px solid #3498db;}
     .kpi-chip.purple {border-left: 3px solid #9b59b6;}
 
-    /* === ZM CARD === */
     .zm-card {background: linear-gradient(135deg, #1e3a5f 0%, #0E1117 100%); border: 1px solid #2a4a6f; border-left: 4px solid #00D4FF; padding: 14px 16px; margin-top: 8px; margin-bottom: 8px;}
     .zm-card-header {color: #00D4FF; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;}
     .zm-card-name {color: #FFFFFF; font-size: 15px; font-weight: 700; line-height: 1.3; margin-bottom: 4px;}
     .zm-card-zone {color: #8fa5bb; font-size: 12px; font-style: italic;}
     .zm-card-stats {color: #00D4FF; font-size: 12px; font-weight: 600; margin-top: 6px;}
 
-    /* === REPORT HEADER === */
     .report-header {border-left: 5px solid #00D4FF; padding: 20px 28px; margin-bottom: 20px;}
     .report-title {color: #FFFFFF; font-size: 24px; font-weight: 700; margin-bottom: 8px;}
     .report-meta {color: #8fa5bb; font-size: 14px; line-height: 1.6;}
     .report-meta strong {color: #CCCCCC;}
 
-    /* === GRADE BADGES === */
     .district-grade-badge {display: inline-block; padding: 6px 18px; border-radius: 8px; font-size: 22px; font-weight: 800; margin-left: 10px;}
     .grade-A {background-color: #2ecc71; color: #000;}
     .grade-B {background-color: #a3e635; color: #000;}
@@ -76,45 +70,28 @@ st.markdown("""
     .grade-D {background-color: #f97316; color: #FFF;}
     .grade-F {background-color: #e74c3c; color: #FFF;}
 
-    /* === BOTTOM SPOKE CARDS === */
     .bottom-spoke {background: #1a1010; border: 1px solid #4a2a2a; border-left: 4px solid #e74c3c; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;}
     .bottom-spoke-name {color: #FFFFFF; font-size: 13px; font-weight: 600;}
     .bottom-spoke-meta {color: #f97316; font-size: 11px; margin-top: 2px;}
 
-    /* === SPACING === */
     hr {border-color: #2a3a4a !important; margin: 14px 0 !important; opacity: 0.5;}
 
-    /* === NATIVE STREAMLIT METRIC === */
     div[data-testid="stMetric"] {background-color: #1E1E1E; border: 1px solid #333333; padding: 15px; border-radius: 10px;}
     div[data-testid="stMetric"] label {color: #AAAAAA !important;}
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {color: #FFFFFF !important;}
 
-    /* === SEGMENTED CONTROL STYLING === */
     div[data-testid="stRadio"] > div[role="radiogroup"] > label {
-        background-color: #1a2a3a;
-        border: 1px solid #2a3a4a;
-        padding: 8px 16px;
-        border-radius: 8px;
-        margin-right: 6px;
-        transition: all 0.2s ease;
-        cursor: pointer;
+        background-color: #1a2a3a; border: 1px solid #2a3a4a;
+        padding: 8px 16px; border-radius: 8px; margin-right: 6px;
+        transition: all 0.2s ease; cursor: pointer;
     }
     div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
-        border-color: #00D4FF;
-        background-color: #1e3a5f;
-    }
-    div[data-testid="stRadio"] > div[role="radiogroup"] > label[data-checked="true"] {
-        background-color: #00D4FF;
-        border-color: #00D4FF;
-        color: #000;
+        border-color: #00D4FF; background-color: #1e3a5f;
     }
 
-    /* === SECTION HEADERS === */
     h2 {font-size: 1.35rem !important; letter-spacing: -0.3px;}
     h3 {font-size: 1.15rem !important; letter-spacing: -0.2px; color: #E5E7EB;}
-    .section-subtitle {color: #8fa5bb; font-size: 13px; margin-top: -8px; margin-bottom: 16px;}
 
-    /* === SIDEBAR POLISH === */
     section[data-testid="stSidebar"] {background-color: #0a0f16;}
     section[data-testid="stSidebar"] .block-container {padding-top: 1.5rem;}
 </style>
@@ -262,7 +239,6 @@ def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
     return round(((total_fd - s['zero_days']) / total_fd * 100), 1) if total_fd > 0 else 0
 
-# --- SCORE-BASED GRADING ---
 def calculate_score(uptime_pct, avg_per_day):
     uptime_component = 60.0 * (uptime_pct / 100.0)
     volume_component = 40.0 * min(avg_per_day / 15.0, 1.0)
@@ -299,7 +275,6 @@ def uptime_hex(uptime_pct):
     if uptime_pct >= 50: return "#f97316"
     return "#e74c3c"
 
-# --- SHARED STYLING FUNCTIONS ---
 def style_grade(val):
     colors = {'A': ('#2ecc71', '#000'), 'B': ('#a3e635', '#000'), 'C': ('#fbbf24', '#000'),
               'D': ('#f97316', '#FFF'), 'F': ('#e74c3c', '#FFF')}
@@ -318,6 +293,31 @@ def make_rank_styler(top_n, bottom_n, n):
             return 'background-color: #e74c3c; color: #FFF; font-weight: bold; text-align: center;'
         return 'text-align: center; font-weight: bold;'
     return styler
+
+# === EXPLICIT COLUMN WIDTHS FOR LEADERBOARD TABLES ===
+LEADERBOARD_COLUMN_CONFIG = {
+    "Rank": st.column_config.NumberColumn("Rank", width=60, format="%d"),
+    "District": st.column_config.TextColumn("District", width="medium"),
+    "ZM": st.column_config.TextColumn("ZM", width="medium"),
+    "Grade": st.column_config.TextColumn("Grade", width=70),
+    "Score": st.column_config.NumberColumn("Score", width=70, format="%.1f"),
+    "Uptime %": st.column_config.NumberColumn("Uptime %", width=90, format="%.1f%%"),
+    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=100, format="%.1f"),
+    "Total Patients": st.column_config.NumberColumn("Total Patients", width=110, format="%d"),
+    "Facilities": st.column_config.NumberColumn("Facilities", width=80, format="%d"),
+}
+
+ZM_LEADERBOARD_COLUMN_CONFIG = {
+    "Rank": st.column_config.NumberColumn("Rank", width=60, format="%d"),
+    "Zone Manager": st.column_config.TextColumn("Zone Manager", width="medium"),
+    "Districts": st.column_config.NumberColumn("Districts", width=85, format="%d"),
+    "Grade": st.column_config.TextColumn("Grade", width=70),
+    "Score": st.column_config.NumberColumn("Score", width=70, format="%.1f"),
+    "Uptime %": st.column_config.NumberColumn("Uptime %", width=90, format="%.1f%%"),
+    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=100, format="%.1f"),
+    "Total Patients": st.column_config.NumberColumn("Total Patients", width=110, format="%d"),
+    "Facilities": st.column_config.NumberColumn("Facilities", width=80, format="%d"),
+}
 
 @st.cache_data(show_spinner=False)
 def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter):
@@ -810,7 +810,6 @@ else:
             if lb_df.empty:
                 st.warning("No districts with data found.")
             else:
-                # ============ KPI SUMMARY STRIP ============
                 total_districts = len(lb_df)
                 avg_uptime_all = round(lb_df['Uptime %'].mean(), 1)
                 avg_score_all = round(lb_df['Score'].mean(), 1)
@@ -853,7 +852,6 @@ else:
 
                 st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
 
-                # ============ SORT & RANK ============
                 if "Reliability" in rank_by: sort_col = 'Uptime %'
                 elif "Efficiency" in rank_by: sort_col = 'Weighted Avg'
                 else: sort_col = 'Total Patients'
@@ -917,7 +915,13 @@ else:
                 else:
                     st.caption(f"🟢 Top {top_n} ranks highlighted in green. 🔴 Bottom {bottom_n} in red.")
 
-                st.dataframe(styled, use_container_width=True, hide_index=True)
+                # === APPLY COLUMN WIDTHS ===
+                st.dataframe(
+                    styled,
+                    use_container_width=True,
+                    hide_index=True,
+                    column_config=LEADERBOARD_COLUMN_CONFIG
+                )
 
                 st.markdown("---")
                 if is_filtered:
@@ -942,7 +946,6 @@ else:
                     height=max(380, 40 * len(top15_chart)),
                     text=sort_col
                 )
-                # Add value labels at end of bars
                 if "Uptime" in sort_col:
                     fig_lb.update_traces(texttemplate='%{text:.1f}%', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
                 elif "Patients" in sort_col:
@@ -980,7 +983,6 @@ else:
                     zm_rank = zm_rank.sort_values('Total_Patients', ascending=False).reset_index(drop=True)
                     zm_rank.insert(0, 'Rank', range(1, len(zm_rank) + 1))
 
-                    # KPI summary strip
                     top_zm = zm_rank.iloc[0]
                     best_uptime_zm = zm_rank.sort_values('Uptime %', ascending=False).iloc[0]
                     total_zms = len(zm_rank)
@@ -1046,7 +1048,13 @@ else:
                     else:
                         st.caption("🟢 Top 3 Zone Managers highlighted in green. 🔴 Bottom 2 in red.")
 
-                    st.dataframe(zm_styled, use_container_width=True, hide_index=True)
+                    # === APPLY COLUMN WIDTHS ===
+                    st.dataframe(
+                        zm_styled,
+                        use_container_width=True,
+                        hide_index=True,
+                        column_config=ZM_LEADERBOARD_COLUMN_CONFIG
+                    )
 
                     st.markdown("---")
                     st.markdown("#### 📊 Top 10 Zone Managers — Total Patients")
