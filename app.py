@@ -87,10 +87,8 @@ st.markdown("""
         border-color: #00D4FF; background-color: #1e3a5f;
     }
 
-    /* === TABLE POLISH === */
     div[data-testid="stDataFrame"] td, div[data-testid="stDataFrame"] th {
-        padding-top: 6px !important;
-        padding-bottom: 6px !important;
+        padding-top: 6px !important; padding-bottom: 6px !important;
         font-size: 13px !important;
     }
 
@@ -281,48 +279,44 @@ def uptime_hex(uptime_pct):
     return "#e74c3c"
 
 def style_grade(val):
+    """Styler for Grade column — kept because Grade is text and emoji-safe."""
     colors = {'A': ('#2ecc71', '#000'), 'B': ('#a3e635', '#000'), 'C': ('#fbbf24', '#000'),
               'D': ('#f97316', '#FFF'), 'F': ('#e74c3c', '#FFF')}
     bg, txt = colors.get(val, ('#333', '#FFF'))
     return f'background-color: {bg}; color: {txt}; font-weight: bold; text-align: center;'
 
-def make_rank_styler(top_n, bottom_n, n):
-    """Rank cell as compact pill-style badge. Rounded corners + tight padding."""
-    def styler(val):
-        try:
-            rank = int(val)
-        except (ValueError, TypeError):
-            return ''
-        if rank <= top_n:
-            return 'background-color: #2ecc71; color: #000; font-weight: bold; text-align: center; border-radius: 6px; padding: 3px 6px;'
-        elif rank > n - bottom_n:
-            return 'background-color: #e74c3c; color: #FFF; font-weight: bold; text-align: center; border-radius: 6px; padding: 3px 6px;'
-        return 'text-align: center; font-weight: bold; color: #8fa5bb;'
-    return styler
+def format_rank(rank, top_n, bottom_n, total):
+    """Return a string that carries its own visual highlight via emoji."""
+    rank = int(rank)
+    if top_n > 0 and rank <= top_n:
+        return f"🟢 {rank}"
+    elif bottom_n > 0 and rank > total - bottom_n:
+        return f"🔴 {rank}"
+    return str(rank)
 
-# === TIGHTENED COLUMN WIDTHS ===
+# === COLUMN CONFIGS (now respected because Rank is a TextColumn) ===
 LEADERBOARD_COLUMN_CONFIG = {
-    "Rank": st.column_config.NumberColumn("Rank", width=55, format="%d"),
-    "District": st.column_config.TextColumn("District", width=150),
+    "Rank": st.column_config.TextColumn("Rank", width=55),
+    "District": st.column_config.TextColumn("District", width=170),
     "ZM": st.column_config.TextColumn("ZM", width=170),
-    "Grade": st.column_config.TextColumn("Grade", width=65),
+    "Grade": st.column_config.TextColumn("Grade", width=70),
     "Score": st.column_config.NumberColumn("Score", width=65, format="%.1f"),
-    "Uptime %": st.column_config.NumberColumn("Uptime %", width=85, format="%.1f%%"),
-    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=95, format="%.1f"),
+    "Uptime %": st.column_config.NumberColumn("Uptime %", width=90, format="%.1f%%"),
+    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=100, format="%.1f"),
     "Total Patients": st.column_config.NumberColumn("Total Patients", width=105, format="%d"),
-    "Facilities": st.column_config.NumberColumn("Facilities", width=75, format="%d"),
+    "Facilities": st.column_config.NumberColumn("Facilities", width=80, format="%d"),
 }
 
 ZM_LEADERBOARD_COLUMN_CONFIG = {
-    "Rank": st.column_config.NumberColumn("Rank", width=55, format="%d"),
-    "Zone Manager": st.column_config.TextColumn("Zone Manager", width=170),
-    "Districts": st.column_config.NumberColumn("Districts", width=80, format="%d"),
-    "Grade": st.column_config.TextColumn("Grade", width=65),
+    "Rank": st.column_config.TextColumn("Rank", width=55),
+    "Zone Manager": st.column_config.TextColumn("Zone Manager", width=190),
+    "Districts": st.column_config.NumberColumn("Districts", width=85, format="%d"),
+    "Grade": st.column_config.TextColumn("Grade", width=70),
     "Score": st.column_config.NumberColumn("Score", width=65, format="%.1f"),
-    "Uptime %": st.column_config.NumberColumn("Uptime %", width=85, format="%.1f%%"),
-    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=95, format="%.1f"),
+    "Uptime %": st.column_config.NumberColumn("Uptime %", width=90, format="%.1f%%"),
+    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=100, format="%.1f"),
     "Total Patients": st.column_config.NumberColumn("Total Patients", width=105, format="%d"),
-    "Facilities": st.column_config.NumberColumn("Facilities", width=75, format="%d"),
+    "Facilities": st.column_config.NumberColumn("Facilities", width=80, format="%d"),
 }
 
 @st.cache_data(show_spinner=False)
@@ -813,7 +807,6 @@ else:
             else:
                 total_districts = len(lb_df)
                 avg_uptime_all = round(lb_df['Uptime %'].mean(), 1)
-                avg_score_all = round(lb_df['Score'].mean(), 1)
                 top_row = lb_df.sort_values('Score', ascending=False).iloc[0]
                 worst_row = lb_df.sort_values('Score', ascending=False).iloc[-1]
 
@@ -872,12 +865,6 @@ else:
                     lb_df_display = lb_df.copy()
                     n = n_total
 
-                def add_medal(row):
-                    r = row['Rank']
-                    m = '🥇' if r == 1 else '🥈' if r == 2 else '🥉' if r == 3 else ''
-                    return f"{m} {row['District']}".strip()
-                lb_df_display['District'] = lb_df_display.apply(add_medal, axis=1)
-
                 if not is_filtered:
                     if n >= 10: top_n, bottom_n = 5, 5
                     elif n >= 6: top_n, bottom_n = 3, 3
@@ -886,25 +873,19 @@ else:
                 else:
                     top_n, bottom_n = 0, 0
 
+                # Replace integer rank with string + emoji so widths work
+                lb_df_display['Rank'] = lb_df_display['Rank'].apply(
+                    lambda r: format_rank(r, top_n, bottom_n, n)
+                )
+
                 lb_df_display = lb_df_display[['Rank', 'District', 'ZM', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']]
 
+                # Only style the Grade column — Rank now carries its highlight as text
                 styled = lb_df_display.style
                 try:
                     styled = styled.map(style_grade, subset=['Grade'])
                 except AttributeError:
                     styled = styled.applymap(style_grade, subset=['Grade'])
-
-                if not is_filtered:
-                    rank_styler = make_rank_styler(top_n, bottom_n, n)
-                    try:
-                        styled = styled.map(rank_styler, subset=['Rank'])
-                    except AttributeError:
-                        styled = styled.applymap(rank_styler, subset=['Rank'])
-                else:
-                    try:
-                        styled = styled.map(lambda v: 'text-align: center; font-weight: bold; color: #8fa5bb;', subset=['Rank'])
-                    except AttributeError:
-                        styled = styled.applymap(lambda v: 'text-align: center; font-weight: bold; color: #8fa5bb;', subset=['Rank'])
 
                 styled = styled.format({
                     'Uptime %': '{:.1f}%', 'Weighted Avg': '{:.1f}',
@@ -914,7 +895,7 @@ else:
                 if is_filtered:
                     st.caption(f"Showing **{n}** districts managed by **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** — ranks preserve their position in the statewide leaderboard.")
                 else:
-                    st.caption(f"🟢 Top {top_n} ranks highlighted in green. 🔴 Bottom {bottom_n} in red.")
+                    st.caption(f"🟢 Top {top_n} ranks highlighted with green dot. 🔴 Bottom {bottom_n} with red dot.")
 
                 st.dataframe(
                     styled,
@@ -930,13 +911,14 @@ else:
                     st.markdown("#### 📊 Top 15 Districts — Statewide")
 
                 top15_chart = lb_df_display.head(min(15, n)).copy()
-                top15_chart = top15_chart.sort_values('Rank', ascending=False)
+                top15_chart['Rank_Num'] = top15_chart['Rank'].str.extract(r'(\d+)').astype(int)
+                top15_chart = top15_chart.sort_values('Rank_Num', ascending=False)
 
                 if is_filtered:
                     top15_chart['Color'] = 'Neutral'
                     color_map = {'Neutral': '#3498db'}
                 else:
-                    top15_chart['Color'] = top15_chart['Rank'].apply(lambda r: f'Top {top_n}' if r <= top_n else 'Others')
+                    top15_chart['Color'] = top15_chart['Rank_Num'].apply(lambda r: f'Top {top_n}' if r <= top_n else 'Others')
                     color_map = {f'Top {top_n}': '#2ecc71', 'Others': '#95a5a6'}
 
                 fig_lb = px.bar(
@@ -1019,23 +1001,20 @@ else:
                     zm_display = zm_rank[['Rank', 'Zone Manager', 'Districts', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total_Patients', 'Facilities']].copy()
                     zm_display.columns = ['Rank', 'Zone Manager', 'Districts', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']
 
+                    # Same treatment: format rank as text with emoji
+                    n_zm = len(zm_display)
+                    if is_filtered:
+                        zm_display['Rank'] = zm_display['Rank'].apply(lambda r: str(int(r)))
+                    else:
+                        zm_display['Rank'] = zm_display['Rank'].apply(
+                            lambda r: format_rank(r, 3, 2, n_zm)
+                        )
+
                     zm_styled = zm_display.style
                     try:
                         zm_styled = zm_styled.map(style_grade, subset=['Grade'])
                     except AttributeError:
                         zm_styled = zm_styled.applymap(style_grade, subset=['Grade'])
-
-                    if is_filtered:
-                        try:
-                            zm_styled = zm_styled.map(lambda v: 'text-align: center; font-weight: bold; color: #8fa5bb;', subset=['Rank'])
-                        except AttributeError:
-                            zm_styled = zm_styled.applymap(lambda v: 'text-align: center; font-weight: bold; color: #8fa5bb;', subset=['Rank'])
-                    else:
-                        zm_rank_styler = make_rank_styler(3, 2, len(zm_display))
-                        try:
-                            zm_styled = zm_styled.map(zm_rank_styler, subset=['Rank'])
-                        except AttributeError:
-                            zm_styled = zm_styled.applymap(zm_rank_styler, subset=['Rank'])
 
                     zm_styled = zm_styled.format({
                         'Uptime %': '{:.1f}%', 'Weighted Avg': '{:.1f}',
@@ -1045,7 +1024,7 @@ else:
                     if is_filtered:
                         st.caption(f"Showing all ZMs — **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** highlighted in blue.")
                     else:
-                        st.caption("🟢 Top 3 Zone Managers highlighted in green. 🔴 Bottom 2 in red.")
+                        st.caption("🟢 Top 3 Zone Managers highlighted with green dot. 🔴 Bottom 2 with red dot.")
 
                     st.dataframe(
                         zm_styled,
