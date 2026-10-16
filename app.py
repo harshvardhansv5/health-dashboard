@@ -139,24 +139,16 @@ def extract_date(col_name):
     return pd.NaT
 
 def find_date_columns(df):
-    """
-    FIX: Return BOTH columns whose name contains 'Total number of patients'
-    AND columns whose name parses as a date. Previously, an early-return
-    skipped timestamp-named columns when a generic header column existed.
-    """
+    """Return both 'Total number of patients' columns and any date-parsable columns."""
     date_cols = []
     seen = set()
     for c in df.columns:
-        if c in seen:
-            continue
+        if c in seen: continue
         if 'Total number of patients' in str(c):
-            date_cols.append(c)
-            seen.add(c)
-            continue
+            date_cols.append(c); seen.add(c); continue
         parsed = extract_date(c)
         if pd.notna(parsed):
-            date_cols.append(c)
-            seen.add(c)
+            date_cols.append(c); seen.add(c)
     return date_cols
 
 def get_facility_mask(df, facility_col):
@@ -221,22 +213,33 @@ def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
     return round(((total_fd - s['zero_days']) / total_fd * 100), 1) if total_fd > 0 else 0
 
-def calculate_grade(uptime_pct, avg_per_day):
-    if avg_per_day == 0 or uptime_pct < 30: return "F"
-    if uptime_pct > 85 and avg_per_day > 10: return "A"
-    if uptime_pct > 70 and avg_per_day > 5: return "B"
-    if uptime_pct > 50 and avg_per_day > 2: return "C"
-    if uptime_pct > 30 and avg_per_day > 1: return "D"
+# --- NEW SCORE-BASED GRADING ---
+def calculate_score(uptime_pct, avg_per_day):
+    """0-100 score: 60% reliability + 40% volume (capped at 15/day)."""
+    uptime_component = 60.0 * (uptime_pct / 100.0)
+    volume_component = 40.0 * min(avg_per_day / 15.0, 1.0)
+    return round(uptime_component + volume_component, 1)
+
+def score_to_grade(score):
+    if score >= 85: return "A"
+    if score >= 70: return "B"
+    if score >= 50: return "C"
+    if score >= 30: return "D"
     return "F"
 
+def calculate_grade(uptime_pct, avg_per_day):
+    return score_to_grade(calculate_score(uptime_pct, avg_per_day))
+
 def district_grade(plot_df):
-    if plot_df is None or plot_df.empty: return "F"
-    grade_map = {"A": 5, "B": 4, "C": 3, "D": 2, "F": 1}
-    reverse_map = {5: "A", 4: "B", 3: "C", 2: "D", 1: "F"}
-    grades = [grade_map[calculate_grade(row['Uptime %'], row['Average Patients'])] for _, row in plot_df.iterrows()]
-    if not grades: return "F"
-    avg = sum(grades) / len(grades)
-    return reverse_map[max(1, min(5, int(round(avg))))]
+    if plot_df is None or plot_df.empty:
+        return "F"
+    scores = [
+        calculate_score(row['Uptime %'], row['Average Patients'])
+        for _, row in plot_df.iterrows()
+    ]
+    if not scores:
+        return "F"
+    return score_to_grade(sum(scores) / len(scores))
 
 def grade_emoji(g):
     return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
@@ -263,12 +266,18 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
             pdf, _, s = process_district_df(sdf, time_filter)
             if s:
                 d_grade = district_grade(pdf) if pdf is not None else "F"
+                d_score = 0.0
+                if pdf is not None and len(pdf) > 0:
+                    d_score = round(sum(
+                        calculate_score(row['Uptime %'], row['Average Patients'])
+                        for _, row in pdf.iterrows()
+                    ) / len(pdf), 1)
                 lookup_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
                 zm_full = DISTRICT_TO_ZM.get(lookup_name, "—")
                 zm_display = ZM_SHORT.get(zm_full, zm_full) if zm_full != "—" else "—"
                 data.append({
                     'District': sheet, 'ZM': zm_display, 'ZM_Full': zm_full,
-                    'Grade': d_grade, 'Total Patients': s['total'],
+                    'Grade': d_grade, 'Score': d_score, 'Total Patients': s['total'],
                     'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s),
                     'Facilities': s['num_facilities'],
                     'Zero Days': s['zero_days'], 'Num Days': s['num_days']
@@ -278,7 +287,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
     return pd.DataFrame(data)
 
 def compute_zm_rankings(lb_df):
-    """Aggregate district-level leaderboard data into ZM rankings."""
+    """Aggregate district-level data into ZM-level metrics."""
     if lb_df.empty or 'ZM_Full' not in lb_df.columns:
         return pd.DataFrame()
     df = lb_df[lb_df['ZM_Full'] != "—"].copy()
@@ -287,22 +296,19 @@ def compute_zm_rankings(lb_df):
     df['Facility_Days'] = df['Facilities'] * df['Num Days']
     df['With_Patient_Days'] = df['Facility_Days'] - df['Zero Days']
 
-    grade_map = {"A": 5, "B": 4, "C": 3, "D": 2, "F": 1}
-    reverse_map = {5: "A", 4: "B", 3: "C", 2: "D", 1: "F"}
-    df['Grade_Num'] = df['Grade'].map(grade_map)
-
     zm = df.groupby('ZM_Full').agg(
         Districts=('District', 'count'),
         Total_Patients=('Total Patients', 'sum'),
         Facilities=('Facilities', 'sum'),
         Facility_Days=('Facility_Days', 'sum'),
         With_Patient_Days=('With_Patient_Days', 'sum'),
-        Avg_Grade_Num=('Grade_Num', 'mean')
+        Avg_Score=('Score', 'mean')
     ).reset_index()
 
     zm['Uptime %'] = (zm['With_Patient_Days'] / zm['Facility_Days'] * 100).round(1)
     zm['Weighted Avg'] = (zm['Total_Patients'] / zm['Facility_Days']).round(1)
-    zm['Grade'] = zm['Avg_Grade_Num'].apply(lambda x: reverse_map[max(1, min(5, int(round(x))))])
+    zm['Score'] = zm['Avg_Score'].round(1)
+    zm['Grade'] = zm['Score'].apply(score_to_grade)
     zm['Zone Manager'] = zm['ZM_Full'].apply(lambda x: ZM_SHORT.get(x, x))
     return zm
 
@@ -365,7 +371,6 @@ with st.sidebar:
                     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone"
 
                 districts_count = len(ZM_DATA.get(zm_name_for_district, {}))
-
                 zm_rank_info = ""
                 try:
                     ranks = get_zm_rankings(tuple(available_sheets), file_bytes, "Last 7 Days")
@@ -441,6 +446,7 @@ if view_mode == "🏥 District View":
     facility_col = stats['facility_col']
 
     plot_df['Grade'] = plot_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
+    plot_df['Score'] = plot_df.apply(lambda r: calculate_score(r['Uptime %'], r['Average Patients']), axis=1)
     grade_order = {'A': 1, 'B': 2, 'C': 3, 'D': 4, 'F': 5}
     plot_df['Grade_Order'] = plot_df['Grade'].map(grade_order)
     ranked_df = plot_df.sort_values(['Grade_Order', 'Average Patients'], ascending=[True, False])
@@ -566,14 +572,15 @@ if view_mode == "🏥 District View":
         with right_col:
             st.markdown("#### 📋 All Facilities")
             st.caption("Sorted by grade and performance")
-            display = ranked_df[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Total Patients']].copy()
-            display.columns = ['Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total']
+            display = ranked_df[[facility_col, 'Grade', 'Score', 'Uptime %', 'Average Patients', 'Total Patients']].copy()
+            display.columns = ['Facility', 'Grade', 'Score', 'Uptime %', 'Avg / Day', 'Total']
             st.dataframe(
                 display, use_container_width=True, hide_index=True,
                 height=min(420, 35 * len(display) + 40),
                 column_config={
                     "Facility": st.column_config.TextColumn("Facility", width="large"),
                     "Grade": st.column_config.TextColumn("Grade", width="small"),
+                    "Score": st.column_config.NumberColumn("Score", format="%.1f"),
                     "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                     "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
                     "Total": st.column_config.NumberColumn("Total", format="%d"),
@@ -622,15 +629,17 @@ if view_mode == "🏥 District View":
 
         st.markdown("---")
         st.markdown("### 🏥 Spoke Scorecard")
-        st.caption("Every facility in the district, graded on reliability (60%) and volume (40%). Sorted best to worst.")
+        st.caption("Every facility in the district, scored on reliability (60%) + volume (40%, capped at 15/day). Sorted best to worst.")
 
         scorecard = plot_df.copy()
         scorecard['Grade'] = scorecard.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
-        scorecard = scorecard.sort_values(by=['Grade', 'Uptime %', 'Average Patients'], ascending=[True, False, False])
+        scorecard['Score'] = scorecard.apply(lambda r: calculate_score(r['Uptime %'], r['Average Patients']), axis=1)
+        scorecard = scorecard.sort_values(by=['Score'], ascending=False)
 
         display = pd.DataFrame()
         display['Facility'] = scorecard[facility_col]
         display['Grade'] = scorecard['Grade'].apply(grade_emoji)
+        display['Score'] = scorecard['Score']
         display['Uptime %'] = scorecard['Uptime %']
         display['Avg / Day'] = scorecard['Average Patients']
         display['Total Patients'] = scorecard['Total Patients'].astype(int)
@@ -641,6 +650,13 @@ if view_mode == "🏥 District View":
             column_config={
                 "Facility": st.column_config.TextColumn("Facility", width="large"),
                 "Grade": st.column_config.TextColumn("Grade", width="small"),
+                "Score": st.column_config.ProgressColumn(
+                    "Score",
+                    help="0-100: 60% reliability + 40% volume (capped at 15/day)",
+                    format="%.1f",
+                    min_value=0,
+                    max_value=100,
+                ),
                 "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                 "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
                 "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"),
@@ -649,8 +665,8 @@ if view_mode == "🏥 District View":
         )
 
         st.markdown("---")
-        export = scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
-        export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Patients', 'Zero Days']
+        export = scorecard[[facility_col, 'Grade', 'Score', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
+        export.columns = ['Facility', 'Grade', 'Score', 'Uptime %', 'Avg Per Day', 'Total Patients', 'Zero Days']
         csv = export.to_csv(index=False).encode('utf-8')
         period_file = pd.Timestamp.now().strftime('%b_%Y')
         st.download_button(
@@ -715,7 +731,7 @@ if view_mode == "🏥 District View":
 # STATE VIEW
 # ---------------------------------------------------------------------------
 else:
-    tab1, tab2 = st.tabs(["🏆 State Leaderboard", "⚖️ Compare Districts"])
+    tab1, tab2, tab3 = st.tabs(["🏆 State Leaderboard", "👥 Zone Managers", "⚖️ Compare Districts"])
 
     # ===== TAB 1: STATE LEADERBOARD =====
     with tab1:
@@ -726,6 +742,7 @@ else:
             - **Efficiency (Weighted Avg)** — Avg patients per facility per day.
             - **Volume (Total Patients)** — Raw total across all facilities.
             - **Grade** — A/B/C/D/F combined score.
+            - **Score** — 0-100: 60% reliability + 40% volume.
             """)
 
         rank_by = st.radio("Rank by:",
@@ -775,7 +792,7 @@ else:
                 else:
                     lb_df_display['Highlight'] = ''
 
-                lb_df_display = lb_df_display[['Rank', 'District', 'ZM', 'Grade', 'Highlight', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']]
+                lb_df_display = lb_df_display[['Rank', 'District', 'ZM', 'Grade', 'Score', 'Highlight', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']]
 
                 def style_row(row):
                     if is_filtered: return [''] * len(row)
@@ -802,7 +819,10 @@ else:
                     styled = styled.applymap(style_grade, subset=['Grade'])
                     styled = styled.applymap(style_highlight, subset=['Highlight'])
 
-                styled = styled.format({'Uptime %': '{:.1f}%', 'Weighted Avg': '{:.1f}', 'Total Patients': '{:,}'})
+                styled = styled.format({
+                    'Uptime %': '{:.1f}%', 'Weighted Avg': '{:.1f}',
+                    'Total Patients': '{:,}', 'Score': '{:.1f}'
+                })
 
                 if is_filtered:
                     st.caption(f"Showing **{n}** districts managed by **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** — ranks preserve their position in the statewide leaderboard.")
@@ -832,23 +852,32 @@ else:
                 fig_lb.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
                                      legend_title="", showlegend=False, margin=dict(l=0, r=20, t=20, b=20))
                 st.plotly_chart(fig_lb, use_container_width=True)
+        else:
+            st.info("Click the button above to generate the statewide leaderboard.")
 
-                # ============================================================
-                # NEW: ZONE MANAGER LEADERBOARD
-                # ============================================================
-                st.markdown("---")
-                st.markdown("### 👥 Zone Manager Leaderboard")
-                st.caption("Ranked by total patients managed across all their districts. Grade reflects the average of their districts' grades.")
+    # ===== TAB 2: ZONE MANAGER LEADERBOARD =====
+    with tab2:
+        st.markdown("### 👥 Zone Manager Leaderboard")
+        st.caption("Each Zone Manager's aggregated performance across all their districts. Ranked by Total Patients.")
 
-                zm_rank = compute_zm_rankings(lb_df)
+        if st.button("🔄 Calculate Zone Rankings", key="zm_rank_btn"):
+            with st.spinner("Processing all districts..."):
+                lb_df_zm = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
+
+            if lb_df_zm.empty:
+                st.warning("No districts with data found.")
+            else:
+                zm_rank = compute_zm_rankings(lb_df_zm)
                 if zm_rank.empty:
                     st.info("No Zone Manager data available.")
                 else:
                     zm_rank = zm_rank.sort_values('Total_Patients', ascending=False).reset_index(drop=True)
                     zm_rank.insert(0, 'Rank', range(1, len(zm_rank) + 1))
 
-                    zm_display = zm_rank[['Rank', 'Zone Manager', 'Districts', 'Grade', 'Uptime %', 'Weighted Avg', 'Total_Patients', 'Facilities']].copy()
-                    zm_display.columns = ['Rank', 'Zone Manager', 'Districts', 'Grade', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']
+                    is_filtered = selected_zm_filter != "🏢 All Zones"
+
+                    zm_display = zm_rank[['Rank', 'Zone Manager', 'Districts', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total_Patients', 'Facilities']].copy()
+                    zm_display.columns = ['Rank', 'Zone Manager', 'Districts', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']
 
                     def style_zm_row(row):
                         if is_filtered:
@@ -872,7 +901,8 @@ else:
                     zm_styled = zm_styled.format({
                         'Uptime %': '{:.1f}%',
                         'Weighted Avg': '{:.1f}',
-                        'Total Patients': '{:,}'
+                        'Total Patients': '{:,}',
+                        'Score': '{:.1f}'
                     })
 
                     if is_filtered:
@@ -880,8 +910,8 @@ else:
 
                     st.dataframe(zm_styled, use_container_width=True, hide_index=True)
 
-                    # Mini bar chart — top 10 ZMs
-                    st.markdown("#### 📊 Top 10 Zone Managers — Volume")
+                    st.markdown("---")
+                    st.markdown("#### 📊 Top 10 Zone Managers — Total Patients")
                     top10_zm = zm_rank.head(min(10, len(zm_rank))).copy()
                     top10_zm_chart = top10_zm.sort_values('Rank', ascending=False)
                     top10_zm_chart['Color'] = top10_zm_chart['Rank'].apply(lambda r: 'Top 3' if r <= 3 else 'Others')
@@ -896,11 +926,31 @@ else:
                     fig_zm.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
                                          legend_title="", showlegend=False, margin=dict(l=0, r=20, t=20, b=20))
                     st.plotly_chart(fig_zm, use_container_width=True)
-        else:
-            st.info("Click the button above to generate the statewide leaderboard.")
 
-    # ===== TAB 2: COMPARE DISTRICTS =====
-    with tab2:
+                    st.markdown("---")
+                    st.markdown("#### 📊 Top 10 Zone Managers — Reliability (Uptime %)")
+                    top10_uptime = zm_rank.sort_values('Uptime %', ascending=False).head(min(10, len(zm_rank))).copy()
+                    top10_uptime_chart = top10_uptime.sort_values('Uptime %', ascending=True)
+                    top10_uptime_chart['Color'] = top10_uptime_chart.apply(
+                        lambda r: 'Top 3' if r['Uptime %'] >= top10_uptime['Uptime %'].nlargest(3).min() else 'Others',
+                        axis=1
+                    )
+
+                    fig_zm_u = px.bar(
+                        top10_uptime_chart, x='Uptime %', y='Zone Manager', orientation='h',
+                        color='Color',
+                        color_discrete_map={'Top 3': '#2ecc71', 'Others': '#95a5a6'},
+                        labels={'Uptime %': 'Uptime %', 'Zone Manager': ''},
+                        height=max(350, 40 * len(top10_uptime_chart))
+                    )
+                    fig_zm_u.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                                           legend_title="", showlegend=False, margin=dict(l=0, r=20, t=20, b=20))
+                    st.plotly_chart(fig_zm_u, use_container_width=True)
+        else:
+            st.info("Click the button above to generate Zone Manager rankings.")
+
+    # ===== TAB 3: COMPARE DISTRICTS =====
+    with tab3:
         st.markdown("### ⚖️ Compare Two Districts Head-to-Head")
         sorted_sheets = sorted(available_sheets)
         ca, cb = st.columns(2)
