@@ -139,7 +139,6 @@ def extract_date(col_name):
     return pd.NaT
 
 def find_date_columns(df):
-    """Return both 'Total number of patients' columns and any date-parsable columns."""
     date_cols = []
     seen = set()
     for c in df.columns:
@@ -213,7 +212,7 @@ def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
     return round(((total_fd - s['zero_days']) / total_fd * 100), 1) if total_fd > 0 else 0
 
-# --- NEW SCORE-BASED GRADING ---
+# --- SCORE-BASED GRADING ---
 def calculate_score(uptime_pct, avg_per_day):
     """0-100 score: 60% reliability + 40% volume (capped at 15/day)."""
     uptime_component = 60.0 * (uptime_pct / 100.0)
@@ -255,6 +254,20 @@ def uptime_hex(uptime_pct):
     if uptime_pct >= 70: return "#fbbf24"
     if uptime_pct >= 50: return "#f97316"
     return "#e74c3c"
+
+# --- SHARED STYLING FUNCTIONS (module level so all tabs can use them) ---
+def style_grade(val):
+    """Shared grade-cell styler used across tabs."""
+    colors = {'A': ('#2ecc71', '#000'), 'B': ('#a3e635', '#000'), 'C': ('#fbbf24', '#000'),
+              'D': ('#f97316', '#FFF'), 'F': ('#e74c3c', '#FFF')}
+    bg, txt = colors.get(val, ('#333', '#FFF'))
+    return f'background-color: {bg}; color: {txt}; font-weight: bold; text-align: center;'
+
+def style_highlight(val):
+    """Shared highlight-cell styler."""
+    if 'Top' in str(val): return 'color: #2ecc71; font-weight: bold;'
+    elif 'Bottom' in str(val): return 'color: #e74c3c; font-weight: bold;'
+    return ''
 
 @st.cache_data(show_spinner=False)
 def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter):
@@ -800,16 +813,6 @@ else:
                     if rank <= top_n: return ['background-color: #0e2a1a; color: #e8f5e9;'] * len(row)
                     elif rank > n - bottom_n: return ['background-color: #2a0e0e; color: #fce4e4;'] * len(row)
                     return [''] * len(row)
-
-                def style_grade(val):
-                    colors = {'A': ('#2ecc71', '#000'), 'B': ('#a3e635', '#000'), 'C': ('#fbbf24', '#000'), 'D': ('#f97316', '#FFF'), 'F': ('#e74c3c', '#FFF')}
-                    bg, txt = colors.get(val, ('#333', '#FFF'))
-                    return f'background-color: {bg}; color: {txt}; font-weight: bold; text-align: center;'
-
-                def style_highlight(val):
-                    if 'Top' in str(val): return 'color: #2ecc71; font-weight: bold;'
-                    elif 'Bottom' in str(val): return 'color: #e74c3c; font-weight: bold;'
-                    return ''
 
                 styled = lb_df_display.style.apply(style_row, axis=1)
                 try:
