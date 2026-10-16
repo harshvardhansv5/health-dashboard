@@ -66,7 +66,6 @@ st.markdown("""
     div[data-testid="stMetric"] label {color: #AAAAAA !important;}
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {color: #FFFFFF !important;}
 
-    /* View mode pills styling */
     .view-mode-title {color: #8fa5bb; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 4px;}
 </style>
 """, unsafe_allow_html=True)
@@ -140,12 +139,24 @@ def extract_date(col_name):
     return pd.NaT
 
 def find_date_columns(df):
-    date_cols = [c for c in df.columns if 'Total number of patients' in str(c)]
-    if date_cols: return date_cols
+    """
+    FIX: Return BOTH columns whose name contains 'Total number of patients'
+    AND columns whose name parses as a date. Previously, an early-return
+    skipped timestamp-named columns when a generic header column existed.
+    """
     date_cols = []
+    seen = set()
     for c in df.columns:
+        if c in seen:
+            continue
+        if 'Total number of patients' in str(c):
+            date_cols.append(c)
+            seen.add(c)
+            continue
         parsed = extract_date(c)
-        if pd.notna(parsed): date_cols.append(c)
+        if pd.notna(parsed):
+            date_cols.append(c)
+            seen.add(c)
     return date_cols
 
 def get_facility_mask(df, facility_col):
@@ -259,11 +270,41 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
                     'District': sheet, 'ZM': zm_display, 'ZM_Full': zm_full,
                     'Grade': d_grade, 'Total Patients': s['total'],
                     'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s),
-                    'Facilities': s['num_facilities']
+                    'Facilities': s['num_facilities'],
+                    'Zero Days': s['zero_days'], 'Num Days': s['num_days']
                 })
         except Exception:
             pass
     return pd.DataFrame(data)
+
+def compute_zm_rankings(lb_df):
+    """Aggregate district-level leaderboard data into ZM rankings."""
+    if lb_df.empty or 'ZM_Full' not in lb_df.columns:
+        return pd.DataFrame()
+    df = lb_df[lb_df['ZM_Full'] != "—"].copy()
+    if df.empty:
+        return pd.DataFrame()
+    df['Facility_Days'] = df['Facilities'] * df['Num Days']
+    df['With_Patient_Days'] = df['Facility_Days'] - df['Zero Days']
+
+    grade_map = {"A": 5, "B": 4, "C": 3, "D": 2, "F": 1}
+    reverse_map = {5: "A", 4: "B", 3: "C", 2: "D", 1: "F"}
+    df['Grade_Num'] = df['Grade'].map(grade_map)
+
+    zm = df.groupby('ZM_Full').agg(
+        Districts=('District', 'count'),
+        Total_Patients=('Total Patients', 'sum'),
+        Facilities=('Facilities', 'sum'),
+        Facility_Days=('Facility_Days', 'sum'),
+        With_Patient_Days=('With_Patient_Days', 'sum'),
+        Avg_Grade_Num=('Grade_Num', 'mean')
+    ).reset_index()
+
+    zm['Uptime %'] = (zm['With_Patient_Days'] / zm['Facility_Days'] * 100).round(1)
+    zm['Weighted Avg'] = (zm['Total_Patients'] / zm['Facility_Days']).round(1)
+    zm['Grade'] = zm['Avg_Grade_Num'].apply(lambda x: reverse_map[max(1, min(5, int(round(x))))])
+    zm['Zone Manager'] = zm['ZM_Full'].apply(lambda x: ZM_SHORT.get(x, x))
+    return zm
 
 @st.cache_data(show_spinner=False)
 def get_zm_rankings(sheet_names_tuple, uploaded_file_bytes, time_filter):
@@ -276,11 +317,10 @@ def get_zm_rankings(sheet_names_tuple, uploaded_file_bytes, time_filter):
     return dict(zip(zm_agg['ZM_Full'], zip(zm_agg['Rank'], zm_agg['Districts'])))
 
 # ============================================================================
-# TOP-LEVEL VIEW MODE SELECTOR (rendered in main area, at the top)
+# TOP-LEVEL VIEW MODE SELECTOR
 # ============================================================================
 st.title("🏥 Bihar District Hub & Spoke Dashboard")
 
-# Use pills if available, else fallback to radio
 try:
     view_mode = st.pills(
         "view_mode_selector",
@@ -293,16 +333,14 @@ except AttributeError:
     view_mode = st.radio(
         "view_mode_selector",
         ["🏥 District View", "🌐 State View"],
-        horizontal=True,
-        index=0,
-        label_visibility="collapsed"
+        horizontal=True, index=0, label_visibility="collapsed"
     )
 
 if view_mode is None:
     view_mode = "🏥 District View"
 
 # ============================================================================
-# SIDEBAR — CONDITIONAL ON VIEW MODE
+# SIDEBAR
 # ============================================================================
 with st.sidebar:
     st.title("Control Panel")
@@ -316,7 +354,6 @@ with st.sidebar:
             st.markdown("---")
 
             if view_mode == "🏥 District View":
-                # ---- DISTRICT VIEW SIDEBAR ----
                 all_districts = sorted(DISTRICT_TO_ZM.keys())
                 selected_district_zm = st.selectbox("Select District", all_districts)
 
@@ -354,8 +391,7 @@ with st.sidebar:
 
                 st.markdown("---")
                 time_filter = st.selectbox("Select Time Range:",
-                    ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"],
-                    key="district_tf")
+                    ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"], key="district_tf")
                 st.markdown("---")
 
                 target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
@@ -364,27 +400,18 @@ with st.sidebar:
                 sheet_found = False
                 for s in available_sheets:
                     if s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower():
-                        sheet_to_load = s
-                        sheet_found = True
-                        break
-                if sheet_found:
-                    st.success(f"✅ Data Available: {selected_district_zm}")
-                else:
-                    st.warning(f"⏳ Data Pending: {selected_district_zm}")
+                        sheet_to_load = s; sheet_found = True; break
+                if sheet_found: st.success(f"✅ Data Available: {selected_district_zm}")
+                else: st.warning(f"⏳ Data Pending: {selected_district_zm}")
 
             else:
-                # ---- STATE VIEW SIDEBAR ----
                 st.markdown('<div class="view-mode-title">🌐 Statewide Analysis</div>', unsafe_allow_html=True)
-
                 zm_options = ["🏢 All Zones"] + sorted(list(ZM_DATA.keys()))
                 selected_zm_filter = st.selectbox("Filter by ZM:", zm_options, key="state_zm_filter")
-
                 st.markdown("---")
                 time_filter = st.selectbox("Select Time Range:",
-                    ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"],
-                    key="state_tf")
+                    ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"], key="state_tf")
                 st.markdown("---")
-
                 st.success(f"✅ Ready for statewide analysis")
                 st.caption(f"{len(available_sheets)} districts loaded")
 
@@ -413,7 +440,6 @@ if view_mode == "🏥 District View":
         st.stop()
     facility_col = stats['facility_col']
 
-    # --- COMPUTE BEST & WORST SPOKES ---
     plot_df['Grade'] = plot_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
     grade_order = {'A': 1, 'B': 2, 'C': 3, 'D': 4, 'F': 5}
     plot_df['Grade_Order'] = plot_df['Grade'].map(grade_order)
@@ -421,7 +447,6 @@ if view_mode == "🏥 District View":
     best_row = ranked_df.iloc[0] if not ranked_df.empty else None
     worst_df = ranked_df.tail(3).iloc[::-1] if len(ranked_df) >= 3 else ranked_df
 
-    # --- 3-CARD INFO BAR ---
     uptime_val = calc_uptime(stats)
     uptime_cls = uptime_color(uptime_val)
 
@@ -454,7 +479,6 @@ if view_mode == "🏥 District View":
 
     st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
 
-    # --- 3 METRIC CARDS ---
     m1, m2, m3 = st.columns(3)
     with m1:
         st.markdown(f'''
@@ -484,7 +508,6 @@ if view_mode == "🏥 District View":
 
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
-    # --- DISTRICT TABS ---
     tab1, tab2, tab3 = st.tabs(["📊 District Dashboard", "📋 Report Card", "📈 Trends & Analytics"])
 
     # ===== TAB 1: DISTRICT DASHBOARD =====
@@ -556,7 +579,6 @@ if view_mode == "🏥 District View":
                     "Total": st.column_config.NumberColumn("Total", format="%d"),
                 }
             )
-
         st.markdown("---")
         st.caption(f"💡 Data: **{sheet_to_load}** | Range: **{time_filter}** | Refreshed: {pd.Timestamp.now().strftime('%d-%b-%Y %H:%M')}")
 
@@ -633,12 +655,11 @@ if view_mode == "🏥 District View":
         period_file = pd.Timestamp.now().strftime('%b_%Y')
         st.download_button(
             label=f"📥 Download Report Card ({selected_district_zm})",
-            data=csv,
-            file_name=f'{selected_district_zm}_ReportCard_{time_filter.replace(" ", "_")}_{period_file}.csv',
+            data=csv, file_name=f'{selected_district_zm}_ReportCard_{time_filter.replace(" ", "_")}_{period_file}.csv',
             mime='text/csv', key='download_report'
         )
 
-    # ===== TAB 3: TRENDS & ANALYTICS =====
+    # ===== TAB 3: TRENDS =====
     with tab3:
         st.markdown(f"### 📈 Trends for {selected_district_zm}")
         st.markdown("#### Daily Patient Trend")
@@ -694,7 +715,6 @@ if view_mode == "🏥 District View":
 # STATE VIEW
 # ---------------------------------------------------------------------------
 else:
-    # --- STATE VIEW TABS ---
     tab1, tab2 = st.tabs(["🏆 State Leaderboard", "⚖️ Compare Districts"])
 
     # ===== TAB 1: STATE LEADERBOARD =====
@@ -812,6 +832,70 @@ else:
                 fig_lb.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
                                      legend_title="", showlegend=False, margin=dict(l=0, r=20, t=20, b=20))
                 st.plotly_chart(fig_lb, use_container_width=True)
+
+                # ============================================================
+                # NEW: ZONE MANAGER LEADERBOARD
+                # ============================================================
+                st.markdown("---")
+                st.markdown("### 👥 Zone Manager Leaderboard")
+                st.caption("Ranked by total patients managed across all their districts. Grade reflects the average of their districts' grades.")
+
+                zm_rank = compute_zm_rankings(lb_df)
+                if zm_rank.empty:
+                    st.info("No Zone Manager data available.")
+                else:
+                    zm_rank = zm_rank.sort_values('Total_Patients', ascending=False).reset_index(drop=True)
+                    zm_rank.insert(0, 'Rank', range(1, len(zm_rank) + 1))
+
+                    zm_display = zm_rank[['Rank', 'Zone Manager', 'Districts', 'Grade', 'Uptime %', 'Weighted Avg', 'Total_Patients', 'Facilities']].copy()
+                    zm_display.columns = ['Rank', 'Zone Manager', 'Districts', 'Grade', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']
+
+                    def style_zm_row(row):
+                        if is_filtered:
+                            zm_filter_short = ZM_SHORT.get(selected_zm_filter, selected_zm_filter)
+                            if row['Zone Manager'] == zm_filter_short:
+                                return ['background-color: #1e3a5f; color: #FFFFFF; font-weight: bold;'] * len(row)
+                            return [''] * len(row)
+                        rank = row['Rank']
+                        if rank <= 3:
+                            return ['background-color: #0e2a1a; color: #e8f5e9;'] * len(row)
+                        elif rank > len(zm_display) - 2:
+                            return ['background-color: #2a0e0e; color: #fce4e4;'] * len(row)
+                        return [''] * len(row)
+
+                    zm_styled = zm_display.style.apply(style_zm_row, axis=1)
+                    try:
+                        zm_styled = zm_styled.map(style_grade, subset=['Grade'])
+                    except AttributeError:
+                        zm_styled = zm_styled.applymap(style_grade, subset=['Grade'])
+
+                    zm_styled = zm_styled.format({
+                        'Uptime %': '{:.1f}%',
+                        'Weighted Avg': '{:.1f}',
+                        'Total Patients': '{:,}'
+                    })
+
+                    if is_filtered:
+                        st.caption(f"Your selection — **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** — is highlighted in blue.")
+
+                    st.dataframe(zm_styled, use_container_width=True, hide_index=True)
+
+                    # Mini bar chart — top 10 ZMs
+                    st.markdown("#### 📊 Top 10 Zone Managers — Volume")
+                    top10_zm = zm_rank.head(min(10, len(zm_rank))).copy()
+                    top10_zm_chart = top10_zm.sort_values('Rank', ascending=False)
+                    top10_zm_chart['Color'] = top10_zm_chart['Rank'].apply(lambda r: 'Top 3' if r <= 3 else 'Others')
+
+                    fig_zm = px.bar(
+                        top10_zm_chart, x='Total_Patients', y='Zone Manager', orientation='h',
+                        color='Color',
+                        color_discrete_map={'Top 3': '#2ecc71', 'Others': '#95a5a6'},
+                        labels={'Total_Patients': 'Total Patients', 'Zone Manager': ''},
+                        height=max(350, 40 * len(top10_zm_chart))
+                    )
+                    fig_zm.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
+                                         legend_title="", showlegend=False, margin=dict(l=0, r=20, t=20, b=20))
+                    st.plotly_chart(fig_zm, use_container_width=True)
         else:
             st.info("Click the button above to generate the statewide leaderboard.")
 
