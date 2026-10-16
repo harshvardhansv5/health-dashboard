@@ -16,9 +16,7 @@ st.markdown("""
 
     .info-card, .metric-card, .zm-card, .report-header, .kpi-chip {
         background: linear-gradient(135deg, #1a2a3a 0%, #0E1117 100%);
-        border: 1px solid #2a3a4a;
-        border-radius: 12px;
-        padding: 16px 20px;
+        border: 1px solid #2a3a4a; border-radius: 12px; padding: 16px 20px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
     .info-card {border-left: 4px solid #00D4FF;}
@@ -41,7 +39,7 @@ st.markdown("""
     .metric-progress-bg {background: #1a2a3a; height: 6px; border-radius: 3px; margin-top: 12px; overflow: hidden;}
     .metric-progress-fill {height: 100%; border-radius: 3px;}
 
-    .kpi-chip {padding: 14px 18px; text-align: left;}
+    .kpi-chip {padding: 14px 18px;}
     .kpi-chip-label {color: #8fa5bb; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;}
     .kpi-chip-value {color: #FFFFFF; font-size: 20px; font-weight: 700; line-height: 1.2;}
     .kpi-chip-sub {color: #6c8095; font-size: 11px; margin-top: 2px;}
@@ -87,6 +85,13 @@ st.markdown("""
     }
     div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
         border-color: #00D4FF; background-color: #1e3a5f;
+    }
+
+    /* === TABLE POLISH === */
+    div[data-testid="stDataFrame"] td, div[data-testid="stDataFrame"] th {
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+        font-size: 13px !important;
     }
 
     h2 {font-size: 1.35rem !important; letter-spacing: -0.3px;}
@@ -282,41 +287,42 @@ def style_grade(val):
     return f'background-color: {bg}; color: {txt}; font-weight: bold; text-align: center;'
 
 def make_rank_styler(top_n, bottom_n, n):
+    """Rank cell as compact pill-style badge. Rounded corners + tight padding."""
     def styler(val):
         try:
             rank = int(val)
         except (ValueError, TypeError):
             return ''
         if rank <= top_n:
-            return 'background-color: #2ecc71; color: #000; font-weight: bold; text-align: center;'
+            return 'background-color: #2ecc71; color: #000; font-weight: bold; text-align: center; border-radius: 6px; padding: 3px 6px;'
         elif rank > n - bottom_n:
-            return 'background-color: #e74c3c; color: #FFF; font-weight: bold; text-align: center;'
-        return 'text-align: center; font-weight: bold;'
+            return 'background-color: #e74c3c; color: #FFF; font-weight: bold; text-align: center; border-radius: 6px; padding: 3px 6px;'
+        return 'text-align: center; font-weight: bold; color: #8fa5bb;'
     return styler
 
-# === EXPLICIT COLUMN WIDTHS FOR LEADERBOARD TABLES ===
+# === TIGHTENED COLUMN WIDTHS ===
 LEADERBOARD_COLUMN_CONFIG = {
-    "Rank": st.column_config.NumberColumn("Rank", width=60, format="%d"),
-    "District": st.column_config.TextColumn("District", width="medium"),
-    "ZM": st.column_config.TextColumn("ZM", width="medium"),
-    "Grade": st.column_config.TextColumn("Grade", width=70),
-    "Score": st.column_config.NumberColumn("Score", width=70, format="%.1f"),
-    "Uptime %": st.column_config.NumberColumn("Uptime %", width=90, format="%.1f%%"),
-    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=100, format="%.1f"),
-    "Total Patients": st.column_config.NumberColumn("Total Patients", width=110, format="%d"),
-    "Facilities": st.column_config.NumberColumn("Facilities", width=80, format="%d"),
+    "Rank": st.column_config.NumberColumn("Rank", width=55, format="%d"),
+    "District": st.column_config.TextColumn("District", width=150),
+    "ZM": st.column_config.TextColumn("ZM", width=170),
+    "Grade": st.column_config.TextColumn("Grade", width=65),
+    "Score": st.column_config.NumberColumn("Score", width=65, format="%.1f"),
+    "Uptime %": st.column_config.NumberColumn("Uptime %", width=85, format="%.1f%%"),
+    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=95, format="%.1f"),
+    "Total Patients": st.column_config.NumberColumn("Total Patients", width=105, format="%d"),
+    "Facilities": st.column_config.NumberColumn("Facilities", width=75, format="%d"),
 }
 
 ZM_LEADERBOARD_COLUMN_CONFIG = {
-    "Rank": st.column_config.NumberColumn("Rank", width=60, format="%d"),
-    "Zone Manager": st.column_config.TextColumn("Zone Manager", width="medium"),
-    "Districts": st.column_config.NumberColumn("Districts", width=85, format="%d"),
-    "Grade": st.column_config.TextColumn("Grade", width=70),
-    "Score": st.column_config.NumberColumn("Score", width=70, format="%.1f"),
-    "Uptime %": st.column_config.NumberColumn("Uptime %", width=90, format="%.1f%%"),
-    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=100, format="%.1f"),
-    "Total Patients": st.column_config.NumberColumn("Total Patients", width=110, format="%d"),
-    "Facilities": st.column_config.NumberColumn("Facilities", width=80, format="%d"),
+    "Rank": st.column_config.NumberColumn("Rank", width=55, format="%d"),
+    "Zone Manager": st.column_config.TextColumn("Zone Manager", width=170),
+    "Districts": st.column_config.NumberColumn("Districts", width=80, format="%d"),
+    "Grade": st.column_config.TextColumn("Grade", width=65),
+    "Score": st.column_config.NumberColumn("Score", width=65, format="%.1f"),
+    "Uptime %": st.column_config.NumberColumn("Uptime %", width=85, format="%.1f%%"),
+    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=95, format="%.1f"),
+    "Total Patients": st.column_config.NumberColumn("Total Patients", width=105, format="%d"),
+    "Facilities": st.column_config.NumberColumn("Facilities", width=75, format="%d"),
 }
 
 @st.cache_data(show_spinner=False)
@@ -571,7 +577,6 @@ if view_mode == "🏥 District View":
 
     tab1, tab2, tab3 = st.tabs(["📊 District Dashboard", "📋 Report Card", "📈 Trends & Analytics"])
 
-    # ===== TAB 1: DISTRICT DASHBOARD =====
     with tab1:
         c1, c2 = st.columns([3, 2])
         with c1:
@@ -598,8 +603,7 @@ if view_mode == "🏥 District View":
                 color='Grade',
                 color_discrete_map={'A': '#2ecc71', 'B': '#a3e635', 'C': '#fbbf24', 'D': '#f97316', 'F': '#e74c3c'},
                 labels={facility_col: '', metric_col: metric_option, 'Grade': 'Grade'},
-                title=chart_title,
-                text=metric_col
+                title=chart_title, text=metric_col
             )
             fig.update_traces(texttemplate='%{text:.1f}', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
             avg_val = sorted_df[metric_col].mean()
@@ -648,7 +652,6 @@ if view_mode == "🏥 District View":
         st.markdown("---")
         st.caption(f"💡 Data: **{sheet_to_load}** | Range: **{time_filter}** | Refreshed: {pd.Timestamp.now().strftime('%d-%b-%Y %H:%M')}")
 
-    # ===== TAB 2: REPORT CARD =====
     with tab2:
         period_str = "N/A"
         if stats['active_date_cols']:
@@ -728,7 +731,6 @@ if view_mode == "🏥 District View":
             mime='text/csv', key='download_report'
         )
 
-    # ===== TAB 3: TRENDS =====
     with tab3:
         st.markdown(f"### 📈 Trends for {selected_district_zm}")
         st.markdown("#### Daily Patient Trend")
@@ -786,7 +788,6 @@ if view_mode == "🏥 District View":
 else:
     tab1, tab2, tab3 = st.tabs(["🏆 State Leaderboard", "👥 Zone Managers", "⚖️ Compare Districts"])
 
-    # ===== TAB 1: STATE LEADERBOARD =====
     with tab1:
         st.markdown("### 🏆 All Districts Ranked")
 
@@ -901,9 +902,9 @@ else:
                         styled = styled.applymap(rank_styler, subset=['Rank'])
                 else:
                     try:
-                        styled = styled.map(lambda v: 'text-align: center; font-weight: bold;', subset=['Rank'])
+                        styled = styled.map(lambda v: 'text-align: center; font-weight: bold; color: #8fa5bb;', subset=['Rank'])
                     except AttributeError:
-                        styled = styled.applymap(lambda v: 'text-align: center; font-weight: bold;', subset=['Rank'])
+                        styled = styled.applymap(lambda v: 'text-align: center; font-weight: bold; color: #8fa5bb;', subset=['Rank'])
 
                 styled = styled.format({
                     'Uptime %': '{:.1f}%', 'Weighted Avg': '{:.1f}',
@@ -915,7 +916,6 @@ else:
                 else:
                     st.caption(f"🟢 Top {top_n} ranks highlighted in green. 🔴 Bottom {bottom_n} in red.")
 
-                # === APPLY COLUMN WIDTHS ===
                 st.dataframe(
                     styled,
                     use_container_width=True,
@@ -964,7 +964,6 @@ else:
         else:
             st.info("Click the button above to generate the statewide leaderboard.")
 
-    # ===== TAB 2: ZONE MANAGER LEADERBOARD =====
     with tab2:
         st.markdown("### 👥 Zone Manager Leaderboard")
         st.caption("Each Zone Manager's aggregated performance across all their districts.")
@@ -1028,9 +1027,9 @@ else:
 
                     if is_filtered:
                         try:
-                            zm_styled = zm_styled.map(lambda v: 'text-align: center; font-weight: bold;', subset=['Rank'])
+                            zm_styled = zm_styled.map(lambda v: 'text-align: center; font-weight: bold; color: #8fa5bb;', subset=['Rank'])
                         except AttributeError:
-                            zm_styled = zm_styled.applymap(lambda v: 'text-align: center; font-weight: bold;', subset=['Rank'])
+                            zm_styled = zm_styled.applymap(lambda v: 'text-align: center; font-weight: bold; color: #8fa5bb;', subset=['Rank'])
                     else:
                         zm_rank_styler = make_rank_styler(3, 2, len(zm_display))
                         try:
@@ -1048,7 +1047,6 @@ else:
                     else:
                         st.caption("🟢 Top 3 Zone Managers highlighted in green. 🔴 Bottom 2 in red.")
 
-                    # === APPLY COLUMN WIDTHS ===
                     st.dataframe(
                         zm_styled,
                         use_container_width=True,
@@ -1107,7 +1105,6 @@ else:
         else:
             st.info("Click the button above to generate Zone Manager rankings.")
 
-    # ===== TAB 3: COMPARE DISTRICTS =====
     with tab3:
         st.markdown("### ⚖️ Compare Two Districts Head-to-Head")
         sorted_sheets = sorted(available_sheets)
