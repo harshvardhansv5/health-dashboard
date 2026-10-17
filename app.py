@@ -8,16 +8,20 @@ import io
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
-# --- CUSTOM CSS (Clinical Light Theme) ---
+# --- FORCED LIGHT THEME CSS ---
 st.markdown("""
 <style>
+    /* Force Light Background */
+    .stApp { background-color: #F4F7F6 !important; }
+    section[data-testid="stSidebar"] { background-color: #FFFFFF !important; border-right: 1px solid #E2E8F0; }
+    
     /* Global Typography */
     h1, h2, h3 { color: #1E293B !important; font-weight: 600; }
-    p { color: #475569; }
+    p, span, div { color: #475569; }
 
     /* Metric Cards */
     div[data-testid="stMetric"] {
-        background-color: #FFFFFF;
+        background-color: #FFFFFF !important;
         border: 1px solid #E2E8F0;
         padding: 20px;
         border-radius: 12px;
@@ -26,12 +30,9 @@ st.markdown("""
     div[data-testid="stMetric"] label { color: #64748B !important; font-size: 14px; font-weight: 500; }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] { color: #0F172A !important; font-weight: 700; }
 
-    /* Sidebar */
-    section[data-testid="stSidebar"] { background-color: #FFFFFF; border-right: 1px solid #E2E8F0; }
-    
     /* Custom ZM Card */
     .zm-card {
-        background-color: #F8FAFC; border: 1px solid #E2E8F0; border-left: 4px solid #0057B8;
+        background-color: #F8FAFC !important; border: 1px solid #E2E8F0; border-left: 4px solid #0057B8;
         border-radius: 8px; padding: 16px; margin-top: 10px; margin-bottom: 16px;
     }
     .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;}
@@ -40,7 +41,7 @@ st.markdown("""
 
     /* Report Header */
     .report-header {
-        background-color: #FFFFFF; border: 1px solid #E2E8F0; border-top: 4px solid #0057B8;
+        background-color: #FFFFFF !important; border: 1px solid #E2E8F0; border-top: 4px solid #0057B8;
         border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     .report-title { color: #0F172A; font-size: 24px; font-weight: 700; margin-bottom: 8px; }
@@ -55,19 +56,8 @@ st.markdown("""
     .grade-D { background-color: #FFEDD5; color: #9A3412; }
     .grade-F { background-color: #FEE2E2; color: #991B1B; }
 
-    /* Info Bar (Top 3 Cards) */
-    .info-bar { display: flex; gap: 16px; margin-bottom: 24px; }
-    .info-card { 
-        flex: 1; background-color: #FFFFFF; border: 1px solid #E2E8F0; 
-        border-top: 3px solid #0057B8; border-radius: 10px; padding: 16px 20px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    }
-    .info-label { color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-    .info-value { color: #0F172A; font-size: 20px; font-weight: 700; line-height: 1.2; }
-    .info-sub { color: #0057B8; font-size: 13px; font-weight: 600; margin-top: 4px; }
-
     /* Compare Battle Cards */
-    .battle-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .battle-card { background-color: #FFFFFF !important; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; }
     .battle-card-blue { border-top: 4px solid #3B82F6; }
     .battle-card-red { border-top: 4px solid #EF4444; }
     .battle-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
@@ -249,9 +239,9 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
             _, _, s = process_district_df(sdf, time_filter)
             if s:
                 data.append({
-                    'District': sheet, 'Total Patients': s['total'],
+                    'District': sheet, 'Total Samples': s['total'],
                     'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s),
-                    'Facilities': s['num_facilities']
+                    'Facilities': s['num_facilities'], 'Days Reported': s['num_days']
                 })
         except Exception: pass
     return pd.DataFrame(data)
@@ -269,7 +259,7 @@ with st.sidebar:
             st.divider()
             
             # --- MASTER NAVIGATION ---
-            view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View"])
+            view_mode = st.radio("Select View Mode:", ["📊 District View", "🌐 State View"])
             st.divider()
             
             time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"])
@@ -366,18 +356,19 @@ if view_mode == "📊 District View":
 
     with d_tab1:
         col1, col2, col3 = st.columns(3)
-        with col1: st.metric(label=f"Total Patients ({time_filter})", value=f"{stats['total']:,}")
-        with col2: st.metric(label="Weighted Avg Daily Patients", value=f"{stats['weighted_avg']}")
+        with col1: st.metric(label=f"Total Samples ({time_filter})", value=f"{stats['total']:,}")
+        with col2: st.metric(label="Weighted Avg Daily Samples", value=f"{stats['weighted_avg']}")
         with col3: st.metric(label="Facility Uptime %", value=f"{calc_uptime(stats)}%")
 
         st.divider()
 
         c1, c2, c3 = st.columns([2, 1, 1])
-        with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d1")
+        with c1: metric_option = st.radio("Metric:", ("Average Samples", "Total Samples", "Uptime %"), horizontal=True, key="d1")
         with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d2")
         with c3: active_only = st.checkbox("Exclude Inactive", value=False, key="d3")
         
-        metric_col = {'Average Patients': 'Average Patients', 'Total Patients': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
+        # Map display names to dataframe columns
+        metric_col = {'Average Samples': 'Average Patients', 'Total Samples': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
         filtered = plot_df.copy()
         if active_only: filtered = filtered[filtered['Total Patients'] > 0]
             
@@ -434,12 +425,12 @@ if view_mode == "📊 District View":
         ''', unsafe_allow_html=True)
 
         col1, col2, col3, col4 = st.columns(4)
-        with col1: st.metric("Total Patients", f"{stats['total']:,}")
+        with col1: st.metric("Total Samples", f"{stats['total']:,}")
         with col2: st.metric("Weighted Avg / Day", f"{stats['weighted_avg']}")
         with col3: st.metric("Facility Uptime", f"{calc_uptime(stats)}%")
         with col4:
             st.markdown(f'''
-            <div style="background-color:#FFFFFF; border:1px solid #E2E8F0; padding:15px; border-radius:12px; text-align:center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div style="background-color:#FFFFFF !important; border:1px solid #E2E8F0; padding:15px; border-radius:12px; text-align:center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
                 <div style="color:#64748B; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">District Grade</div>
                 <span class="grade-badge grade-{d_grade}">{d_grade}</span>
             </div>
@@ -457,7 +448,7 @@ if view_mode == "📊 District View":
         display['Grade'] = scorecard['Grade'].apply(grade_emoji)
         display['Uptime %'] = scorecard['Uptime %']
         display['Avg / Day'] = scorecard['Average Patients']
-        display['Total Patients'] = scorecard['Total Patients'].astype(int)
+        display['Total Samples'] = scorecard['Total Patients'].astype(int)
         display['Zero Days'] = scorecard['Zero Days'].astype(int)
 
         st.dataframe(
@@ -467,27 +458,27 @@ if view_mode == "📊 District View":
                 "Grade": st.column_config.TextColumn("Grade", width="small"),
                 "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                 "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
-                "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"),
+                "Total Samples": st.column_config.NumberColumn("Total Samples", format="%d"),
                 "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d"),
             }
         )
         st.divider()
 
         export = scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
-        export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Patients', 'Zero Days']
+        export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Samples', 'Zero Days']
         st.download_button("📥 Download Report Card (CSV)", export.to_csv(index=False).encode('utf-8'), f'{selected_district_zm}_ReportCard.csv', 'text/csv')
 
     with d_tab3:
-        st.markdown("#### Daily Patient Trend")
+        st.markdown("#### Daily Sample Trend")
         if stats['active_date_cols']:
             trend_data = []
             for col in stats['active_date_cols']:
                 d = extract_date(col)
                 dt = pd.to_numeric(plot_df[col], errors='coerce').fillna(0).sum()
-                if pd.notna(d): trend_data.append({'Date': d, 'Patients': dt})
+                if pd.notna(d): trend_data.append({'Date': d, 'Samples': dt})
             if trend_data:
                 trend_df = pd.DataFrame(trend_data).sort_values('Date')
-                fig_t = px.line(trend_df, x='Date', y='Patients', markers=True)
+                fig_t = px.line(trend_df, x='Date', y='Samples', markers=True)
                 fig_t.update_traces(line_color='#0057B8', line_width=3)
                 fig_t.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', title_font_color="#1E293B", font_color="#475569")
                 fig_t.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
@@ -508,25 +499,16 @@ if view_mode == "📊 District View":
 else:
     st.markdown("### 🌐 Bihar State Master View")
     
-    # Metric Selector for Leaderboard & Comparison
-    state_metric_label = st.radio("Rank & Compare by:", ["Total Sample Count", "Weighted Avg", "Uptime %"], horizontal=True)
-    
-    state_metric_col = {
-        "Total Sample Count": "Total Patients",
-        "Weighted Avg": "Weighted Avg",
-        "Uptime %": "Uptime %"
-    }[state_metric_label]
-
     with st.spinner("Loading State Data..."):
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
         
     if not state_df.empty:
         # Statewide Metrics
-        total_state_patients = state_df['Total Patients'].sum()
+        total_state_samples = state_df['Total Samples'].sum()
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
         
         sc1, sc2, sc3 = st.columns(3)
-        with sc1: st.metric("Total Bihar Samples", f"{total_state_patients:,}")
+        with sc1: st.metric("Total Bihar Samples", f"{total_state_samples:,}")
         with sc2: st.metric("Active Districts", f"{len(state_df)}")
         with sc3: st.metric("Statewide Avg Uptime", f"{avg_state_uptime}%")
         
@@ -535,9 +517,22 @@ else:
         s_tab1, s_tab2 = st.tabs(["🏆 State Leaderboard", "⚖️ Compare Districts"])
         
         with s_tab1:
-            st.markdown(f"#### District Leaderboard (Ranked by {state_metric_label})")
+            # Moved the metric selector inside the tab for better UI
+            state_metric_label = st.radio("Rank & Compare by:", ["Total Sample Count", "Weighted Avg", "Uptime %"], horizontal=True)
             
-            lb_df = state_df.sort_values(state_metric_col, ascending=False).reset_index(drop=True)
+            state_metric_col = {
+                "Total Sample Count": "Total Samples",
+                "Weighted Avg": "Weighted Avg",
+                "Uptime %": "Uptime %"
+            }[state_metric_label]
+            
+            # FIX: Filter out districts with less than 7 days if ranking by Weighted Avg
+            lb_df = state_df.copy()
+            if state_metric_col == "Weighted Avg":
+                lb_df = lb_df[lb_df['Days Reported'] >= 7]
+                st.caption("⚠️ Districts with less than 7 days of data are hidden to ensure fair comparison.")
+            
+            lb_df = lb_df.sort_values(state_metric_col, ascending=False).reset_index(drop=True)
             lb_df.index = lb_df.index + 1
             lb_df.index.name = 'Rank'
             
@@ -552,7 +547,7 @@ else:
             )
             
             st.divider()
-            st.markdown(f"#### Top 15 Districts Chart")
+            st.markdown(f"#### Top 15 Districts Chart (Ranked by {state_metric_label})")
             top15 = lb_df.head(15)
             fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
             fig_lb.update_layout(
