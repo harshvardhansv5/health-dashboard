@@ -390,15 +390,14 @@ with tab1:
             
         fig = px.bar(sorted_df, y=facility_col, x=metric_col, orientation='h', color='Highlight', color_discrete_map={'Top 5': '#2ecc71', 'Bottom 5': '#e74c3c', 'Others': '#95a5a6'}, title=f"{metric_option} per Facility")
         
-                # --- FIXED: Calculate dynamic average line based on current filter ---
+        # --- FIXED: Calculate dynamic average line based on current filter ---
         if metric_col == 'Uptime %' or metric_col == 'Total Patients':
             current_avg = round(filtered[metric_col].mean(), 1)
         else:
             # For 'Average Patients', show the true weighted average of the filtered facilities
             current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
             
-        # Use add_vline (vertical line) because the bars are horizontal
-        fig.add_vline(x=current_avg, line_dash="dash", line_color="#e74c3c", annotation_text=f"Avg: {current_avg}")
+        fig.add_hline(y=current_avg, line_dash="dash", line_color="#e74c3c", annotation_text=f"Avg: {current_avg}")
 
         fig.update_layout(height=max(500, len(sorted_df) * 25), yaxis=dict(autorange="reversed"), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend_title="", xaxis_title=metric_option, yaxis_title="")
         st.plotly_chart(fig, use_container_width=True)
