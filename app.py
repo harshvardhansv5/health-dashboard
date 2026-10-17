@@ -8,25 +8,41 @@ import io
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
-# --- FORCED LIGHT THEME (NUCLEAR OPTION) ---
+# --- FORCED LIGHT THEME & PREMIUM FONTS ---
 st.markdown("""
 <style>
-    /* Override Streamlit's internal variables */
-    :root {
-        --primary-color: #0057B8;
-        --background-color: #F4F7F6;
-        --secondary-background-color: #FFFFFF;
-        --text-color: #1E293B;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    /* Force global font */
+    html, body, [class*="css"] {
+        font-family: 'Inter', sans-serif !important;
     }
-    
-    /* Force specific containers */
+
+    /* Force Light Background */
     .stApp { background-color: #F4F7F6 !important; }
     section[data-testid="stSidebar"] { background-color: #FFFFFF !important; border-right: 1px solid #E2E8F0; }
-    section[data-testid="stSidebar"] * { color: #1E293B !important; }
+    section[data-testid="stSidebar"] * { color: #1E293B !important; font-family: 'Inter', sans-serif !important; }
     
     /* Global Typography */
-    h1, h2, h3 { color: #1E293B !important; font-weight: 600; }
-    p, span, div { color: #475569; }
+    h1, h2, h3 { color: #0F172A !important; font-weight: 700 !important; letter-spacing: -0.02em; }
+    p, span, div { color: #475569; font-family: 'Inter', sans-serif !important; }
+
+    /* --- FIX THE FILE UPLOADER DARK BOX --- */
+    [data-testid="stFileUploadDropzone"] {
+        background-color: #F8FAFC !important;
+        border: 1px dashed #CBD5E1 !important;
+        border-radius: 10px !important;
+    }
+    [data-testid="stFileUploadDropzone"]:hover {
+        border-color: #0057B8 !important;
+    }
+    [data-testid="stFileUploadDropzone"] button {
+        background-color: #0057B8 !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        font-weight: 600 !important;
+    }
+    [data-testid="stFileUploadDropzone"] small { color: #64748B !important; }
 
     /* Metric Cards */
     div[data-testid="stMetric"] {
@@ -37,27 +53,26 @@ st.markdown("""
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     }
     div[data-testid="stMetric"] label { color: #64748B !important; font-size: 14px; font-weight: 500; }
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] { color: #0F172A !important; font-weight: 700; }
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] { color: #0F172A !important; font-weight: 700; font-size: 32px; }
 
-    /* Dataframe override */
-    [data-testid="stDataFrame"] * { color: #1E293B !important; }
-    [data-testid="stDataFrame"] { background-color: #FFFFFF !important; }
+    /* Dataframe Polish */
+    [data-testid="stDataFrame"] { 
+        background-color: #FFFFFF !important; 
+        border-radius: 12px; 
+        padding: 10px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        border: 1px solid #E2E8F0;
+    }
+    [data-testid="stDataFrame"] * { color: #1E293B !important; font-family: 'Inter', sans-serif !important; font-size: 14px; }
 
     /* Custom ZM Card */
     .zm-card {
         background-color: #F8FAFC !important; border: 1px solid #E2E8F0; border-left: 4px solid #0057B8;
-        border-radius: 8px; padding: 16px; margin-top: 10px; margin-bottom: 16px;
+        border-radius: 8px; padding: 16px; margin-top: 10px; margin-bottom: 24px;
     }
     .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;}
     .zm-card-name { color: #0F172A; font-size: 16px; font-weight: 700; margin-bottom: 2px;}
-    .zm-card-zone { color: #0057B8; font-size: 13px; font-weight: 500;}
-
-    /* Info Bar */
-    .info-bar { display: flex; gap: 16px; margin-bottom: 24px; }
-    .info-card { flex: 1; background-color: #FFFFFF !important; border: 1px solid #E2E8F0; border-top: 3px solid #0057B8; border-radius: 10px; padding: 16px 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-    .info-label { color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-    .info-value { color: #0F172A; font-size: 20px; font-weight: 700; line-height: 1.2; }
-    .info-sub { color: #0057B8; font-size: 13px; font-weight: 600; margin-top: 4px; }
+    .zm-card-zone { color: #0057B8; font-size: 13px; font-weight: 600;}
 
     /* Report Header */
     .report-header { background-color: #FFFFFF !important; border: 1px solid #E2E8F0; border-top: 4px solid #0057B8; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
@@ -106,7 +121,7 @@ for zm_name, districts in ZM_DATA.items():
 
 DISTRICT_MAP = {"Seikhpura": "Sheikhpura", "Rohtas": "Sasaram"}
 
-# --- HELPER FUNCTIONS (Same as before) ---
+# --- HELPER FUNCTIONS ---
 def read_sheet_robust(xls, sheet_name):
     try:
         df_raw = pd.read_excel(xls, sheet_name=sheet_name, header=None)
@@ -259,6 +274,18 @@ st.markdown("### Select View")
 view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View"], horizontal=True, label_visibility="collapsed")
 st.divider()
 
+# Apply universal Plotly layout settings for the light theme
+PLOTLY_LAYOUT = dict(
+    template="plotly_white",
+    font=dict(family="Inter, sans-serif", size=14, color="#334155"),
+    title_font=dict(size=18, color="#0F172A", family="Inter, sans-serif"),
+    plot_bgcolor='rgba(0,0,0,0)',
+    paper_bgcolor='rgba(0,0,0,0)',
+    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9'),
+    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9'),
+    margin=dict(l=20, r=20, t=50, b=20)
+)
+
 if view_mode == "📊 District View":
     col_d, col_h = st.columns(2)
     with col_d: selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
@@ -272,7 +299,7 @@ if view_mode == "📊 District View":
         display_zm = zm_name_for_district.split("(")[0].strip()
         zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone"
 
-    st.markdown(f'<div class="zm-card" style="margin-bottom: 24px;"><div class="zm-card-header">👤 Zone Manager</div><div class="zm-card-name">{display_zm}</div><div class="zm-card-zone">{zone_name}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="zm-card"><div class="zm-card-header">👤 Zone Manager</div><div class="zm-card-name">{display_zm}</div><div class="zm-card-zone">{zone_name}</div></div>', unsafe_allow_html=True)
 
     target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
     sheet_found = False
@@ -318,8 +345,9 @@ if view_mode == "📊 District View":
             else: current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
                 
             fig.add_vline(x=current_avg, line_dash="dash", line_color="#0057B8", annotation_text=f"Avg: {current_avg}", annotation_font_color="#0057B8")
-            fig.update_layout(template="plotly_white", height=max(500, len(sorted_df) * 25), yaxis=dict(autorange="reversed"), plot_bgcolor='#FFFFFF', paper_bgcolor='#FFFFFF', legend_title="", xaxis_title=metric_option, yaxis_title="", title_font_color="#1E293B", font_color="#475569")
-            fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
+            
+            fig.update_layout(**PLOTLY_LAYOUT)
+            fig.update_layout(height=max(500, len(sorted_df) * 25), yaxis=dict(autorange="reversed", showgrid=False), legend_title="", xaxis_title=metric_option, yaxis_title="")
             st.plotly_chart(fig, use_container_width=True)
 
     with d_tab2:
@@ -328,7 +356,7 @@ if view_mode == "📊 District View":
             fd = extract_date(stats['active_date_cols'][0]); ld = extract_date(stats['active_date_cols'][-1])
             if pd.notna(fd) and pd.notna(ld): period_str = f"{fd.strftime('%d %b %Y')} – {ld.strftime('%d %b %Y')}"
         d_grade = district_grade(plot_df)
-        st.markdown(f'<div class="report-header"><div class="report-title">📋 District Report Card — {selected_district_zm}</div><div class="report-meta"><strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; <strong>Period:</strong> {period_str} ({stats['num_days']} days) &nbsp;|&nbsp; <strong>Generated:</strong> {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="report-header"><div class="report-title">📋 District Report Card — {selected_district_zm}</div><div class="report-meta"><strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; <strong>Period:</strong> {period_str} ({stats["num_days"]} days) &nbsp;|&nbsp; <strong>Generated:</strong> {pd.Timestamp.now().strftime("%d %b %Y, %H:%M")}</div></div>', unsafe_allow_html=True)
         col1, col2, col3, col4 = st.columns(4)
         with col1: st.metric("Total Samples", f"{stats['total']:,}")
         with col2: st.metric("Weighted Avg / Day", f"{stats['weighted_avg']}")
@@ -359,15 +387,15 @@ if view_mode == "📊 District View":
                 trend_df = pd.DataFrame(trend_data).sort_values('Date')
                 fig_t = px.line(trend_df, x='Date', y='Samples', markers=True)
                 fig_t.update_traces(line_color='#0057B8', line_width=3)
-                fig_t.update_layout(template="plotly_white", plot_bgcolor='#FFFFFF', paper_bgcolor='#FFFFFF', title_font_color="#1E293B", font_color="#475569")
-                fig_t.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9'); fig_t.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
+                fig_t.update_layout(**PLOTLY_LAYOUT)
                 st.plotly_chart(fig_t, use_container_width=True)
         st.divider()
         st.markdown("#### Spoke Heatmap (Facility vs. Date)")
         heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
         heatmap_df.columns = [extract_date(c).strftime('%d-%b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
         fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale='RdYlGn')
-        fig_h.update_layout(template="plotly_white", height=max(600, len(heatmap_df) * 20), plot_bgcolor='#FFFFFF', paper_bgcolor='#FFFFFF')
+        fig_h.update_layout(**PLOTLY_LAYOUT)
+        fig_h.update_layout(height=max(600, len(heatmap_df) * 20))
         st.plotly_chart(fig_h, use_container_width=True)
 
 else:
@@ -401,8 +429,8 @@ else:
             st.markdown(f"#### Top 15 Districts Chart (Ranked by {state_metric_label})")
             top15 = lb_df.head(15)
             fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
-            fig_lb.update_layout(template="plotly_white", yaxis=dict(autorange="reversed"), height=500, plot_bgcolor='#FFFFFF', paper_bgcolor='#FFFFFF', title_font_color="#1E293B", font_color="#475569")
-            fig_lb.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
+            fig_lb.update_layout(**PLOTLY_LAYOUT)
+            fig_lb.update_layout(yaxis=dict(autorange="reversed", showgrid=False), height=500)
             st.plotly_chart(fig_lb, use_container_width=True)
             
         with s_tab2:
@@ -430,8 +458,8 @@ else:
                         return pd.DataFrame(d)
                     combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
                     fig_c = px.line(combined, x='Date', y='Samples', color='District', markers=True, color_discrete_map={district_a: '#3B82F6', district_b: '#EF4444'})
-                    fig_c.update_layout(template="plotly_white", plot_bgcolor='#FFFFFF', paper_bgcolor='#FFFFFF', height=450, title_font_color="#1E293B", font_color="#475569")
-                    fig_c.update_xaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9'); fig_c.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
+                    fig_c.update_layout(**PLOTLY_LAYOUT)
+                    fig_c.update_layout(height=450)
                     st.plotly_chart(fig_c, use_container_width=True)
     else:
         st.warning("No district data available for the selected time range.")
