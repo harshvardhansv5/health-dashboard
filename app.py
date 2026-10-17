@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 from datetime import timedelta
 import re
 import io
@@ -12,97 +11,40 @@ st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout
 # --- CUSTOM CSS ---
 st.markdown("""
 <style>
-    .block-container {padding-top: 2rem; padding-bottom: 2rem; max-width: 1500px;}
-
-    .info-card, .metric-card, .zm-card, .report-header, .kpi-chip {
-        background: linear-gradient(135deg, #1a2a3a 0%, #0E1117 100%);
-        border: 1px solid #2a3a4a; border-radius: 12px; padding: 16px 20px;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-    }
-    .info-card {border-left: 4px solid #00D4FF;}
-    .info-card.green {border-left: 4px solid #2ecc71;}
-    .info-card.green .info-value {color: #2ecc71;}
-    .info-label {color: #8fa5bb; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;}
-    .info-value {color: #FFFFFF; font-size: 17px; font-weight: 700; line-height: 1.3;}
-    .info-sub {color: #8fa5bb; font-size: 12px; margin-top: 3px;}
-    .info-sub.accent {color: #00D4FF; font-weight: 500;}
-
-    .metric-card {padding: 18px 20px; border-left: 4px solid #6c757d;}
-    .metric-card.blue {border-left-color: #3498db;}
-    .metric-card.purple {border-left-color: #9b59b6;}
-    .metric-card.green {border-left-color: #2ecc71;}
-    .metric-card.yellow {border-left-color: #fbbf24;}
-    .metric-card.orange {border-left-color: #f97316;}
-    .metric-card.red {border-left-color: #e74c3c;}
-    .metric-value {color: #FFFFFF; font-size: 30px; font-weight: 700; line-height: 1.1; margin-top: 4px;}
-    .metric-label {color: #8fa5bb; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;}
-    .metric-progress-bg {background: #1a2a3a; height: 6px; border-radius: 3px; margin-top: 12px; overflow: hidden;}
-    .metric-progress-fill {height: 100%; border-radius: 3px;}
-
-    .kpi-chip {padding: 14px 18px;}
-    .kpi-chip-label {color: #8fa5bb; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 4px;}
-    .kpi-chip-value {color: #FFFFFF; font-size: 20px; font-weight: 700; line-height: 1.2;}
-    .kpi-chip-sub {color: #6c8095; font-size: 11px; margin-top: 2px;}
-    .kpi-chip.green {border-left: 3px solid #2ecc71;}
-    .kpi-chip.green .kpi-chip-value {color: #2ecc71;}
-    .kpi-chip.red {border-left: 3px solid #e74c3c;}
-    .kpi-chip.red .kpi-chip-value {color: #e74c3c;}
-    .kpi-chip.blue {border-left: 3px solid #3498db;}
-    .kpi-chip.purple {border-left: 3px solid #9b59b6;}
-
-    .zm-card {background: linear-gradient(135deg, #1e3a5f 0%, #0E1117 100%); border: 1px solid #2a4a6f; border-left: 4px solid #00D4FF; padding: 14px 16px; margin-top: 8px; margin-bottom: 8px;}
+    div[data-testid="stMetric"] {background-color: #1E1E1E; border: 1px solid #333333; padding: 15px; border-radius: 10px;}
+    div[data-testid="stMetric"] label {color: #AAAAAA !important;}
+    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {color: #FFFFFF !important;}
+    .zm-card {background: linear-gradient(135deg, #1e3a5f 0%, #0E1117 100%); border: 1px solid #2a4a6f; border-left: 4px solid #00D4FF; border-radius: 10px; padding: 14px 16px; margin-top: 8px; margin-bottom: 8px;}
     .zm-card-header {color: #00D4FF; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;}
     .zm-card-name {color: #FFFFFF; font-size: 15px; font-weight: 700; line-height: 1.3; margin-bottom: 4px;}
     .zm-card-zone {color: #8fa5bb; font-size: 12px; font-style: italic;}
-    .zm-card-stats {color: #00D4FF; font-size: 12px; font-weight: 600; margin-top: 6px;}
-
-    .report-header {border-left: 5px solid #00D4FF; padding: 20px 28px; margin-bottom: 20px;}
+    .report-header {background: linear-gradient(135deg, #1a2a3a 0%, #0E1117 100%); border: 1px solid #333; border-left: 5px solid #00D4FF; border-radius: 10px; padding: 20px 28px; margin-bottom: 20px;}
     .report-title {color: #FFFFFF; font-size: 24px; font-weight: 700; margin-bottom: 8px;}
     .report-meta {color: #8fa5bb; font-size: 14px; line-height: 1.6;}
     .report-meta strong {color: #CCCCCC;}
-
     .district-grade-badge {display: inline-block; padding: 6px 18px; border-radius: 8px; font-size: 22px; font-weight: 800; margin-left: 10px;}
     .grade-A {background-color: #2ecc71; color: #000;}
     .grade-B {background-color: #a3e635; color: #000;}
     .grade-C {background-color: #fbbf24; color: #000;}
     .grade-D {background-color: #f97316; color: #FFF;}
     .grade-F {background-color: #e74c3c; color: #FFF;}
-
-    .bottom-spoke {background: #1a1010; border: 1px solid #4a2a2a; border-left: 4px solid #e74c3c; border-radius: 8px; padding: 10px 14px; margin-bottom: 8px;}
-    .bottom-spoke-name {color: #FFFFFF; font-size: 13px; font-weight: 600;}
-    .bottom-spoke-meta {color: #f97316; font-size: 11px; margin-top: 2px;}
-
-    hr {border-color: #2a3a4a !important; margin: 14px 0 !important; opacity: 0.5;}
-
-    div[data-testid="stMetric"] {background-color: #1E1E1E; border: 1px solid #333333; padding: 15px; border-radius: 10px;}
-    div[data-testid="stMetric"] label {color: #AAAAAA !important;}
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] {color: #FFFFFF !important;}
-
-    div[data-testid="stRadio"] > div[role="radiogroup"] > label {
-        background-color: #1a2a3a; border: 1px solid #2a3a4a;
-        padding: 8px 16px; border-radius: 8px; margin-right: 6px;
-        transition: all 0.2s ease; cursor: pointer;
-    }
-    div[data-testid="stRadio"] > div[role="radiogroup"] > label:hover {
-        border-color: #00D4FF; background-color: #1e3a5f;
-    }
-
-    div[data-testid="stDataFrame"] td, div[data-testid="stDataFrame"] th {
-        padding-top: 6px !important; padding-bottom: 6px !important;
-        font-size: 13px !important;
-    }
-
-    h2 {font-size: 1.35rem !important; letter-spacing: -0.3px;}
-    h3 {font-size: 1.15rem !important; letter-spacing: -0.2px; color: #E5E7EB;}
-
-    section[data-testid="stSidebar"] {background-color: #0a0f16;}
-    section[data-testid="stSidebar"] .block-container {padding-top: 1.5rem;}
+    .info-bar {display: flex; gap: 12px; margin-bottom: 15px;}
+    .info-card {flex: 1; background: linear-gradient(135deg, #1a2a3a 0%, #0E1117 100%); border: 1px solid #333; border-left: 4px solid #00D4FF; border-radius: 10px; padding: 14px 20px;}
+    .info-label {color: #8fa5bb; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 6px;}
+    .info-value {color: #FFFFFF; font-size: 18px; font-weight: 700; line-height: 1.3;}
+    .info-sub {color: #00D4FF; font-size: 13px; font-weight: 500; margin-top: 2px;}
 </style>
 """, unsafe_allow_html=True)
 
-# --- HARDCODED ZM DATA ---
+# --- HARDCODED ZM DATA (Fixed Keshav's districts) ---
 ZM_DATA = {
-    "Keshav Kumar (Patna)": {"Bhojpur": ["DH Ara Bhojpur"], "Nalanda": ["DH Bihar Sharif Nalanda"], "Patna": ["DH (Guru Gobind Singh Hospital, Patna City)", "SDH Barh Patna", "SDH Danapur Patna"]},
+    "Keshav Kumar (Patna)": {
+        "Bhojpur": ["DH Ara Bhojpur"], 
+        "Nalanda": ["DH Bihar Sharif Nalanda"], 
+        "Patna": ["DH (Guru Gobind Singh Hospital, Patna City)"], 
+        "Barh": ["SDH Barh Patna"], 
+        "Danapur": ["SDH Danapur Patna"]
+    },
     "Samir Kumar Singh (Bhagalpur)": {"Banka": ["DH Banka"], "Bhagalpur": ["DH LNJP Bhagalpur"], "Jamui": ["DH Jamui"], "Munger": ["DH Munger"]},
     "Manish Rai (Champaran)": {"East Champaran": ["DH Motihari"], "Sitamarhi": ["DH Sitamarhi"], "West Champaran": ["SDH Narkatiyaganj"]},
     "Mohammad Asif Nasir (Darbhanga)": {"Darbhanga": ["DH Darbhanga"], "Madhubani": ["DH Madhubani"], "Samastipur": ["DH Samastipur"]},
@@ -120,13 +62,10 @@ for zm_name, districts in ZM_DATA.items():
     for d in districts.keys():
         DISTRICT_TO_ZM[d] = zm_name
 
-ZM_SHORT = {full: full.split("(")[0].strip() for full in ZM_DATA.keys()}
-
+# Map for sheet names that differ from dropdown names
 DISTRICT_MAP = {"Seikhpura": "Sheikhpura", "Rohtas": "Sasaram"}
-REVERSE_DISTRICT_MAP = {"Sheikhpura": "Seikhpura", "Sasaram": "Rohtas", "Barh": "Patna", "Danapur": "Patna"}
-HUB_TO_SHEET_MAP = {"SDH Barh Patna": "Barh", "SDH Danapur Patna": "Danapur"}
 
-# --- HELPERS ---
+# --- ROBUST HELPERS ---
 def read_sheet_robust(xls, sheet_name):
     try:
         df_raw = pd.read_excel(xls, sheet_name=sheet_name, header=None)
@@ -150,34 +89,40 @@ def read_sheet_robust(xls, sheet_name):
 
 def find_facility_column(df):
     for c in df.columns:
-        if 'name of the hospital' in str(c).lower(): return c
+        if 'name of the hospital' in str(c).lower():
+            return c
     for c in df.columns:
-        if 'hospital' in str(c).lower() and 'name' in str(c).lower(): return c
+        if 'hospital' in str(c).lower() and 'name' in str(c).lower():
+            return c
     for c in df.columns:
-        if 'hospital' in str(c).lower(): return c
+        if 'hospital' in str(c).lower():
+            return c
     return None
 
 def extract_date(col_name):
-    if isinstance(col_name, pd.Timestamp): return col_name
+    if isinstance(col_name, pd.Timestamp):
+        return col_name
     s = str(col_name)
     match = re.search(r'(\d{4}-\d{2}-\d{2})', s)
-    if match: return pd.to_datetime(match.group(1), errors='coerce')
+    if match:
+        return pd.to_datetime(match.group(1), errors='coerce')
     match = re.search(r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', s)
-    if match: return pd.to_datetime(match.group(1), dayfirst=True, errors='coerce')
+    if match:
+        return pd.to_datetime(match.group(1), dayfirst=True, errors='coerce')
     match = re.search(r'(\d{1,2}-\w{3}-\d{2,4})', s)
-    if match: return pd.to_datetime(match.group(1), errors='coerce')
+    if match:
+        return pd.to_datetime(match.group(1), errors='coerce')
     return pd.NaT
 
 def find_date_columns(df):
+    date_cols = [c for c in df.columns if 'Total number of patients' in str(c)]
+    if date_cols:
+        return date_cols
     date_cols = []
-    seen = set()
     for c in df.columns:
-        if c in seen: continue
-        if 'Total number of patients' in str(c):
-            date_cols.append(c); seen.add(c); continue
         parsed = extract_date(c)
         if pd.notna(parsed):
-            date_cols.append(c); seen.add(c)
+            date_cols.append(c)
     return date_cols
 
 def get_facility_mask(df, facility_col):
@@ -187,17 +132,24 @@ def get_facility_mask(df, facility_col):
     return mask
 
 def process_district_df(df, time_filter):
-    if df is None: return None, None, None
+    if df is None:
+        return None, None, None
     facility_col = find_facility_column(df)
-    if not facility_col: return None, None, None
+    if not facility_col:
+        return None, None, None
+
     df = df[get_facility_mask(df, facility_col)].copy()
     all_facilities = df[facility_col].dropna().tolist()
+
     date_cols = find_date_columns(df)
-    if not date_cols: return None, None, None
+    if not date_cols:
+        return None, None, None
+
     paired = [(c, extract_date(c)) for c in date_cols]
     paired = [(c, d) for c, d in paired if pd.notna(d)]
     paired.sort(key=lambda x: x[1])
     sorted_cols = [c for c, d in paired]
+
     latest_data_idx = -1
     for i in range(len(sorted_cols) - 1, -1, -1):
         c = sorted_cols[i]
@@ -207,6 +159,7 @@ def process_district_df(df, time_filter):
             break
     if latest_data_idx == -1 and sorted_cols:
         latest_data_idx = len(sorted_cols) - 1
+
     if time_filter == "Last 7 Days":
         active_date_cols = sorted_cols[max(0, latest_data_idx - 6): latest_data_idx + 1]
     elif time_filter == "Last 15 Days":
@@ -215,7 +168,10 @@ def process_district_df(df, time_filter):
         active_date_cols = sorted_cols[max(0, latest_data_idx - 29): latest_data_idx + 1]
     else:
         active_date_cols = sorted_cols
-    if not active_date_cols: active_date_cols = sorted_cols
+
+    if not active_date_cols:
+        active_date_cols = sorted_cols
+
     plot_df = df[[facility_col] + active_date_cols].copy()
     raw_text_df = plot_df.copy()
     for col in active_date_cols:
@@ -242,82 +198,35 @@ def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
     return round(((total_fd - s['zero_days']) / total_fd * 100), 1) if total_fd > 0 else 0
 
-def calculate_score(uptime_pct, avg_per_day):
-    uptime_component = 60.0 * (uptime_pct / 100.0)
-    volume_component = 40.0 * min(avg_per_day / 15.0, 1.0)
-    return round(uptime_component + volume_component, 1)
-
-def score_to_grade(score):
-    if score >= 85: return "A"
-    if score >= 70: return "B"
-    if score >= 50: return "C"
-    if score >= 30: return "D"
+def calculate_grade(uptime_pct, avg_per_day):
+    if avg_per_day == 0 or uptime_pct < 30:
+        return "F"
+    if uptime_pct > 85 and avg_per_day > 10:
+        return "A"
+    if uptime_pct > 70 and avg_per_day > 5:
+        return "B"
+    if uptime_pct > 50 and avg_per_day > 2:
+        return "C"
+    if uptime_pct > 30 and avg_per_day > 1:
+        return "D"
     return "F"
 
-def calculate_grade(uptime_pct, avg_per_day):
-    return score_to_grade(calculate_score(uptime_pct, avg_per_day))
-
 def district_grade(plot_df):
-    if plot_df is None or plot_df.empty: return "F"
-    scores = [calculate_score(row['Uptime %'], row['Average Patients']) for _, row in plot_df.iterrows()]
-    if not scores: return "F"
-    return score_to_grade(sum(scores) / len(scores))
+    if plot_df is None or plot_df.empty:
+        return "F"
+    grade_map = {"A": 5, "B": 4, "C": 3, "D": 2, "F": 1}
+    reverse_map = {5: "A", 4: "B", 3: "C", 2: "D", 1: "F"}
+    grades = []
+    for _, row in plot_df.iterrows():
+        grades.append(grade_map[calculate_grade(row['Uptime %'], row['Average Patients'])])
+    if not grades:
+        return "F"
+    avg = sum(grades) / len(grades)
+    rounded = max(1, min(5, int(round(avg))))
+    return reverse_map[rounded]
 
 def grade_emoji(g):
     return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
-
-def uptime_color(uptime_pct):
-    if uptime_pct >= 85: return "green"
-    if uptime_pct >= 70: return "yellow"
-    if uptime_pct >= 50: return "orange"
-    return "red"
-
-def uptime_hex(uptime_pct):
-    if uptime_pct >= 85: return "#2ecc71"
-    if uptime_pct >= 70: return "#fbbf24"
-    if uptime_pct >= 50: return "#f97316"
-    return "#e74c3c"
-
-def style_grade(val):
-    """Styler for Grade column — kept because Grade is text and emoji-safe."""
-    colors = {'A': ('#2ecc71', '#000'), 'B': ('#a3e635', '#000'), 'C': ('#fbbf24', '#000'),
-              'D': ('#f97316', '#FFF'), 'F': ('#e74c3c', '#FFF')}
-    bg, txt = colors.get(val, ('#333', '#FFF'))
-    return f'background-color: {bg}; color: {txt}; font-weight: bold; text-align: center;'
-
-def format_rank(rank, top_n, bottom_n, total):
-    """Return a string that carries its own visual highlight via emoji."""
-    rank = int(rank)
-    if top_n > 0 and rank <= top_n:
-        return f"🟢 {rank}"
-    elif bottom_n > 0 and rank > total - bottom_n:
-        return f"🔴 {rank}"
-    return str(rank)
-
-# === COLUMN CONFIGS (now respected because Rank is a TextColumn) ===
-LEADERBOARD_COLUMN_CONFIG = {
-    "Rank": st.column_config.TextColumn("Rank", width=55),
-    "District": st.column_config.TextColumn("District", width=170),
-    "ZM": st.column_config.TextColumn("ZM", width=170),
-    "Grade": st.column_config.TextColumn("Grade", width=70),
-    "Score": st.column_config.NumberColumn("Score", width=65, format="%.1f"),
-    "Uptime %": st.column_config.NumberColumn("Uptime %", width=90, format="%.1f%%"),
-    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=100, format="%.1f"),
-    "Total Patients": st.column_config.NumberColumn("Total Patients", width=105, format="%d"),
-    "Facilities": st.column_config.NumberColumn("Facilities", width=80, format="%d"),
-}
-
-ZM_LEADERBOARD_COLUMN_CONFIG = {
-    "Rank": st.column_config.TextColumn("Rank", width=55),
-    "Zone Manager": st.column_config.TextColumn("Zone Manager", width=190),
-    "Districts": st.column_config.NumberColumn("Districts", width=85, format="%d"),
-    "Grade": st.column_config.TextColumn("Grade", width=70),
-    "Score": st.column_config.NumberColumn("Score", width=65, format="%.1f"),
-    "Uptime %": st.column_config.NumberColumn("Uptime %", width=90, format="%.1f%%"),
-    "Weighted Avg": st.column_config.NumberColumn("Weighted Avg", width=100, format="%.1f"),
-    "Total Patients": st.column_config.NumberColumn("Total Patients", width=105, format="%d"),
-    "Facilities": st.column_config.NumberColumn("Facilities", width=80, format="%d"),
-}
 
 @st.cache_data(show_spinner=False)
 def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter):
@@ -326,822 +235,403 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
     for sheet in sheet_names_tuple:
         try:
             sdf = read_sheet_robust(xls, sheet)
-            pdf, _, s = process_district_df(sdf, time_filter)
+            _, _, s = process_district_df(sdf, time_filter)
             if s:
-                d_grade = district_grade(pdf) if pdf is not None else "F"
-                d_score = 0.0
-                if pdf is not None and len(pdf) > 0:
-                    d_score = round(sum(
-                        calculate_score(row['Uptime %'], row['Average Patients'])
-                        for _, row in pdf.iterrows()
-                    ) / len(pdf), 1)
-                lookup_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
-                zm_full = DISTRICT_TO_ZM.get(lookup_name, "—")
-                zm_display = ZM_SHORT.get(zm_full, zm_full) if zm_full != "—" else "—"
                 data.append({
-                    'District': sheet, 'ZM': zm_display, 'ZM_Full': zm_full,
-                    'Grade': d_grade, 'Score': d_score, 'Total Patients': s['total'],
-                    'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s),
-                    'Facilities': s['num_facilities'],
-                    'Zero Days': s['zero_days'], 'Num Days': s['num_days']
+                    'District': sheet,
+                    'Total Patients': s['total'],
+                    'Weighted Avg': s['weighted_avg'],
+                    'Uptime %': calc_uptime(s),
+                    'Facilities': s['num_facilities']
                 })
         except Exception:
             pass
     return pd.DataFrame(data)
 
-def compute_zm_rankings(lb_df):
-    if lb_df.empty or 'ZM_Full' not in lb_df.columns: return pd.DataFrame()
-    df = lb_df[lb_df['ZM_Full'] != "—"].copy()
-    if df.empty: return pd.DataFrame()
-    df['Facility_Days'] = df['Facilities'] * df['Num Days']
-    df['With_Patient_Days'] = df['Facility_Days'] - df['Zero Days']
-    zm = df.groupby('ZM_Full').agg(
-        Districts=('District', 'count'), Total_Patients=('Total Patients', 'sum'),
-        Facilities=('Facilities', 'sum'), Facility_Days=('Facility_Days', 'sum'),
-        With_Patient_Days=('With_Patient_Days', 'sum'), Avg_Score=('Score', 'mean')
-    ).reset_index()
-    zm['Uptime %'] = (zm['With_Patient_Days'] / zm['Facility_Days'] * 100).round(1)
-    zm['Weighted Avg'] = (zm['Total_Patients'] / zm['Facility_Days']).round(1)
-    zm['Score'] = zm['Avg_Score'].round(1)
-    zm['Grade'] = zm['Score'].apply(score_to_grade)
-    zm['Zone Manager'] = zm['ZM_Full'].apply(lambda x: ZM_SHORT.get(x, x))
-    return zm
-
-@st.cache_data(show_spinner=False)
-def get_zm_rankings(sheet_names_tuple, uploaded_file_bytes, time_filter):
-    lb = calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
-    if lb.empty: return {}
-    zm_agg = lb[lb['ZM_Full'] != "—"].groupby('ZM_Full').agg(
-        Districts=('District', 'count'), Total=('Total Patients', 'sum')
-    ).reset_index().sort_values('Total', ascending=False).reset_index(drop=True)
-    zm_agg['Rank'] = range(1, len(zm_agg) + 1)
-    return dict(zip(zm_agg['ZM_Full'], zip(zm_agg['Rank'], zm_agg['Districts'])))
-
-# ============================================================================
-# TOP-LEVEL VIEW MODE SELECTOR
-# ============================================================================
-st.title("🏥 Bihar District Hub & Spoke Dashboard")
-
-try:
-    view_mode = st.pills(
-        "view_mode_selector",
-        ["🏥 District View", "🌐 State View"],
-        selection_mode="single",
-        default="🏥 District View",
-        label_visibility="collapsed"
-    )
-except AttributeError:
-    view_mode = st.radio(
-        "view_mode_selector",
-        ["🏥 District View", "🌐 State View"],
-        horizontal=True, index=0, label_visibility="collapsed"
-    )
-
-if view_mode is None:
-    view_mode = "🏥 District View"
-
-# ============================================================================
-# SIDEBAR
-# ============================================================================
+# --- SIDEBAR ---
 with st.sidebar:
     st.title("Control Panel")
     uploaded_data_file = st.file_uploader("Upload Main Data File", type=["xlsx", "csv"])
-
     if uploaded_data_file is not None:
         try:
             file_bytes = uploaded_data_file.getvalue()
             xls = pd.ExcelFile(uploaded_data_file)
             available_sheets = xls.sheet_names
-            st.markdown("---")
+            st.divider()
 
-            if view_mode == "🏥 District View":
-                all_districts = sorted(DISTRICT_TO_ZM.keys())
-                selected_district_zm = st.selectbox("Select District", all_districts)
+            all_districts = sorted(DISTRICT_TO_ZM.keys())
+            selected_district_zm = st.selectbox("Select District", all_districts)
 
-                zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
-                zone_name = "Unknown Zone"
-                display_zm = zm_name_for_district
-                if "(" in zm_name_for_district and ")" in zm_name_for_district:
-                    display_zm = zm_name_for_district.split("(")[0].strip()
-                    zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone"
+            zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
+            zone_name = "Unknown Zone"
+            display_zm = zm_name_for_district
+            if "(" in zm_name_for_district and ")" in zm_name_for_district:
+                display_zm = zm_name_for_district.split("(")[0].strip()
+                zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone"
 
-                districts_count = len(ZM_DATA.get(zm_name_for_district, {}))
-                zm_rank_info = ""
-                try:
-                    ranks = get_zm_rankings(tuple(available_sheets), file_bytes, "Last 7 Days")
-                    if zm_name_for_district in ranks:
-                        rank, _ = ranks[zm_name_for_district]
-                        zm_rank_info = f'<div class="zm-card-stats">🏆 Rank #{rank} among {len(ranks)} ZMs · Manages {districts_count} districts</div>'
-                    else:
-                        zm_rank_info = f'<div class="zm-card-stats">Manages {districts_count} districts</div>'
-                except Exception:
-                    zm_rank_info = f'<div class="zm-card-stats">Manages {districts_count} districts</div>'
+            zm_card_html = f'''
+            <div class="zm-card">
+                <div class="zm-card-header">👤 Zone Manager</div>
+                <div class="zm-card-name">{display_zm}</div>
+                <div class="zm-card-zone">{zone_name}</div>
+            </div>
+            '''
+            st.markdown(zm_card_html, unsafe_allow_html=True)
 
-                st.markdown(f'''
-                <div class="zm-card">
-                    <div class="zm-card-header">👤 Zone Manager</div>
-                    <div class="zm-card-name">{display_zm}</div>
-                    <div class="zm-card-zone">{zone_name}</div>
-                    {zm_rank_info}
-                </div>
-                ''', unsafe_allow_html=True)
+            hub_list = sorted(ZM_DATA[zm_name_for_district][selected_district_zm])
+            selected_hub_zm = st.selectbox("Select Hub", hub_list)
 
-                hub_list = sorted(ZM_DATA[zm_name_for_district][selected_district_zm])
-                selected_hub_zm = st.selectbox("Select Hub", hub_list)
+            st.divider()
+            time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"])
+            st.divider()
 
-                st.markdown("---")
-                time_filter = st.selectbox("Select Time Range:",
-                    ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"], key="district_tf")
-                st.markdown("---")
-
-                target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
-                if selected_hub_zm in HUB_TO_SHEET_MAP:
-                    target_district = HUB_TO_SHEET_MAP[selected_hub_zm]
-                sheet_found = False
-                for s in available_sheets:
-                    if s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower():
-                        sheet_to_load = s; sheet_found = True; break
-                if sheet_found: st.success(f"✅ Data Available: {selected_district_zm}")
-                else: st.warning(f"⏳ Data Pending: {selected_district_zm}")
-
+            # Simplified sheet resolution since Barh & Danapur are now separate districts
+            target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
+            sheet_found = False
+            for s in available_sheets:
+                if s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower():
+                    sheet_to_load = s
+                    sheet_found = True
+                    break
+            if sheet_found:
+                st.success(f"✅ Data Available: {selected_district_zm}")
             else:
-                st.markdown('<div class="view-mode-title">🌐 Statewide Analysis</div>', unsafe_allow_html=True)
-                zm_options = ["🏢 All Zones"] + sorted(list(ZM_DATA.keys()))
-                selected_zm_filter = st.selectbox("Filter by ZM:", zm_options, key="state_zm_filter")
-                st.markdown("---")
-                time_filter = st.selectbox("Select Time Range:",
-                    ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"], key="state_tf")
-                st.markdown("---")
-                st.success(f"✅ Ready for statewide analysis")
-                st.caption(f"{len(available_sheets)} districts loaded")
-
+                st.warning(f"⏳ Data Pending: {selected_district_zm}")
         except Exception as e:
             st.error(f"Error: {e}")
 
-# ============================================================================
-# MAIN AREA ROUTING
-# ============================================================================
+# --- MAIN AREA ---
+st.title("🏥 Bihar District Hub & Spoke Dashboard")
 if uploaded_data_file is None:
     st.info("👈 Please upload the Main Data File from the sidebar to begin.")
     st.stop()
+if not sheet_found:
+    st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**")
+    st.stop()
 
-# ---------------------------------------------------------------------------
-# DISTRICT VIEW
-# ---------------------------------------------------------------------------
-if view_mode == "🏥 District View":
-    if not sheet_found:
-        st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**")
-        st.stop()
+df_raw = read_sheet_robust(xls, sheet_to_load)
+plot_df, raw_text_df, stats = process_district_df(df_raw, time_filter)
+if plot_df is None:
+    st.error(f"Could not process the sheet '{sheet_to_load}'.")
+    st.stop()
+facility_col = stats['facility_col']
 
-    df_raw = read_sheet_robust(xls, sheet_to_load)
-    plot_df, raw_text_df, stats = process_district_df(df_raw, time_filter)
-    if plot_df is None:
-        st.error(f"Could not process the sheet '{sheet_to_load}'.")
-        st.stop()
-    facility_col = stats['facility_col']
-
-    plot_df['Grade'] = plot_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
-    plot_df['Score'] = plot_df.apply(lambda r: calculate_score(r['Uptime %'], r['Average Patients']), axis=1)
+# --- SPOKE INFO BAR ---
+best_name, best_grade, best_avg = "N/A", "—", 0
+if not plot_df.empty:
+    scorecard_tmp = plot_df.copy()
+    scorecard_tmp['Grade'] = scorecard_tmp.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
     grade_order = {'A': 1, 'B': 2, 'C': 3, 'D': 4, 'F': 5}
-    plot_df['Grade_Order'] = plot_df['Grade'].map(grade_order)
-    ranked_df = plot_df.sort_values(['Grade_Order', 'Average Patients'], ascending=[True, False])
-    best_row = ranked_df.iloc[0] if not ranked_df.empty else None
-    worst_df = ranked_df.tail(3).iloc[::-1] if len(ranked_df) >= 3 else ranked_df
+    scorecard_tmp['Grade_Order'] = scorecard_tmp['Grade'].map(grade_order)
+    scorecard_tmp = scorecard_tmp.sort_values(by=['Grade_Order', 'Average Patients'], ascending=[True, False])
+    if not scorecard_tmp.empty:
+        best_row = scorecard_tmp.iloc[0]
+        best_name = best_row[facility_col]
+        best_grade = best_row['Grade']
+        best_avg = best_row['Average Patients']
 
-    uptime_val = calc_uptime(stats)
-    uptime_cls = uptime_color(uptime_val)
+info_html = f'''
+<div class="info-bar">
+    <div class="info-card">
+        <div class="info-label">📍 Total Spokes</div>
+        <div class="info-value">{stats['num_facilities']}</div>
+        <div class="info-sub">Reporting facilities</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label">🏥 Hub Lab</div>
+        <div class="info-value">{selected_hub_zm}</div>
+        <div class="info-sub">{selected_district_zm} District</div>
+    </div>
+    <div class="info-card">
+        <div class="info-label">⭐ Best Performing Spoke</div>
+        <div class="info-value">{best_name}</div>
+        <div class="info-sub">Grade {best_grade} · {best_avg} /day</div>
+    </div>
+</div>
+'''
+st.markdown(info_html, unsafe_allow_html=True)
 
-    col1, col2, col3 = st.columns([1, 1, 1.2])
-    with col1:
-        st.markdown(f'''
-        <div class="info-card">
-            <div class="info-label">📍 Total Spokes</div>
-            <div class="info-value">{stats['num_facilities']}</div>
-            <div class="info-sub">Reporting facilities</div>
-        </div>
-        ''', unsafe_allow_html=True)
-    with col2:
-        st.markdown(f'''
-        <div class="info-card">
-            <div class="info-label">🏥 Hub Lab</div>
-            <div class="info-value">{selected_hub_zm}</div>
-            <div class="info-sub">Central processing facility</div>
-        </div>
-        ''', unsafe_allow_html=True)
-    with col3:
-        if best_row is not None:
-            st.markdown(f'''
-            <div class="info-card green">
-                <div class="info-label">⭐ Best Performing Spoke</div>
-                <div class="info-value">🏆 {best_row[facility_col]}</div>
-                <div class="info-sub accent">Ranked #1 of {stats['num_facilities']} · Grade {best_row['Grade']} · {best_row['Average Patients']} /day</div>
-            </div>
-            ''', unsafe_allow_html=True)
+# --- TABS ---
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📊 District Dashboard",
+    "📋 Report Card",
+    "🏆 State Leaderboard",
+    "📈 Trends & Analytics",
+    "⚖️ Compare Districts"
+])
 
-    st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
+# ===== TAB 1: DISTRICT DASHBOARD =====
+with tab1:
+    col1, col2, col3 = st.columns(3)
+    with col1: st.metric(label=f"Total Patients ({time_filter})", value=f"{stats['total']:,}")
+    with col2: st.metric(label="Weighted Avg Daily Patients", value=f"{stats['weighted_avg']}")
+    with col3: st.metric(label="Facility Uptime %", value=f"{calc_uptime(stats)}%")
 
-    m1, m2, m3 = st.columns(3)
-    with m1:
-        st.markdown(f'''
-        <div class="metric-card blue">
-            <div class="metric-label">Total Patients ({time_filter})</div>
-            <div class="metric-value">{stats['total']:,}</div>
-        </div>
-        ''', unsafe_allow_html=True)
-    with m2:
-        st.markdown(f'''
-        <div class="metric-card purple">
-            <div class="metric-label">Weighted Avg Daily Patients</div>
-            <div class="metric-value">{stats['weighted_avg']}</div>
-        </div>
-        ''', unsafe_allow_html=True)
-    with m3:
-        bar_color = uptime_hex(uptime_val)
-        st.markdown(f'''
-        <div class="metric-card {uptime_cls}">
-            <div class="metric-label">Facility Uptime %</div>
-            <div class="metric-value">{uptime_val}%</div>
-            <div class="metric-progress-bg">
-                <div class="metric-progress-fill" style="width: {min(uptime_val, 100)}%; background: {bar_color};"></div>
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
+    st.divider()
 
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-
-    tab1, tab2, tab3 = st.tabs(["📊 District Dashboard", "📋 Report Card", "📈 Trends & Analytics"])
-
-    with tab1:
-        c1, c2 = st.columns([3, 2])
-        with c1:
-            metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d1")
-        with c2:
-            cc1, cc2 = st.columns(2)
-            with cc1:
-                sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d2", label_visibility="collapsed")
-            with cc2:
-                active_only = st.checkbox("Exclude Inactive", value=False, key="d3")
-
-        metric_col = {'Average Patients': 'Average Patients', 'Total Patients': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
-        filtered = plot_df.copy()
-        if active_only:
-            filtered = filtered[filtered['Total Patients'] > 0]
-
-        if filtered.empty:
-            st.warning("No data matches the filters.")
+    c1, c2, c3 = st.columns([2, 1, 1])
+    with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d1")
+    with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d2")
+    with c3: active_only = st.checkbox("Exclude Inactive", value=False, key="d3")
+    
+    metric_col = {'Average Patients': 'Average Patients', 'Total Patients': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
+    filtered = plot_df.copy()
+    if active_only:
+        filtered = filtered[filtered['Total Patients'] > 0]
+        
+    if filtered.empty:
+        st.warning("No data matches the filters.")
+    else:
+        sorted_df = filtered.sort_values(by=metric_col, ascending=(sort_option == "Lowest to Highest"))
+        sorted_df['Highlight'] = 'Others'
+        if len(sorted_df) > 10:
+            sorted_df.loc[sorted_df.nlargest(5, metric_col).index, 'Highlight'] = 'Top 5'
+            sorted_df.loc[sorted_df.nsmallest(5, metric_col).index, 'Highlight'] = 'Bottom 5'
+            
+        fig = px.bar(sorted_df, y=facility_col, x=metric_col, orientation='h', color='Highlight', color_discrete_map={'Top 5': '#2ecc71', 'Bottom 5': '#e74c3c', 'Others': '#95a5a6'}, title=f"{metric_option} per Facility")
+        
+        # --- FIXED: Calculate dynamic average line based on current filter ---
+        if metric_col == 'Uptime %' or metric_col == 'Total Patients':
+            current_avg = round(filtered[metric_col].mean(), 1)
         else:
-            sorted_df = filtered.sort_values(by=metric_col, ascending=(sort_option == "Lowest to Highest"))
-            chart_title = f"{metric_option} per Facility — {selected_district_zm} ({time_filter}) · {len(sorted_df)} Facilities"
-            fig = px.bar(
-                sorted_df, y=facility_col, x=metric_col, orientation='h',
-                color='Grade',
-                color_discrete_map={'A': '#2ecc71', 'B': '#a3e635', 'C': '#fbbf24', 'D': '#f97316', 'F': '#e74c3c'},
-                labels={facility_col: '', metric_col: metric_option, 'Grade': 'Grade'},
-                title=chart_title, text=metric_col
-            )
-            fig.update_traces(texttemplate='%{text:.1f}', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
-            avg_val = sorted_df[metric_col].mean()
-            fig.add_vline(x=avg_val, line_dash="dash", line_color="#e74c3c", line_width=2,
-                          annotation_text=f"Avg: {avg_val:.1f}", annotation_position="top")
-            chart_height = max(360, len(sorted_df) * 36)
-            fig.update_layout(
-                height=chart_height, yaxis=dict(autorange="reversed"),
-                plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1, title=""),
-                margin=dict(l=0, r=60, t=60, b=20), font=dict(size=12)
-            )
-            fig.update_xaxes(showgrid=True, gridcolor='#1f2a35', zeroline=False)
-            fig.update_yaxes(showgrid=False)
-            st.plotly_chart(fig, use_container_width=True)
+            # For 'Average Patients', show the true weighted average of the filtered facilities
+            current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
+            
+        fig.add_hline(y=current_avg, line_dash="dash", line_color="#e74c3c", annotation_text=f"Avg: {current_avg}")
 
-        st.markdown("---")
-        left_col, right_col = st.columns([1, 2])
-        with left_col:
-            st.markdown("#### 🔴 Attention Needed")
-            st.caption("Bottom 3 spokes by grade & volume")
-            for _, row in worst_df.iterrows():
-                st.markdown(f'''
-                <div class="bottom-spoke">
-                    <div class="bottom-spoke-name">{row[facility_col]}</div>
-                    <div class="bottom-spoke-meta">Grade {row['Grade']} · Uptime {row['Uptime %']}% · {row['Average Patients']} /day</div>
-                </div>
-                ''', unsafe_allow_html=True)
-        with right_col:
-            st.markdown("#### 📋 All Facilities")
-            st.caption("Sorted by grade and performance")
-            display = ranked_df[[facility_col, 'Grade', 'Score', 'Uptime %', 'Average Patients', 'Total Patients']].copy()
-            display.columns = ['Facility', 'Grade', 'Score', 'Uptime %', 'Avg / Day', 'Total']
-            st.dataframe(
-                display, use_container_width=True, hide_index=True,
-                height=min(420, 35 * len(display) + 40),
-                column_config={
-                    "Facility": st.column_config.TextColumn("Facility", width="large"),
-                    "Grade": st.column_config.TextColumn("Grade", width="small"),
-                    "Score": st.column_config.ProgressColumn("Score", format="%.1f", min_value=0, max_value=100),
-                    "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
-                    "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
-                    "Total": st.column_config.NumberColumn("Total", format="%d"),
-                }
-            )
-        st.markdown("---")
-        st.caption(f"💡 Data: **{sheet_to_load}** | Range: **{time_filter}** | Refreshed: {pd.Timestamp.now().strftime('%d-%b-%Y %H:%M')}")
+        fig.update_layout(height=max(500, len(sorted_df) * 25), yaxis=dict(autorange="reversed"), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', legend_title="", xaxis_title=metric_option, yaxis_title="")
+        st.plotly_chart(fig, use_container_width=True)
+        
+    st.divider()
+    st.caption(f"💡 Data: **{sheet_to_load}** | Range: **{time_filter}** | Refreshed: {pd.Timestamp.now().strftime('%d-%b-%Y %H:%M')}")
 
-    with tab2:
-        period_str = "N/A"
-        if stats['active_date_cols']:
-            fd = extract_date(stats['active_date_cols'][0])
-            ld = extract_date(stats['active_date_cols'][-1])
-            if pd.notna(fd) and pd.notna(ld):
-                period_str = f"{fd.strftime('%d %b %Y')} – {ld.strftime('%d %b %Y')}"
-                if fd == ld: period_str = fd.strftime('%d %b %Y')
+# ===== TAB 2: REPORT CARD =====
+with tab2:
+    period_str = "N/A"
+    if stats['active_date_cols']:
+        fd = extract_date(stats['active_date_cols'][0])
+        ld = extract_date(stats['active_date_cols'][-1])
+        if pd.notna(fd) and pd.notna(ld):
+            period_str = f"{fd.strftime('%d %b %Y')} – {ld.strftime('%d %b %Y')}"
+            if fd == ld:
+                period_str = fd.strftime('%d %b %Y')
 
-        d_grade = district_grade(plot_df)
-        grade_class = f"grade-{d_grade}"
+    d_grade = district_grade(plot_df)
+    grade_class = f"grade-{d_grade}"
 
+    header_html = f'''
+    <div class="report-header">
+        <div class="report-title">📋 District Report Card — {selected_district_zm}</div>
+        <div class="report-meta">
+            <strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; 
+            <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; 
+            <strong>Period:</strong> {period_str} <span style="color: #666;">({stats['num_days']} days)</span>
+            <br>
+            <strong>Generated:</strong> {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}
+        </div>
+    </div>
+    '''
+    st.markdown(header_html, unsafe_allow_html=True)
+
+    col1, col2, col3, col4 = st.columns(4)
+    with col1: st.metric("Total Patients", f"{stats['total']:,}")
+    with col2: st.metric("Weighted Avg / Day", f"{stats['weighted_avg']}")
+    with col3: st.metric("Facility Uptime", f"{calc_uptime(stats)}%")
+    with col4:
         st.markdown(f'''
-        <div class="report-header">
-            <div class="report-title">📋 District Report Card — {selected_district_zm}</div>
-            <div class="report-meta">
-                <strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; 
-                <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; 
-                <strong>Period:</strong> {period_str} <span style="color: #666;">({stats['num_days']} days)</span>
-                <br>
-                <strong>Generated:</strong> {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}
-            </div>
+        <div style="background-color:#1E1E1E; border:1px solid #333; padding:15px; border-radius:10px; text-align:center;">
+            <div style="color:#AAAAAA; font-size:13px; text-transform:uppercase; letter-spacing:1px;">District Grade</div>
+            <div style="margin-top:8px;"><span class="district-grade-badge {grade_class}">{d_grade}</span></div>
         </div>
         ''', unsafe_allow_html=True)
 
-        col1, col2, col3, col4 = st.columns(4)
-        with col1: st.metric("Total Patients", f"{stats['total']:,}")
-        with col2: st.metric("Weighted Avg / Day", f"{stats['weighted_avg']}")
-        with col3: st.metric("Facility Uptime", f"{calc_uptime(stats)}%")
-        with col4:
-            st.markdown(f'''
-            <div style="background-color:#1E1E1E; border:1px solid #333; padding:15px; border-radius:10px; text-align:center;">
-                <div style="color:#AAAAAA; font-size:13px; text-transform:uppercase; letter-spacing:1px;">District Grade</div>
-                <div style="margin-top:8px;"><span class="district-grade-badge {grade_class}">{d_grade}</span></div>
-            </div>
-            ''', unsafe_allow_html=True)
+    st.divider()
 
-        st.markdown("---")
-        st.markdown("### 🏥 Spoke Scorecard")
-        st.caption("Every facility in the district, scored on reliability (60%) + volume (40%, capped at 15/day). Sorted best to worst.")
+    st.markdown("### 🏥 Spoke Scorecard")
+    st.caption("Every facility in the district, graded on reliability (60%) and volume (40%). Sorted best to worst.")
 
-        scorecard = plot_df.copy()
-        scorecard['Grade'] = scorecard.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
-        scorecard['Score'] = scorecard.apply(lambda r: calculate_score(r['Uptime %'], r['Average Patients']), axis=1)
-        scorecard = scorecard.sort_values(by=['Score'], ascending=False)
+    scorecard = plot_df.copy()
+    scorecard['Grade'] = scorecard.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
+    scorecard = scorecard.sort_values(by=['Grade', 'Uptime %', 'Average Patients'], ascending=[True, False, False])
 
-        display = pd.DataFrame()
-        display['Facility'] = scorecard[facility_col]
-        display['Grade'] = scorecard['Grade'].apply(grade_emoji)
-        display['Score'] = scorecard['Score']
-        display['Uptime %'] = scorecard['Uptime %']
-        display['Avg / Day'] = scorecard['Average Patients']
-        display['Total Patients'] = scorecard['Total Patients'].astype(int)
-        display['Zero Days'] = scorecard['Zero Days'].astype(int)
+    display = pd.DataFrame()
+    display['Facility'] = scorecard[facility_col]
+    display['Grade'] = scorecard['Grade'].apply(grade_emoji)
+    display['Uptime %'] = scorecard['Uptime %']
+    display['Avg / Day'] = scorecard['Average Patients']
+    display['Total Patients'] = scorecard['Total Patients'].astype(int)
+    display['Zero Days'] = scorecard['Zero Days'].astype(int)
 
-        st.dataframe(
-            display, use_container_width=True, hide_index=True,
-            column_config={
-                "Facility": st.column_config.TextColumn("Facility", width="large"),
-                "Grade": st.column_config.TextColumn("Grade", width="small"),
-                "Score": st.column_config.ProgressColumn("Score", format="%.1f", min_value=0, max_value=100),
-                "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
-                "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
-                "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"),
-                "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d"),
-            }
-        )
+    st.dataframe(
+        display,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Facility": st.column_config.TextColumn("Facility", width="large"),
+            "Grade": st.column_config.TextColumn("Grade", width="small"),
+            "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
+            "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
+            "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"),
+            "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d"),
+        }
+    )
 
-        st.markdown("---")
-        export = scorecard[[facility_col, 'Grade', 'Score', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
-        export.columns = ['Facility', 'Grade', 'Score', 'Uptime %', 'Avg Per Day', 'Total Patients', 'Zero Days']
-        csv = export.to_csv(index=False).encode('utf-8')
-        period_file = pd.Timestamp.now().strftime('%b_%Y')
-        st.download_button(
-            label=f"📥 Download Report Card ({selected_district_zm})",
-            data=csv, file_name=f'{selected_district_zm}_ReportCard_{time_filter.replace(" ", "_")}_{period_file}.csv',
-            mime='text/csv', key='download_report'
-        )
+    st.divider()
 
-    with tab3:
-        st.markdown(f"### 📈 Trends for {selected_district_zm}")
-        st.markdown("#### Daily Patient Trend")
-        if stats['active_date_cols']:
-            trend_data = []
-            for col in stats['active_date_cols']:
-                d = extract_date(col)
-                dt = pd.to_numeric(plot_df[col], errors='coerce').fillna(0).sum()
-                if pd.notna(d): trend_data.append({'Date': d, 'Patients': dt})
-            if trend_data:
-                trend_df = pd.DataFrame(trend_data).sort_values('Date')
-                trend_df['Day'] = trend_df['Date'].dt.day_name()
-                holidays = {'2026-09-16': 'Milad-un-Nabi', '2026-10-02': 'Gandhi Jayanti', '2026-10-20': 'Dussehra', '2026-10-21': 'Dussehra Holiday', '2026-11-08': 'Diwali', '2026-11-10': 'Bhai Dooj', '2026-11-13': 'Chhath Day 1', '2026-11-14': 'Chhath Day 2'}
-                trend_df['Holiday'] = trend_df['Date'].dt.strftime('%Y-%m-%d').map(holidays).fillna(trend_df['Day'])
-                fig_t = px.line(trend_df, x='Date', y='Patients', markers=True, hover_data={'Day': True, 'Holiday': True})
-                fig_t.update_traces(line_color='#00D4FF', line_width=3)
-                for _, row in trend_df.iterrows():
-                    if row['Day'] == 'Sunday':
-                        fig_t.add_vrect(x0=row['Date'] - pd.Timedelta(hours=12), x1=row['Date'] + pd.Timedelta(hours=12), fillcolor="gray", opacity=0.1, layer="below", line_width=0)
-                    if row['Holiday'] not in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']:
-                        fig_t.add_vrect(x0=row['Date'] - pd.Timedelta(hours=12), x1=row['Date'] + pd.Timedelta(hours=12), fillcolor="#e74c3c", opacity=0.15, layer="below", line_width=0)
-                        fig_t.add_annotation(x=row['Date'], y=row['Patients'], text=row['Holiday'], showarrow=True, yshift=20, font=dict(color="#e74c3c"))
-                fig_t.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
-                st.plotly_chart(fig_t, use_container_width=True)
+    export = scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
+    export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Patients', 'Zero Days']
+    csv = export.to_csv(index=False).encode('utf-8')
+    period_file = pd.Timestamp.now().strftime('%b_%Y')
 
-        st.markdown("---")
-        st.markdown("#### Spoke Heatmap (Facility vs. Date)")
-        heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
-        heatmap_df.columns = [extract_date(c).strftime('%d-%b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
-        fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale='RdYlGn')
-        fig_h.update_layout(height=max(600, len(heatmap_df) * 20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', coloraxis_colorbar=dict(title="Patients"))
-        st.plotly_chart(fig_h, use_container_width=True)
+    st.download_button(
+        label=f"📥 Download Report Card ({selected_district_zm})",
+        data=csv,
+        file_name=f'{selected_district_zm}_ReportCard_{time_filter.replace(" ", "_")}_{period_file}.csv',
+        mime='text/csv',
+        key='download_report'
+    )
 
-        st.markdown("---")
-        st.markdown("#### ⚠️ Anomaly Detector")
-        if len(stats['active_date_cols']) >= 8:
-            rc = stats['active_date_cols'][-8:-1]
-            lc = stats['active_date_cols'][-1]
-            anomalies = []
-            for _, row in plot_df.iterrows():
-                pa = pd.to_numeric(row[rc], errors='coerce').fillna(0).mean()
-                lv = 0 if pd.isna(row[lc]) else pd.to_numeric(row[lc], errors='coerce')
-                lv = 0 if pd.isna(lv) else lv
-                if pa > 5 and lv < (pa * 0.2):
-                    anomalies.append({'Facility': row[facility_col], 'Prev 7-day Avg': round(pa, 1), 'Latest Day': int(lv), 'Drop %': f"-{round((1 - lv/pa) * 100)}%"})
-            if anomalies:
-                st.error(f"⚠️ {len(anomalies)} anomalies detected!")
-                st.dataframe(pd.DataFrame(anomalies), use_container_width=True, hide_index=True)
-            else:
-                st.success("✅ No anomalies detected.")
+# ===== TAB 3: LEADERBOARD =====
+with tab3:
+    st.markdown("### 🏆 All Districts Ranked")
+    with st.expander("ℹ️ What do 'Uptime %' and 'Weighted Avg' mean? Click to expand", expanded=False):
+        st.markdown("""
+        **📊 Uptime %** — *The reliability score.* The percentage of days each facility reported more than 0 patients.
+        
+        **⚖️ Weighted Avg** — *The efficiency score.* Total patients divided by (facilities × days).
+        
+        **👥 Total Patients** — *The volume score.* Raw sum of all patients across every facility in the district.
+        
+        **🏥 Facilities** — Number of reporting hospitals in the district.
+        """)
+    if st.button("🔄 Calculate Leaderboard", key="lb"):
+        with st.spinner("Processing..."):
+            lb_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
+        if not lb_df.empty:
+            lb_df = lb_df.sort_values('Total Patients', ascending=False).reset_index(drop=True)
+            lb_df.index = lb_df.index + 1
+            lb_df.index.name = 'Rank'
+            def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
+            lb_df['District'] = lb_df.apply(lambda row: f"{medal(row.name)} {row['District']}".strip(), axis=1)
+            st.dataframe(lb_df, use_container_width=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
+            top15 = lb_df.head(15)
+            fig_lb = px.bar(top15, x='Total Patients', y='District', orientation='h', color='Uptime %', color_continuous_scale='RdYlGn')
+            fig_lb.update_layout(yaxis=dict(autorange="reversed"), height=500, plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig_lb, use_container_width=True)
+    else:
+        st.info("Click the button above to generate the statewide leaderboard.")
 
-# ---------------------------------------------------------------------------
-# STATE VIEW
-# ---------------------------------------------------------------------------
-else:
-    tab1, tab2, tab3 = st.tabs(["🏆 State Leaderboard", "👥 Zone Managers", "⚖️ Compare Districts"])
-
-    with tab1:
-        st.markdown("### 🏆 All Districts Ranked")
-
-        with st.expander("ℹ️ How is this ranked?", expanded=False):
-            st.markdown("""
-            - **Reliability (Uptime %)** — % of facility-days with at least 1 patient.
-            - **Efficiency (Weighted Avg)** — Avg patients per facility per day.
-            - **Volume (Total Patients)** — Raw total across all facilities.
-            - **Grade** — A/B/C/D/F combined score.
-            - **Score** — 0-100: 60% reliability + 40% volume.
-            """)
-
-        rank_by = st.radio("Rank by:",
-            ("Reliability (Uptime %)", "Efficiency (Weighted Avg)", "Volume (Total Patients)"),
-            horizontal=True, key="lb_rank")
-
-        if st.button("🔄 Calculate Leaderboard", key="lb"):
-            with st.spinner("Processing all districts..."):
-                lb_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
-
-            if lb_df.empty:
-                st.warning("No districts with data found.")
-            else:
-                total_districts = len(lb_df)
-                avg_uptime_all = round(lb_df['Uptime %'].mean(), 1)
-                top_row = lb_df.sort_values('Score', ascending=False).iloc[0]
-                worst_row = lb_df.sort_values('Score', ascending=False).iloc[-1]
-
-                k1, k2, k3, k4 = st.columns(4)
-                with k1:
-                    st.markdown(f'''
-                    <div class="kpi-chip blue">
-                        <div class="kpi-chip-label">📍 Districts</div>
-                        <div class="kpi-chip-value">{total_districts}</div>
-                        <div class="kpi-chip-sub">Statewide reporting</div>
-                    </div>
-                    ''', unsafe_allow_html=True)
-                with k2:
-                    st.markdown(f'''
-                    <div class="kpi-chip purple">
-                        <div class="kpi-chip-label">📊 Avg Uptime</div>
-                        <div class="kpi-chip-value">{avg_uptime_all}%</div>
-                        <div class="kpi-chip-sub">Across all districts</div>
-                    </div>
-                    ''', unsafe_allow_html=True)
-                with k3:
-                    st.markdown(f'''
-                    <div class="kpi-chip green">
-                        <div class="kpi-chip-label">🏆 Top Performer</div>
-                        <div class="kpi-chip-value">{top_row['District']}</div>
-                        <div class="kpi-chip-sub">Score {top_row['Score']} · Grade {top_row['Grade']}</div>
-                    </div>
-                    ''', unsafe_allow_html=True)
-                with k4:
-                    st.markdown(f'''
-                    <div class="kpi-chip red">
-                        <div class="kpi-chip-label">⚠️ Needs Attention</div>
-                        <div class="kpi-chip-value">{worst_row['District']}</div>
-                        <div class="kpi-chip-sub">Score {worst_row['Score']} · Grade {worst_row['Grade']}</div>
-                    </div>
-                    ''', unsafe_allow_html=True)
-
-                st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
-
-                if "Reliability" in rank_by: sort_col = 'Uptime %'
-                elif "Efficiency" in rank_by: sort_col = 'Weighted Avg'
-                else: sort_col = 'Total Patients'
-
-                lb_df = lb_df.sort_values(sort_col, ascending=False).reset_index(drop=True)
-                n_total = len(lb_df)
-                lb_df.insert(0, 'Rank', range(1, n_total + 1))
-
-                is_filtered = selected_zm_filter != "🏢 All Zones"
-                if is_filtered:
-                    lb_df_display = lb_df[lb_df['ZM_Full'] == selected_zm_filter].reset_index(drop=True)
-                    if lb_df_display.empty:
-                        st.warning(f"No districts found for {selected_zm_filter}.")
-                        st.stop()
-                    n = len(lb_df_display)
-                else:
-                    lb_df_display = lb_df.copy()
-                    n = n_total
-
-                if not is_filtered:
-                    if n >= 10: top_n, bottom_n = 5, 5
-                    elif n >= 6: top_n, bottom_n = 3, 3
-                    elif n >= 4: top_n, bottom_n = 2, 2
-                    else: top_n, bottom_n = 1, 1
-                else:
-                    top_n, bottom_n = 0, 0
-
-                # Replace integer rank with string + emoji so widths work
-                lb_df_display['Rank'] = lb_df_display['Rank'].apply(
-                    lambda r: format_rank(r, top_n, bottom_n, n)
-                )
-
-                lb_df_display = lb_df_display[['Rank', 'District', 'ZM', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']]
-
-                # Only style the Grade column — Rank now carries its highlight as text
-                styled = lb_df_display.style
-                try:
-                    styled = styled.map(style_grade, subset=['Grade'])
-                except AttributeError:
-                    styled = styled.applymap(style_grade, subset=['Grade'])
-
-                styled = styled.format({
-                    'Uptime %': '{:.1f}%', 'Weighted Avg': '{:.1f}',
-                    'Total Patients': '{:,}', 'Score': '{:.1f}'
-                })
-
-                if is_filtered:
-                    st.caption(f"Showing **{n}** districts managed by **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** — ranks preserve their position in the statewide leaderboard.")
-                else:
-                    st.caption(f"🟢 Top {top_n} ranks highlighted with green dot. 🔴 Bottom {bottom_n} with red dot.")
-
-                st.dataframe(
-                    styled,
-                    use_container_width=True,
-                    hide_index=True,
-                    column_config=LEADERBOARD_COLUMN_CONFIG
-                )
-
-                st.markdown("---")
-                if is_filtered:
-                    st.markdown(f"#### 📊 {ZM_SHORT.get(selected_zm_filter, selected_zm_filter)} — Districts Ranked")
-                else:
-                    st.markdown("#### 📊 Top 15 Districts — Statewide")
-
-                top15_chart = lb_df_display.head(min(15, n)).copy()
-                top15_chart['Rank_Num'] = top15_chart['Rank'].str.extract(r'(\d+)').astype(int)
-                top15_chart = top15_chart.sort_values('Rank_Num', ascending=False)
-
-                if is_filtered:
-                    top15_chart['Color'] = 'Neutral'
-                    color_map = {'Neutral': '#3498db'}
-                else:
-                    top15_chart['Color'] = top15_chart['Rank_Num'].apply(lambda r: f'Top {top_n}' if r <= top_n else 'Others')
-                    color_map = {f'Top {top_n}': '#2ecc71', 'Others': '#95a5a6'}
-
-                fig_lb = px.bar(
-                    top15_chart, x=sort_col, y='District', orientation='h',
-                    color='Color', color_discrete_map=color_map,
-                    labels={sort_col: sort_col, 'District': ''},
-                    height=max(380, 40 * len(top15_chart)),
-                    text=sort_col
-                )
-                if "Uptime" in sort_col:
-                    fig_lb.update_traces(texttemplate='%{text:.1f}%', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
-                elif "Patients" in sort_col:
-                    fig_lb.update_traces(texttemplate='%{text:,.0f}', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
-                else:
-                    fig_lb.update_traces(texttemplate='%{text:.1f}', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
-
-                fig_lb.update_layout(
-                    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                    legend_title="", showlegend=False,
-                    margin=dict(l=0, r=70, t=20, b=20),
-                    xaxis=dict(showgrid=True, gridcolor='#1f2a35', zeroline=False),
-                    yaxis=dict(showgrid=False)
-                )
-                st.plotly_chart(fig_lb, use_container_width=True)
+# ===== TAB 4: TRENDS =====
+with tab4:
+    st.markdown(f"### 📈 Trends for {selected_district_zm}")
+    st.markdown("#### Daily Patient Trend")
+    if stats['active_date_cols']:
+        trend_data = []
+        for col in stats['active_date_cols']:
+            d = extract_date(col)
+            dt = pd.to_numeric(plot_df[col], errors='coerce').fillna(0).sum()
+            if pd.notna(d):
+                trend_data.append({'Date': d, 'Patients': dt})
+        if trend_data:
+            trend_df = pd.DataFrame(trend_data).sort_values('Date')
+            trend_df['Day'] = trend_df['Date'].dt.day_name()
+            holidays = {'2026-09-16': 'Milad-un-Nabi', '2026-10-02': 'Gandhi Jayanti', '2026-10-20': 'Dussehra', '2026-10-21': 'Dussehra Holiday', '2026-11-08': 'Diwali', '2026-11-10': 'Bhai Dooj', '2026-11-13': 'Chhath Day 1', '2026-11-14': 'Chhath Day 2'}
+            trend_df['Holiday'] = trend_df['Date'].dt.strftime('%Y-%m-%d').map(holidays).fillna(trend_df['Day'])
+            fig_t = px.line(trend_df, x='Date', y='Patients', markers=True, hover_data={'Day': True, 'Holiday': True})
+            fig_t.update_traces(line_color='#00D4FF', line_width=3)
+            for _, row in trend_df.iterrows():
+                if row['Day'] == 'Sunday':
+                    fig_t.add_vrect(x0=row['Date'] - pd.Timedelta(hours=12), x1=row['Date'] + pd.Timedelta(hours=12), fillcolor="gray", opacity=0.1, layer="below", line_width=0)
+                if row['Holiday'] not in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']:
+                    fig_t.add_vrect(x0=row['Date'] - pd.Timedelta(hours=12), x1=row['Date'] + pd.Timedelta(hours=12), fillcolor="#e74c3c", opacity=0.15, layer="below", line_width=0)
+                    fig_t.add_annotation(x=row['Date'], y=row['Patients'], text=row['Holiday'], showarrow=True, yshift=20, font=dict(color="#e74c3c"))
+            fig_t.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+            st.plotly_chart(fig_t, use_container_width=True)
+    st.divider()
+    st.markdown("#### Spoke Heatmap (Facility vs. Date)")
+    heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
+    heatmap_df.columns = [extract_date(c).strftime('%d-%b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
+    fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale='RdYlGn')
+    fig_h.update_layout(height=max(600, len(heatmap_df) * 20), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', coloraxis_colorbar=dict(title="Patients"))
+    st.plotly_chart(fig_h, use_container_width=True)
+    st.divider()
+    st.markdown("#### ⚠️ Anomaly Detector")
+    if len(stats['active_date_cols']) >= 8:
+        rc = stats['active_date_cols'][-8:-1]
+        lc = stats['active_date_cols'][-1]
+        anomalies = []
+        for _, row in plot_df.iterrows():
+            pa = pd.to_numeric(row[rc], errors='coerce').fillna(0).mean()
+            lv = 0 if pd.isna(row[lc]) else pd.to_numeric(row[lc], errors='coerce')
+            lv = 0 if pd.isna(lv) else lv
+            if pa > 5 and lv < (pa * 0.2):
+                anomalies.append({'Facility': row[facility_col], 'Prev 7-day Avg': round(pa, 1), 'Latest Day': int(lv), 'Drop %': f"-{round((1 - lv/pa) * 100)}%"})
+        if anomalies:
+            st.error(f"⚠️ {len(anomalies)} anomalies detected!")
+            st.dataframe(pd.DataFrame(anomalies), use_container_width=True, hide_index=True)
         else:
-            st.info("Click the button above to generate the statewide leaderboard.")
+            st.success("✅ No anomalies detected.")
 
-    with tab2:
-        st.markdown("### 👥 Zone Manager Leaderboard")
-        st.caption("Each Zone Manager's aggregated performance across all their districts.")
-
-        if st.button("🔄 Calculate Zone Rankings", key="zm_rank_btn"):
-            with st.spinner("Processing all districts..."):
-                lb_df_zm = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
-
-            if lb_df_zm.empty:
-                st.warning("No districts with data found.")
-            else:
-                zm_rank = compute_zm_rankings(lb_df_zm)
-                if zm_rank.empty:
-                    st.info("No Zone Manager data available.")
-                else:
-                    zm_rank = zm_rank.sort_values('Total_Patients', ascending=False).reset_index(drop=True)
-                    zm_rank.insert(0, 'Rank', range(1, len(zm_rank) + 1))
-
-                    top_zm = zm_rank.iloc[0]
-                    best_uptime_zm = zm_rank.sort_values('Uptime %', ascending=False).iloc[0]
-                    total_zms = len(zm_rank)
-
-                    k1, k2, k3 = st.columns(3)
-                    with k1:
-                        st.markdown(f'''
-                        <div class="kpi-chip blue">
-                            <div class="kpi-chip-label">👥 Zone Managers</div>
-                            <div class="kpi-chip-value">{total_zms}</div>
-                            <div class="kpi-chip-sub">Across all districts</div>
-                        </div>
-                        ''', unsafe_allow_html=True)
-                    with k2:
-                        st.markdown(f'''
-                        <div class="kpi-chip green">
-                            <div class="kpi-chip-label">🏆 Top by Volume</div>
-                            <div class="kpi-chip-value">{top_zm['Zone Manager']}</div>
-                            <div class="kpi-chip-sub">{int(top_zm['Total_Patients']):,} patients</div>
-                        </div>
-                        ''', unsafe_allow_html=True)
-                    with k3:
-                        st.markdown(f'''
-                        <div class="kpi-chip purple">
-                            <div class="kpi-chip-label">📊 Most Reliable</div>
-                            <div class="kpi-chip-value">{best_uptime_zm['Zone Manager']}</div>
-                            <div class="kpi-chip-sub">{best_uptime_zm['Uptime %']:.1f}% uptime</div>
-                        </div>
-                        ''', unsafe_allow_html=True)
-
-                    st.markdown("<div style='height: 16px;'></div>", unsafe_allow_html=True)
-
-                    is_filtered = selected_zm_filter != "🏢 All Zones"
-
-                    zm_display = zm_rank[['Rank', 'Zone Manager', 'Districts', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total_Patients', 'Facilities']].copy()
-                    zm_display.columns = ['Rank', 'Zone Manager', 'Districts', 'Grade', 'Score', 'Uptime %', 'Weighted Avg', 'Total Patients', 'Facilities']
-
-                    # Same treatment: format rank as text with emoji
-                    n_zm = len(zm_display)
-                    if is_filtered:
-                        zm_display['Rank'] = zm_display['Rank'].apply(lambda r: str(int(r)))
-                    else:
-                        zm_display['Rank'] = zm_display['Rank'].apply(
-                            lambda r: format_rank(r, 3, 2, n_zm)
-                        )
-
-                    zm_styled = zm_display.style
-                    try:
-                        zm_styled = zm_styled.map(style_grade, subset=['Grade'])
-                    except AttributeError:
-                        zm_styled = zm_styled.applymap(style_grade, subset=['Grade'])
-
-                    zm_styled = zm_styled.format({
-                        'Uptime %': '{:.1f}%', 'Weighted Avg': '{:.1f}',
-                        'Total Patients': '{:,}', 'Score': '{:.1f}'
-                    })
-
-                    if is_filtered:
-                        st.caption(f"Showing all ZMs — **{ZM_SHORT.get(selected_zm_filter, selected_zm_filter)}** highlighted in blue.")
-                    else:
-                        st.caption("🟢 Top 3 Zone Managers highlighted with green dot. 🔴 Bottom 2 with red dot.")
-
-                    st.dataframe(
-                        zm_styled,
-                        use_container_width=True,
-                        hide_index=True,
-                        column_config=ZM_LEADERBOARD_COLUMN_CONFIG
-                    )
-
-                    st.markdown("---")
-                    st.markdown("#### 📊 Top 10 Zone Managers — Total Patients")
-                    top10_zm = zm_rank.head(min(10, len(zm_rank))).copy()
-                    top10_zm_chart = top10_zm.sort_values('Rank', ascending=False)
-                    top10_zm_chart['Color'] = top10_zm_chart['Rank'].apply(lambda r: 'Top 3' if r <= 3 else 'Others')
-
-                    fig_zm = px.bar(
-                        top10_zm_chart, x='Total_Patients', y='Zone Manager', orientation='h',
-                        color='Color', color_discrete_map={'Top 3': '#2ecc71', 'Others': '#95a5a6'},
-                        labels={'Total_Patients': 'Total Patients', 'Zone Manager': ''},
-                        height=max(380, 40 * len(top10_zm_chart)),
-                        text='Total_Patients'
-                    )
-                    fig_zm.update_traces(texttemplate='%{text:,.0f}', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
-                    fig_zm.update_layout(
-                        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                        legend_title="", showlegend=False,
-                        margin=dict(l=0, r=70, t=20, b=20),
-                        xaxis=dict(showgrid=True, gridcolor='#1f2a35', zeroline=False),
-                        yaxis=dict(showgrid=False)
-                    )
-                    st.plotly_chart(fig_zm, use_container_width=True)
-
-                    st.markdown("---")
-                    st.markdown("#### 📊 Top 10 Zone Managers — Reliability (Uptime %)")
-                    top10_uptime = zm_rank.sort_values('Uptime %', ascending=False).head(min(10, len(zm_rank))).copy()
-                    top10_uptime_chart = top10_uptime.sort_values('Uptime %', ascending=True)
-                    top10_uptime_chart['Color'] = top10_uptime_chart.apply(
-                        lambda r: 'Top 3' if r['Uptime %'] >= top10_uptime['Uptime %'].nlargest(3).min() else 'Others',
-                        axis=1
-                    )
-
-                    fig_zm_u = px.bar(
-                        top10_uptime_chart, x='Uptime %', y='Zone Manager', orientation='h',
-                        color='Color', color_discrete_map={'Top 3': '#2ecc71', 'Others': '#95a5a6'},
-                        labels={'Uptime %': 'Uptime %', 'Zone Manager': ''},
-                        height=max(380, 40 * len(top10_uptime_chart)),
-                        text='Uptime %'
-                    )
-                    fig_zm_u.update_traces(texttemplate='%{text:.1f}%', textposition='outside', textfont=dict(size=11, color='#FFFFFF'))
-                    fig_zm_u.update_layout(
-                        plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
-                        legend_title="", showlegend=False,
-                        margin=dict(l=0, r=70, t=20, b=20),
-                        xaxis=dict(showgrid=True, gridcolor='#1f2a35', zeroline=False),
-                        yaxis=dict(showgrid=False)
-                    )
-                    st.plotly_chart(fig_zm_u, use_container_width=True)
+# ===== TAB 5: COMPARE DISTRICTS =====
+with tab5:
+    st.markdown("### ⚖️ Compare Two Districts Head-to-Head")
+    sorted_sheets = sorted(available_sheets)
+    ca, cb = st.columns(2)
+    with ca: district_a = st.selectbox("🔵 District A", sorted_sheets, index=0, key='cmp_a')
+    with cb: district_b = st.selectbox("🔴 District B", sorted_sheets, index=min(1, len(sorted_sheets) - 1), key='cmp_b')
+    
+    if district_a and district_b:
+        df_a = read_sheet_robust(xls, district_a)
+        df_b = read_sheet_robust(xls, district_b)
+        pa, ra, sa = process_district_df(df_a, time_filter)
+        pb, rb, sb = process_district_df(df_b, time_filter)
+        
+        if pa is None:
+            st.error(f"❌ Could not process **{district_a}**. No date columns found.")
+        elif pb is None:
+            st.error(f"❌ Could not process **{district_b}**. No date columns found.")
         else:
-            st.info("Click the button above to generate Zone Manager rankings.")
-
-    with tab3:
-        st.markdown("### ⚖️ Compare Two Districts Head-to-Head")
-        sorted_sheets = sorted(available_sheets)
-        ca, cb = st.columns(2)
-        with ca: district_a = st.selectbox("🔵 District A", sorted_sheets, index=0, key='cmp_a')
-        with cb: district_b = st.selectbox("🔴 District B", sorted_sheets, index=min(1, len(sorted_sheets) - 1), key='cmp_b')
-
-        if district_a and district_b:
-            df_a = read_sheet_robust(xls, district_a)
-            df_b = read_sheet_robust(xls, district_b)
-            pa, ra, sa = process_district_df(df_a, time_filter)
-            pb, rb, sb = process_district_df(df_b, time_filter)
-
-            if pa is None:
-                st.error(f"❌ Could not process **{district_a}**.")
-            elif pb is None:
-                st.error(f"❌ Could not process **{district_b}**.")
-            else:
-                col1, col2 = st.columns(2)
-                with col1:
-                    st.markdown(f"#### 🔵 {district_a}")
-                    r1c1, r1c2 = st.columns(2)
-                    r1c1.metric("Total Patients", f"{sa['total']:,}")
-                    r1c2.metric("Avg/Day", sa['weighted_avg'])
-                    r2c1, r2c2 = st.columns(2)
-                    r2c1.metric("Uptime", f"{calc_uptime(sa)}%")
-                    r2c2.metric("Spokes", f"{sa['num_facilities']}")
-                with col2:
-                    st.markdown(f"#### 🔴 {district_b}")
-                    r1c1, r1c2 = st.columns(2)
-                    r1c1.metric("Total Patients", f"{sb['total']:,}")
-                    r1c2.metric("Avg/Day", sb['weighted_avg'])
-                    r2c1, r2c2 = st.columns(2)
-                    r2c1.metric("Uptime", f"{calc_uptime(sb)}%")
-                    r2c2.metric("Spokes", f"{sb['num_facilities']}")
-                st.markdown("---")
-                st.markdown("#### 📈 Daily Trend — Overlaid")
-                def get_trend(p, cols, name):
-                    d = []
-                    for c in cols:
-                        dv = extract_date(c)
-                        t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
-                        if pd.notna(dv): d.append({'Date': dv, 'Patients': t, 'District': name})
-                    return pd.DataFrame(d)
-                combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
-                fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#3498db', district_b: '#e74c3c'})
-                fig_c.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', height=450)
-                st.plotly_chart(fig_c, use_container_width=True)
-                st.markdown("---")
-                st.markdown("#### 🏥 Top 10 Facilities — Side-by-Side")
-                cA, cB = st.columns(2)
-                with cA:
-                    st.markdown(f"**🔵 {district_a}**")
-                    top_a = pa.nlargest(min(10, len(pa)), 'Average Patients')[[sa['facility_col'], 'Average Patients']]
-                    top_a.columns = ['Facility', 'Avg/Day']
-                    st.dataframe(top_a, hide_index=True, use_container_width=True)
-                with cB:
-                    st.markdown(f"**🔴 {district_b}**")
-                    top_b = pb.nlargest(min(10, len(pb)), 'Average Patients')[[sb['facility_col'], 'Average Patients']]
-                    top_b.columns = ['Facility', 'Avg/Day']
-                    st.dataframe(top_b, hide_index=True, use_container_width=True)
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown(f"#### 🔵 {district_a}")
+                r1c1, r1c2 = st.columns(2)
+                r1c1.metric("Total Patients", f"{sa['total']:,}")
+                r1c2.metric("Avg/Day", sa['weighted_avg'])
+                r2c1, r2c2 = st.columns(2)
+                r2c1.metric("Uptime", f"{calc_uptime(sa)}%")
+                r2c2.metric("Spokes", f"{sa['num_facilities']}")
+            with col2:
+                st.markdown(f"#### 🔴 {district_b}")
+                r1c1, r1c2 = st.columns(2)
+                r1c1.metric("Total Patients", f"{sb['total']:,}")
+                r1c2.metric("Avg/Day", sb['weighted_avg'])
+                r2c1, r2c2 = st.columns(2)
+                r2c1.metric("Uptime", f"{calc_uptime(sb)}%")
+                r2c2.metric("Spokes", f"{sb['num_facilities']}")
+            st.divider()
+            st.markdown("#### 📈 Daily Trend — Overlaid")
+            def get_trend(p, cols, name):
+                d = []
+                for c in cols:
+                    dv = extract_date(c)
+                    t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
+                    if pd.notna(dv):
+                        d.append({'Date': dv, 'Patients': t, 'District': name})
+                return pd.DataFrame(d)
+            combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
+            fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#3498db', district_b: '#e74c3c'})
+            fig_c.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', height=450)
+            st.plotly_chart(fig_c, use_container_width=True)
+            st.divider()
+            st.markdown("#### 🏥 Top 10 Facilities — Side-by-Side")
+            cA, cB = st.columns(2)
+            with cA:
+                st.markdown(f"**🔵 {district_a}**")
+                top_a = pa.nlargest(min(10, len(pa)), 'Average Patients')[[sa['facility_col'], 'Average Patients']]
+                top_a.columns = ['Facility', 'Avg/Day']
+                st.dataframe(top_a, hide_index=True, use_container_width=True)
+            with cB:
+                st.markdown(f"**🔴 {district_b}**")
+                top_b = pb.nlargest(min(10, len(pb)), 'Average Patients')[[sb['facility_col'], 'Average Patients']]
+                top_b.columns = ['Facility', 'Avg/Day']
+                st.dataframe(top_b, hide_index=True, use_container_width=True)
