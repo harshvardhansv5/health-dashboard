@@ -94,75 +94,89 @@ st.markdown("""
     /* Custom Info Banner */
     .info-banner { background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 16px; color: #1E3A8A; display: flex; align-items: center; gap: 12px; margin-top: 20px; }
 
-        /* --- NUCLEAR PREMIUM SELECTBOX --- */
-    
-    /* 1. Target the widget container */
-    div[data-testid="stSelectbox"] {
-        margin-bottom: 10px;
-    }
+    /* ========================================================= */
+    /* NUCLEAR OPTION: FORCED DROPDOWN BORDERS & SEGMENTED CONTROL */
+    /* ========================================================= */
 
-    /* 2. Force the border on the BaseWeb wrapper */
-    div[data-baseweb="select"] > div {
-        border: 1.5px solid #CBD5E1 !important; /* Thicker, darker border */
+    /* 1. Force the Dropdown Container to look like a proper input */
+    div[data-baseweb="select"] {
+        border: 1px solid #CBD5E1 !important;
         border-radius: 8px !important;
         background-color: #FFFFFF !important;
-        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important; /* Adds depth */
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
         transition: all 0.2s ease !important;
-        min-height: 46px !important;
+        min-height: 44px !important;
+        display: flex !important;
+        align-items: center !important;
     }
 
-    /* 3. Hover state */
-    div[data-baseweb="select"] > div:hover {
+    /* Force the inner div to have no border so it doesn't double up */
+    div[data-baseweb="select"] > div {
+        border: none !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        width: 100%;
+    }
+
+    /* Hover state for dropdown */
+    div[data-baseweb="select"]:hover {
         border-color: #2563EB !important;
-        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important;
     }
 
-    /* 4. Focus state (when clicked) */
-    div[data-baseweb="select"] > div:focus-within {
+    /* Focus state for dropdown */
+    div[data-baseweb="select"]:focus-within {
         border-color: #2563EB !important;
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
     }
 
-    /* 5. Text styling inside */
+    /* Dropdown text */
     div[data-baseweb="select"] span {
         color: #0F172A !important;
         font-weight: 600 !important;
     }
 
-    /* 6. Label styling */
+    /* Dropdown Label ("Select District") */
     label[data-testid="stWidgetLabel"] p {
         color: #1E293B !important;
         font-weight: 600 !important;
         font-size: 14px !important;
         margin-bottom: 4px !important;
     }
-    /* --- PREMIUM SEGMENTED CONTROL (Radio Buttons) --- */
-    div[role="radiogroup"] > label > div:first-child { display: none !important; }
-    div[role="radiogroup"] {
+
+    /* 2. Hide the Radio Button Circles */
+    div[data-testid="stRadio"] label > div:first-child {
+        display: none !important;
+    }
+    
+    /* 3. Style the Radio Group as a Segmented Control */
+    div[data-testid="stRadio"] div[role="radiogroup"] {
         display: inline-flex !important;
         background-color: #F1F5F9 !important;
         padding: 4px !important;
         border-radius: 10px !important;
         gap: 4px !important;
-        margin-bottom: 0px !important;
+        border: 1px solid #E2E8F0 !important;
     }
-    div[role="radiogroup"] > label {
-        margin: 0 !important;
+
+    /* 4. Style the labels inside the Segmented Control */
+    div[data-testid="stRadio"] div[role="radiogroup"] label {
         padding: 8px 16px !important;
-        border-radius: 8px !important;
+        border-radius: 6px !important;
         cursor: pointer !important;
         transition: all 0.2s ease !important;
         color: #475569 !important;
         font-weight: 600 !important;
         font-size: 14px !important;
+        margin: 0 !important;
     }
-    div[role="radiogroup"] > label:hover { color: #0F172A !important; }
-    div[role="radiogroup"] > label[data-checked="true"] {
+
+    /* 5. Style the Active (Selected) State */
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
         background-color: #FFFFFF !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06) !important;
-        color: #0F172A !important;
+        color: #2563EB !important;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
     }
-    div[data-testid="stRadio"] { margin-bottom: -10px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -369,7 +383,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Main Navigation (Toggle)
+# Main Navigation (Segmented Control)
 view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View"], horizontal=True, label_visibility="collapsed")
 
 # --- DEFINITIONS EXPANDER ---
