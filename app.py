@@ -253,6 +253,7 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
             
             facility_col = stats['facility_col']
             active_cols = stats['active_date_cols']
+            max_days = len(active_cols)
             
             for _, row in plot_df.iterrows():
                 fac_name = row[facility_col]
@@ -271,6 +272,10 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
                             last_active_date = date_obj.strftime('%d %b %Y')
                         break
                 
+                # If they never reported, their streak is the max number of days in the sheet
+                if last_active_date == "Never Reported":
+                    streak = max_days
+                
                 if streak > 0:
                     tracker_data.append({
                         'ZM': DISTRICT_TO_ZM.get(sheet, "Unknown"),
@@ -284,8 +289,8 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
             
     tracker_df = pd.DataFrame(tracker_data)
     if not tracker_df.empty:
-        # Sort by District, then Facility Name so the list is easy to read
-        tracker_df = tracker_df.sort_values(by=['District', 'Facility Name']).reset_index(drop=True)
+        # Sort by the longest streak first, then by District
+        tracker_df = tracker_df.sort_values(by=['Current Inactive Streak', 'District', 'Facility Name'], ascending=[False, True, True]).reset_index(drop=True)
         # Add Serial Number
         tracker_df.index = tracker_df.index + 1
         tracker_df.index.name = 'S.No.'
@@ -704,17 +709,17 @@ else:
     
     col_filter, _ = st.columns([1, 2])
     with col_filter:
-        streak_threshold = st.selectbox("Show facilities inactive for exactly:", [5, 7, 14, 21], format_func=lambda x: f"{x} days")
+        streak_threshold = st.selectbox("Show facilities inactive for at least:", [5, 7, 14, 21], format_func=lambda x: f"{x} days")
     
     with st.spinner("Scanning all districts for inactive facilities..."):
         tracker_df = generate_zero_tracker_data(tuple(available_sheets), file_bytes)
         
     if not tracker_df.empty:
-        # Exact match filter
-        filtered_tracker = tracker_df[tracker_df['Current Inactive Streak'] == streak_threshold]
+        # Filter for streaks >= threshold
+        filtered_tracker = tracker_df[tracker_df['Current Inactive Streak'] >= streak_threshold]
         
         if not filtered_tracker.empty:
-            st.error(f"Found {len(filtered_tracker)} facilities with an inactive streak of exactly {streak_threshold} days.")
+            st.error(f"Found {len(filtered_tracker)} facilities with an inactive streak of {streak_threshold}+ days.")
             
             # Display the table
             st.dataframe(
@@ -727,7 +732,7 @@ else:
                     "District": st.column_config.TextColumn("District", width="medium"),
                     "Facility Name": st.column_config.TextColumn("Facility Name", width="large"),
                     "Last Active Date": st.column_config.TextColumn("Last Active Date", width="medium"),
-                    "Current Inactive Streak": st.column_config.NumberColumn("Inactive Streak", format="%d days"),
+                    "Current Inactive Streak": st.column_config.NumberColumn("Current Inactive Streak", format="%d days"),
                 }
             )
             
@@ -737,13 +742,13 @@ else:
                 filtered_tracker.to_excel(writer, index=False, sheet_name='Inactive Facilities')
                 
             st.download_button(
-                label=f"📥 Download List ({streak_threshold} Days)",
+                label=f"📥 Download List ({streak_threshold}+ Days)",
                 data=buffer.getvalue(),
                 file_name=f"Statewide_Inactive_Tracker_{streak_threshold}Days_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
         else:
-            st.success(f"✅ Excellent! No facilities found with an inactive streak of exactly {streak_threshold} days.")
+            st.success(f"✅ Excellent! No facilities found with an inactive streak of {streak_threshold}+ days.")
     else:
         st.success("✅ Excellent! No facilities found with any inactive streaks in the state.")
