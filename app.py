@@ -8,7 +8,7 @@ import io
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
-# --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme v3 + Animations) ---
+# --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -235,6 +235,55 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
         except Exception: pass
     return pd.DataFrame(data)
 
+# --- NEW CACHED FUNCTION FOR ZERO TRACKER ---
+@st.cache_data(show_spinner=False)
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
+    xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
+    tracker_data = []
+    
+    for sheet in sheet_names_tuple:
+        try:
+            sdf = read_sheet_robust(xls, sheet)
+            # Use "All Available Data" to ensure we have the max history
+            plot_df, _, stats = process_district_df(sdf, "All Available Data")
+            if plot_df is None: continue
+            
+            facility_col = stats['facility_col']
+            active_cols = stats['active_date_cols']
+            
+            for _, row in plot_df.iterrows():
+                fac_name = row[facility_col]
+                
+                # Helper to sum the last N days
+                def get_sum(days):
+                    if len(active_cols) == 0: return 0
+                    cols = active_cols[-days:] if len(active_cols) >= days else active_cols
+                    return int(row[cols].sum())
+                
+                sum_5 = get_sum(5)
+                sum_7 = get_sum(7)
+                sum_14 = get_sum(14)
+                sum_21 = get_sum(21)
+                
+                # If any of the sums are 0, we add it to the master list
+                if sum_5 == 0 or sum_7 == 0 or sum_14 == 0 or sum_21 == 0:
+                    tracker_data.append({
+                        'District': sheet,
+                        'Facility Name': fac_name,
+                        'Last 5 Days': sum_5,
+                        'Last 7 Days': sum_7,
+                        'Last 14 Days': sum_14,
+                        'Last 21 Days': sum_21
+                    })
+        except Exception:
+            pass
+            
+    # Convert to DataFrame and sort by District, then Facility
+    tracker_df = pd.DataFrame(tracker_data)
+    if not tracker_df.empty:
+        tracker_df = tracker_df.sort_values(by=['District', 'Facility Name']).reset_index(drop=True)
+    return tracker_df
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Control Panel</h3>", unsafe_allow_html=True)
@@ -301,7 +350,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View"], horizontal=True, label_visibility="collapsed")
+# UPDATED NAVIGATION WITH 3 OPTIONS
+view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
@@ -493,7 +543,6 @@ if view_mode == "📊 District View":
         st.dataframe(display, use_container_width=True, hide_index=True, column_config={"Facility": st.column_config.TextColumn("Facility", width="large"), "Grade": st.column_config.TextColumn("Grade", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"), "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"), "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"), "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d")})
         
         st.markdown("<br>", unsafe_allow_html=True)
-        
         col_dl1, col_dl2 = st.columns([1, 2])
         
         buffer = io.BytesIO()
@@ -543,13 +592,12 @@ if view_mode == "📊 District View":
             coloraxis_colorbar=dict(title="Patients", thickness=15)
         ))
         fig_h.update_layout(**hm_layout)
-        
         st.plotly_chart(fig_h, use_container_width=True)
 
 # ==============================================================================
 # VIEW: STATE VIEW
 # ==============================================================================
-else:
+elif view_mode == "🌐 State View":
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Bihar State Master View</h3>", unsafe_allow_html=True)
     
     with st.spinner("Loading State Data..."):
@@ -638,3 +686,46 @@ else:
                     st.plotly_chart(fig_c, use_container_width=True)
     else:
         st.warning("No district data available for the selected time range.")
+
+# ==============================================================================
+# VIEW: ZERO-SAMPLE TRACKER
+# ==============================================================================
+else:
+    st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>⚠️ Statewide Zero-Sample Tracker</h3>", unsafe_allow_html=True)
+    st.markdown("This table lists all facilities across the state that have reported **0 samples** for at least one of the lookback periods. The table is sorted by District.")
+    
+    with st.spinner("Scanning all districts for dark facilities..."):
+        tracker_df = generate_zero_tracker_data(tuple(available_sheets), file_bytes)
+        
+    if not tracker_df.empty:
+        st.error(f"Found {len(tracker_df)} facilities across the state with zero samples in one or more periods.")
+        
+        # Display the table
+        st.dataframe(
+            tracker_df, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "District": st.column_config.TextColumn("District", width="medium"),
+                "Facility Name": st.column_config.TextColumn("Facility Name", width="large"),
+                "Last 5 Days": st.column_config.NumberColumn("Last 5 Days", format="%d"),
+                "Last 7 Days": st.column_config.NumberColumn("Last 7 Days", format="%d"),
+                "Last 14 Days": st.column_config.NumberColumn("Last 14 Days", format="%d"),
+                "Last 21 Days": st.column_config.NumberColumn("Last 21 Days", format="%d"),
+            }
+        )
+        
+        # Download Button
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            tracker_df.to_excel(writer, index=False, sheet_name='Zero Samples')
+            
+        st.download_button(
+            label="📥 Download Zero-Sample Master List",
+            data=buffer.getvalue(),
+            file_name=f"Statewide_Zero_Sample_Tracker_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+    else:
+        st.success("✅ Excellent! No facilities found with zero samples in the state.")
