@@ -19,7 +19,7 @@ st.markdown("""
     .material-symbols-rounded, [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
     
     /* --- THE COOL STEEL CANVAS --- */
-    .stApp { background-color: #F1F5F9 !important; } /* Slate 100 */
+    .stApp { background-color: #F1F5F9 !important; }
     section[data-testid="stSidebar"] { background-color: #FFFFFF !important; border-right: 1px solid #E2E8F0; }
     
     /* Metric Cards */
@@ -64,12 +64,8 @@ st.markdown("""
     /* --- DEFINITIVE DROPDOWN STYLING --- */
     div[data-testid="stSelectbox"] { margin-bottom: 12px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
-        background-color: #FFFFFF !important; 
-        border: 2px solid #CBD5E1 !important; 
-        border-radius: 8px !important; 
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; 
-        transition: all 0.2s ease-in-out !important; 
-        min-height: 44px !important; 
+        background-color: #FFFFFF !important; border: 2px solid #CBD5E1 !important; border-radius: 8px !important; 
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 44px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
     div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #2563EB !important; }
@@ -372,9 +368,18 @@ if view_mode == "📊 District View":
                 
             fig.add_vline(x=current_avg, line_dash="dash", line_color="#2563EB", line_width=2, annotation_text=f"Avg: {current_avg}", annotation_position="top right", annotation_font_color="#2563EB", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#2563EB", annotation_borderwidth=1, annotation_borderpad=4)
             
+            # Fix: Update layout_dict safely without duplicate keys
             layout_dict = PLOTLY_LAYOUT.copy()
-            layout_dict["margin"] = dict(l=10, r=60, t=80, b=10)
-            fig.update_layout(**layout_dict, height=max(500, len(sorted_df) * 30), yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', tickfont=dict(size=12, color="#64748B")), showlegend=False, xaxis_title=metric_option, yaxis_title="")
+            layout_dict.update(dict(
+                height=max(500, len(sorted_df) * 30),
+                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")),
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', tickfont=dict(size=12, color="#64748B")),
+                showlegend=False,
+                xaxis_title=metric_option,
+                yaxis_title="",
+                margin=dict(l=10, r=60, t=80, b=10)
+            ))
+            fig.update_layout(**layout_dict)
             
             fig.update_traces(textposition='outside', textfont=dict(color="#1E293B", size=12, weight="bold"), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
@@ -400,9 +405,15 @@ if view_mode == "📊 District View":
                     fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True)
                     fig_dt.update_traces(line_color='#2563EB', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')), fillcolor='rgba(37, 99, 235, 0.1)')
                     
+                    # Fix: Update dt_layout safely
                     dt_layout = PLOTLY_LAYOUT.copy()
-                    dt_layout["margin"] = dict(l=10, r=10, t=20, b=10)
-                    fig_dt.update_layout(**dt_layout, height=300, xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'))
+                    dt_layout.update(dict(
+                        height=300,
+                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
+                        margin=dict(l=10, r=10, t=20, b=10)
+                    ))
+                    fig_dt.update_layout(**dt_layout)
                     
                     st.plotly_chart(fig_dt, use_container_width=True)
 
@@ -476,7 +487,7 @@ if view_mode == "📊 District View":
             if trend_data:
                 fig_t = px.area(pd.DataFrame(trend_data).sort_values('Date'), x='Date', y='Patients', markers=True)
                 fig_t.update_traces(line_color='#2563EB', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')), fillcolor='rgba(37, 99, 235, 0.1)')
-                fig_t.update_layout(**PLOTLY_LAYOUT, xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'))
+                fig_t.update_layout(**PLOTLY_LAYOUT)
                 st.plotly_chart(fig_t, use_container_width=True)
                 
         st.markdown("<h4 style='color:#0F172A; margin-top:30px; margin-bottom:10px;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
@@ -537,8 +548,14 @@ else:
             st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Top 15 Districts (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
             top15 = lb_df.head(15)
             fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
-            fig_lb.update_layout(**PLOTLY_LAYOUT)
-            fig_lb.update_layout(yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), height=500)
+            
+            # Fix: Update layout safely
+            lb_layout = PLOTLY_LAYOUT.copy()
+            lb_layout.update(dict(
+                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), 
+                height=500
+            ))
+            fig_lb.update_layout(**lb_layout)
             st.plotly_chart(fig_lb, use_container_width=True)
             
         with s_tab2:
