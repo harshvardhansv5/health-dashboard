@@ -61,44 +61,60 @@ st.markdown("""
     .status-dot { width: 8px; height: 8px; background-color: #10B981; border-radius: 50%; }
     .header-date { font-size: 13px; color: #64748B; font-weight: 500; }
 
-        /* --- SOLID DROPDOWN DIFFERENTIATOR --- */
-    
-    /* Target the main dropdown box */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-        background-color: #F1F5F9 !important; /* Light slate background to contrast with white cards */
-        border: 1.5px solid #94A3B8 !important; /* Solid, darker border */
+    /* --- DEFINITIVE DROPDOWN STYLING --- */
+    div[data-testid="stSelectbox"] { margin-bottom: 12px; }
+
+    /* Target the actual clickable button element */
+    div[data-testid="stSelectbox"] div[role="combobox"] {
+        background-color: #F8FAFC !important; /* Light grey to contrast with white cards */
+        border: 2px solid #CBD5E1 !important; /* Thick, visible border */
         border-radius: 8px !important;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
-        transition: all 0.2s ease !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
+        transition: all 0.2s ease-in-out !important;
         min-height: 44px !important;
     }
 
-    /* Hover state - turns white with a blue border */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
-        background-color: #FFFFFF !important;
-        border-color: #2563EB !important;
+    /* Force inner wrapper to be transparent */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        background-color: transparent !important;
+        border: none !important;
     }
 
-    /* Focus state (when clicked) */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within {
-        background-color: #FFFFFF !important;
+    /* Hover State */
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover {
         border-color: #2563EB !important;
+        background-color: #FFFFFF !important;
+    }
+
+    /* Focus State */
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within {
+        border-color: #2563EB !important;
+        background-color: #FFFFFF !important;
         box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
     }
 
-    /* Text inside the dropdown */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] span {
-        color: #0F172A !important;
-        font-weight: 600 !important;
+    /* Text and Arrow */
+    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #64748B !important; }
+
+    /* Label */
+    label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 600 !important; font-size: 14px !important; margin-bottom: 4px !important; }
+
+    /* Date Picker */
+    div[data-testid="stDateInput"] div[data-baseweb="input"] {
+        border: 2px solid #CBD5E1 !important; border-radius: 8px !important;
+        background-color: #F8FAFC !important; min-height: 44px !important;
+    }
+    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within {
+        border-color: #2563EB !important; background-color: #FFFFFF !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
     }
 
-    /* Label above the dropdown */
-    label[data-testid="stWidgetLabel"] p {
-        color: #1E293B !important;
-        font-weight: 600 !important;
-        font-size: 14px !important;
-        margin-bottom: 4px !important;
-    }
+    /* Segmented Control (Radio Buttons) */
+    div[data-testid="stRadio"] label > div:first-child { display: none !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] { display: inline-flex !important; background-color: #F1F5F9 !important; padding: 4px !important; border-radius: 10px !important; gap: 4px !important; border: 1px solid #E2E8F0 !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] label { padding: 8px 16px !important; border-radius: 6px !important; cursor: pointer !important; transition: all 0.2s ease !important; color: #475569 !important; font-weight: 600 !important; font-size: 14px !important; margin: 0 !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) { background-color: #FFFFFF !important; color: #2563EB !important; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -398,7 +414,6 @@ if view_mode == "📊 District View":
                 
             fig.add_vline(x=current_avg, line_dash="dash", line_color="#2563EB", line_width=2, annotation_text=f"Avg: {current_avg}", annotation_position="top right", annotation_font_color="#2563EB", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#2563EB", annotation_borderwidth=1, annotation_borderpad=4)
             
-            # FIXED: Removed duplicate margin parameter
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict["margin"] = dict(l=10, r=60, t=80, b=10)
             fig.update_layout(**layout_dict, height=max(500, len(sorted_df) * 30), yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', tickfont=dict(size=12, color="#64748B")), showlegend=False, xaxis_title=metric_option, yaxis_title="")
@@ -427,7 +442,6 @@ if view_mode == "📊 District View":
                     fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True)
                     fig_dt.update_traces(line_color='#2563EB', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')), fillcolor='rgba(37, 99, 235, 0.1)')
                     
-                    # FIXED: Removed duplicate margin parameter
                     dt_layout = PLOTLY_LAYOUT.copy()
                     dt_layout["margin"] = dict(l=10, r=10, t=20, b=10)
                     fig_dt.update_layout(**dt_layout, height=300, xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'))
