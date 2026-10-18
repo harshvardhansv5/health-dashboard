@@ -13,21 +13,17 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-    /* Apply font safely without breaking Streamlit icons */
     html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     
-    /* Protect Material Icons */
     .material-symbols-rounded, [data-testid="stIconMaterial"] {
         font-family: 'Material Symbols Rounded' !important;
     }
 
-    /* Global Backgrounds */
     .stApp { background-color: #F8FAFC !important; }
     section[data-testid="stSidebar"] { background-color: #FFFFFF !important; border-right: 1px solid #E2E8F0; }
     
-    /* Custom Enterprise Metric Cards */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .metric-card {
         background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px;
@@ -37,24 +33,20 @@ st.markdown("""
     .metric-label { color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .metric-value { color: #0F172A; font-size: 28px; font-weight: 700; line-height: 1; }
 
-    /* Custom Dataframe Style */
     [data-testid="stDataFrame"] { 
         background-color: #FFFFFF !important; border-radius: 10px; border: 1px solid #E2E8F0;
         box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); padding: 4px;
     }
 
-    /* ZM Card */
     .zm-card { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
     .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;}
     .zm-card-name { color: #0F172A; font-size: 15px; font-weight: 600; margin-bottom: 2px;}
     .zm-card-zone { color: #2563EB; font-size: 13px; font-weight: 500;}
 
-    /* Report Header */
     .report-header { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); }
     .report-title { color: #0F172A; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
     .report-meta { color: #64748B; font-size: 14px; line-height: 1.6; }
     
-    /* Grade Badges */
     .grade-badge { display: inline-block; padding: 6px 16px; border-radius: 6px; font-size: 20px; font-weight: 700; }
     .grade-A { background-color: #D1FAE5; color: #065F46; border: 1px solid #34D399; }
     .grade-B { background-color: #ECFCCB; color: #3F6212; border: 1px solid #A3E635; }
@@ -62,7 +54,6 @@ st.markdown("""
     .grade-D { background-color: #FFEDD5; color: #9A3412; border: 1px solid #FB923C; }
     .grade-F { background-color: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
 
-    /* Compare Battle Cards */
     .battle-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 24px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); margin-bottom: 16px; }
     .battle-card-blue { border-top: 4px solid #2563EB; }
     .battle-card-red { border-top: 4px solid #DC2626; }
@@ -71,12 +62,10 @@ st.markdown("""
     .battle-row:last-child { border-bottom: none; }
     .battle-val { font-weight: 600; color: #0F172A; }
 
-    /* Top App Header */
     .app-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid #E2E8F0; margin-bottom: 32px; }
     .app-title { font-size: 24px; font-weight: 700; color: #0F172A; display: flex; align-items: center; gap: 12px; }
     .app-subtitle { font-size: 14px; color: #64748B; }
     
-    /* Custom Info Banner */
     .info-banner { background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 16px; color: #1E3A8A; display: flex; align-items: center; gap: 12px; margin-top: 20px; }
 </style>
 """, unsafe_allow_html=True)
@@ -300,9 +289,7 @@ PLOTLY_LAYOUT = dict(
     title_font=dict(size=16, color="#0F172A", family="Inter, sans-serif", weight="bold"),
     plot_bgcolor='rgba(0,0,0,0)',
     paper_bgcolor='rgba(0,0,0,0)',
-    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
-    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
-    margin=dict(l=10, r=10, t=40, b=10)
+    margin=dict(l=10, r=10, t=60, b=10)
 )
 
 # ==============================================================================
@@ -340,7 +327,6 @@ if view_mode == "📊 District View":
     d_tab1, d_tab2, d_tab3 = st.tabs(["Dashboard", "Report Card", "Trends & Analytics"])
 
     with d_tab1:
-        # Custom HTML Metrics
         st.markdown(f'''
         <div class="metric-grid">
             <div class="metric-card">
@@ -374,15 +360,55 @@ if view_mode == "📊 District View":
             if len(sorted_df) > 10:
                 sorted_df.loc[sorted_df.nlargest(5, metric_col).index, 'Highlight'] = 'Top 5'
                 sorted_df.loc[sorted_df.nsmallest(5, metric_col).index, 'Highlight'] = 'Bottom 5'
-                
-            fig = px.bar(sorted_df, y=facility_col, x=metric_col, orientation='h', color='Highlight', color_discrete_map={'Top 5': '#10B981', 'Bottom 5': '#EF4444', 'Others': '#94A3B8'}, title=f"{metric_option} per Facility")
-            if metric_col == 'Uptime %' or metric_col == 'Total Patients': current_avg = round(filtered[metric_col].mean(), 1)
-            else: current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
-                
-            fig.add_vline(x=current_avg, line_dash="dash", line_color="#2563EB", annotation_text=f"Avg: {current_avg}", annotation_font_color="#2563EB")
             
+            # --- PREPARE DATA LABELS ---
+            if metric_col == 'Uptime %':
+                text_labels = [f"{v:.1f}%" for v in sorted_df[metric_col]]
+            else:
+                text_labels = [f"{v:.1f}" if v % 1 != 0 else f"{int(v)}" for v in sorted_df[metric_col]]
+                
+            fig = px.bar(
+                sorted_df, y=facility_col, x=metric_col, orientation='h', 
+                color='Highlight', 
+                color_discrete_map={'Top 5': '#10B981', 'Bottom 5': '#EF4444', 'Others': '#94A3B8'},
+                text=text_labels,
+                title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {time_filter}</span>"
+            )
+            
+            # --- AVERAGE LINE ---
+            if metric_col == 'Uptime %' or metric_col == 'Total Patients': 
+                current_avg = round(filtered[metric_col].mean(), 1)
+            else: 
+                current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
+                
+            fig.add_vline(
+                x=current_avg, line_dash="dash", line_color="#2563EB", line_width=2,
+                annotation_text=f"Avg: {current_avg}", annotation_position="top right",
+                annotation_font_color="#2563EB", annotation_font_weight="bold",
+                annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#2563EB", 
+                annotation_borderwidth=1, annotation_borderpad=4
+            )
+            
+            # --- CLEAN LAYOUT ---
             fig.update_layout(**PLOTLY_LAYOUT)
-            fig.update_layout(height=max(500, len(sorted_df) * 25), yaxis=dict(autorange="reversed", showgrid=False), legend_title="", xaxis_title=metric_option, yaxis_title="")
+            fig.update_layout(
+                height=max(500, len(sorted_df) * 30), # Extra height for bolder fonts
+                yaxis=dict(
+                    autorange="reversed", showgrid=False, 
+                    tickfont=dict(size=13, color="#1E293B", weight="bold") # Bolder Y-axis labels
+                ),
+                xaxis=dict(
+                    showgrid=True, gridwidth=1, gridcolor='#E2E8F0',
+                    tickfont=dict(size=12, color="#64748B")
+                ),
+                showlegend=False, # Hide legend
+                xaxis_title=metric_option, yaxis_title="",
+                margin=dict(l=10, r=60, t=80, b=10) # Extra right margin so text labels don't get cut off
+            )
+            
+            # Add bold text labels to the end of the bars
+            fig.update_traces(textposition='outside', textfont=dict(color="#1E293B", size=12, weight="bold"), cliponaxis=False)
+            
             st.plotly_chart(fig, use_container_width=True)
 
     with d_tab2:
@@ -450,6 +476,7 @@ if view_mode == "📊 District View":
                 fig_t = px.line(trend_df, x='Date', y='Patients', markers=True)
                 fig_t.update_traces(line_color='#2563EB', line_width=3)
                 fig_t.update_layout(**PLOTLY_LAYOUT)
+                fig_t.update_layout(xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'))
                 st.plotly_chart(fig_t, use_container_width=True)
                 
         st.markdown("<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
@@ -457,7 +484,7 @@ if view_mode == "📊 District View":
         heatmap_df.columns = [extract_date(c).strftime('%d-%b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
         fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale='RdYlGn')
         fig_h.update_layout(**PLOTLY_LAYOUT)
-        fig_h.update_layout(height=max(600, len(heatmap_df) * 20))
+        fig_h.update_layout(height=max(600, len(heatmap_df) * 20), yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")))
         st.plotly_chart(fig_h, use_container_width=True)
 
 # ==============================================================================
@@ -508,7 +535,7 @@ else:
             top15 = lb_df.head(15)
             fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
             fig_lb.update_layout(**PLOTLY_LAYOUT)
-            fig_lb.update_layout(yaxis=dict(autorange="reversed", showgrid=False), height=500)
+            fig_lb.update_layout(yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), height=500)
             st.plotly_chart(fig_lb, use_container_width=True)
             
         with s_tab2:
@@ -536,7 +563,7 @@ else:
                     combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
                     fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#2563EB', district_b: '#DC2626'})
                     fig_c.update_layout(**PLOTLY_LAYOUT)
-                    fig_c.update_layout(height=450)
+                    fig_c.update_layout(height=450, xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'))
                     st.plotly_chart(fig_c, use_container_width=True)
     else:
         st.warning("No district data available for the selected time range.")
