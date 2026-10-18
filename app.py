@@ -165,6 +165,9 @@ def process_district_df(df, time_filter, start_date=None, end_date=None):
     if not facility_col: return None, None, None
     df = df[get_facility_mask(df, facility_col)].copy()
     
+    # FIX: Drop duplicates so we don't count a facility twice
+    df = df.drop_duplicates(subset=[facility_col])
+    
     date_cols = find_date_columns(df)
     if not date_cols: return None, None, None
     paired = [(c, extract_date(c)) for c in date_cols]
@@ -175,11 +178,12 @@ def process_district_df(df, time_filter, start_date=None, end_date=None):
     if time_filter == "Custom Range" and start_date and end_date:
         active_date_cols = [c for c, d in paired if start_date <= d.date() <= end_date]
     else:
+        # FIX: Find the actual latest date that has data, and slice only up to that
         latest_data_idx = next((i for i in range(len(sorted_cols) - 1, -1, -1) if pd.to_numeric(df[sorted_cols[i]], errors='coerce').fillna(0).sum() > 0), len(sorted_cols) - 1)
         if time_filter == "Last 7 Days": active_date_cols = sorted_cols[max(0, latest_data_idx - 6): latest_data_idx + 1]
         elif time_filter == "Last 15 Days": active_date_cols = sorted_cols[max(0, latest_data_idx - 14): latest_data_idx + 1]
         elif time_filter == "Last 30 Days": active_date_cols = sorted_cols[max(0, latest_data_idx - 29): latest_data_idx + 1]
-        else: active_date_cols = sorted_cols
+        else: active_date_cols = sorted_cols[:latest_data_idx + 1] # Only up to latest data
 
     if not active_date_cols: active_date_cols = sorted_cols
     
@@ -256,7 +260,7 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
                 
                 # Count backwards from the most recent date to find the current streak of 0s
                 streak = 0
-                last_active_date = None
+                last_active_date = "Never Reported"
                 
                 # We reverse the active columns to start from the latest date
                 for col in reversed(active_cols):
@@ -275,7 +279,7 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
                     tracker_data.append({
                         'District': sheet,
                         'Facility Name': fac_name,
-                        'Last Active Date': last_active_date if last_active_date else "N/A",
+                        'Last Active Date': last_active_date,
                         'Current Inactive Streak': streak
                     })
         except Exception:
@@ -285,6 +289,10 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
     tracker_df = pd.DataFrame(tracker_data)
     if not tracker_df.empty:
         tracker_df = tracker_df.sort_values(by=['Current Inactive Streak', 'District'], ascending=[False, True]).reset_index(drop=True)
+        # Add Serial Number
+        tracker_df.index = tracker_df.index + 1
+        tracker_df.index.name = 'S.No.'
+        tracker_df = tracker_df.reset_index() # Convert index to a normal column for displaying
     return tracker_df
 
 # --- SIDEBAR ---
@@ -608,6 +616,7 @@ elif view_mode == "🌐 State View":
     if not state_df.empty:
         total_state_patients = state_df['Total Patients'].sum()
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
+        total_facilities = state_df['Facilities'].sum()
         
         st.markdown(f'''
         <div class="metric-grid">
@@ -616,8 +625,8 @@ elif view_mode == "🌐 State View":
                 <div class="metric-value">{total_state_patients:,}</div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Active Districts</div>
-                <div class="metric-value">{len(state_df)}</div>
+                <div class="metric-label">Total Spokes</div>
+                <div class="metric-value">{total_facilities}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Statewide Avg Uptime</div>
@@ -696,7 +705,6 @@ else:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>⚠️ Statewide Zero-Sample Tracker</h3>", unsafe_allow_html=True)
     st.markdown("This table lists all facilities that are **currently inactive** (a streak of 0 patients ending on the latest date).")
     
-    # New Filter
     col_filter, _ = st.columns([1, 2])
     with col_filter:
         streak_threshold = st.selectbox("Show facilities inactive for at least:", [5, 7, 14, 21], format_func=lambda x: f"{x} consecutive days")
@@ -705,18 +713,18 @@ else:
         tracker_df = generate_zero_tracker_data(tuple(available_sheets), file_bytes)
         
     if not tracker_df.empty:
-        # Apply the threshold filter
         filtered_tracker = tracker_df[tracker_df['Current Inactive Streak'] >= streak_threshold]
         
         if not filtered_tracker.empty:
             st.error(f"Found {len(filtered_tracker)} facilities with an inactive streak of {streak_threshold}+ days.")
             
-            # Display the table
+            # Display the table with S.No.
             st.dataframe(
                 filtered_tracker, 
                 use_container_width=True, 
                 hide_index=True,
                 column_config={
+                    "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
                     "District": st.column_config.TextColumn("District", width="medium"),
                     "Facility Name": st.column_config.TextColumn("Facility Name", width="large"),
                     "Last Active Date": st.column_config.TextColumn("Last Active Date", width="medium"),
