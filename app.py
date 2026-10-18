@@ -228,7 +228,8 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
             sdf = read_sheet_robust(xls, sheet)
             _, _, s = process_district_df(sdf, time_filter)
             if s:
-                data.append({'District': sheet, 'Total Samples': s['total'], 'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s), 'Facilities': s['num_facilities'], 'Days Reported': s['num_days']})
+                # Renamed from Total Samples to Total Patients
+                data.append({'District': sheet, 'Total Patients': s['total'], 'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s), 'Facilities': s['num_facilities'], 'Days Reported': s['num_days']})
         except Exception: pass
     return pd.DataFrame(data)
 
@@ -236,7 +237,6 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
 with st.sidebar:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Control Panel</h3>", unsafe_allow_html=True)
     
-    # Native uploader, no custom text hacks
     uploaded_data_file = st.file_uploader("Upload Data File", type=["xlsx", "csv"])
     
     if uploaded_data_file is not None:
@@ -327,7 +327,7 @@ if view_mode == "📊 District View":
         st.markdown(f'''
         <div class="metric-grid">
             <div class="metric-card">
-                <div class="metric-label">Total Samples</div>
+                <div class="metric-label">Total Patients</div>
                 <div class="metric-value">{stats['total']:,}</div>
             </div>
             <div class="metric-card">
@@ -342,11 +342,11 @@ if view_mode == "📊 District View":
         ''', unsafe_allow_html=True)
         
         c1, c2, c3 = st.columns([2, 1, 1])
-        with c1: metric_option = st.radio("Metric:", ("Average Samples", "Total Samples", "Uptime %"), horizontal=True, key="d1")
+        with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d1")
         with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d2")
         with c3: active_only = st.checkbox("Exclude Inactive", value=False, key="d3")
         
-        metric_col = {'Average Samples': 'Average Patients', 'Total Samples': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
+        metric_col = {'Average Patients': 'Average Patients', 'Total Patients': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
         filtered = plot_df.copy()
         if active_only: filtered = filtered[filtered['Total Patients'] > 0]
             
@@ -389,7 +389,7 @@ if view_mode == "📊 District View":
         st.markdown(f'''
         <div class="metric-grid">
             <div class="metric-card">
-                <div class="metric-label">Total Samples</div>
+                <div class="metric-label">Total Patients</div>
                 <div class="metric-value">{stats['total']:,}</div>
             </div>
             <div class="metric-card">
@@ -413,24 +413,24 @@ if view_mode == "📊 District View":
         scorecard = scorecard.sort_values(by=['Grade', 'Uptime %', 'Average Patients'], ascending=[True, False, False])
         display = pd.DataFrame()
         display['Facility'] = scorecard[facility_col]; display['Grade'] = scorecard['Grade'].apply(grade_emoji); display['Uptime %'] = scorecard['Uptime %']
-        display['Avg / Day'] = scorecard['Average Patients']; display['Total Samples'] = scorecard['Total Patients'].astype(int); display['Zero Days'] = scorecard['Zero Days'].astype(int)
-        st.dataframe(display, use_container_width=True, hide_index=True, column_config={"Facility": st.column_config.TextColumn("Facility", width="large"), "Grade": st.column_config.TextColumn("Grade", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"), "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"), "Total Samples": st.column_config.NumberColumn("Total Samples", format="%d"), "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d")})
+        display['Avg / Day'] = scorecard['Average Patients']; display['Total Patients'] = scorecard['Total Patients'].astype(int); display['Zero Days'] = scorecard['Zero Days'].astype(int)
+        st.dataframe(display, use_container_width=True, hide_index=True, column_config={"Facility": st.column_config.TextColumn("Facility", width="large"), "Grade": st.column_config.TextColumn("Grade", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"), "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"), "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"), "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d")})
         
         st.markdown("<br>", unsafe_allow_html=True)
         export = scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
-        export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Samples', 'Zero Days']
+        export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Patients', 'Zero Days']
         st.download_button("📥 Download Report Card (CSV)", export.to_csv(index=False).encode('utf-8'), f'{selected_district_zm}_ReportCard.csv', 'text/csv')
 
     with d_tab3:
-        st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>Daily Sample Trend</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>Daily Patient Trend</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
             trend_data = []
             for col in stats['active_date_cols']:
                 d = extract_date(col); dt = pd.to_numeric(plot_df[col], errors='coerce').fillna(0).sum()
-                if pd.notna(d): trend_data.append({'Date': d, 'Samples': dt})
+                if pd.notna(d): trend_data.append({'Date': d, 'Patients': dt})
             if trend_data:
                 trend_df = pd.DataFrame(trend_data).sort_values('Date')
-                fig_t = px.line(trend_df, x='Date', y='Samples', markers=True)
+                fig_t = px.line(trend_df, x='Date', y='Patients', markers=True)
                 fig_t.update_traces(line_color='#2563EB', line_width=3)
                 fig_t.update_layout(**PLOTLY_LAYOUT)
                 st.plotly_chart(fig_t, use_container_width=True)
@@ -453,14 +453,14 @@ else:
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
         
     if not state_df.empty:
-        total_state_samples = state_df['Total Samples'].sum()
+        total_state_patients = state_df['Total Patients'].sum()
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
         
         st.markdown(f'''
         <div class="metric-grid">
             <div class="metric-card">
-                <div class="metric-label">Total Bihar Samples</div>
-                <div class="metric-value">{total_state_samples:,}</div>
+                <div class="metric-label">Total Bihar Patients</div>
+                <div class="metric-value">{total_state_patients:,}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Active Districts</div>
@@ -475,8 +475,8 @@ else:
         
         s_tab1, s_tab2 = st.tabs(["Leaderboard", "District vs District"])
         with s_tab1:
-            state_metric_label = st.radio("Rank & Compare by:", ["Total Sample Count", "Weighted Avg", "Uptime %"], horizontal=True)
-            state_metric_col = {"Total Sample Count": "Total Samples", "Weighted Avg": "Weighted Avg", "Uptime %": "Uptime %"}[state_metric_label]
+            state_metric_label = st.radio("Rank & Compare by:", ["Total Patient Count", "Weighted Avg", "Uptime %"], horizontal=True)
+            state_metric_col = {"Total Patient Count": "Total Patients", "Weighted Avg": "Weighted Avg", "Uptime %": "Uptime %"}[state_metric_label]
             lb_df = state_df.copy()
             if state_metric_col == "Weighted Avg":
                 lb_df = lb_df[lb_df['Days Reported'] >= 7]
@@ -506,18 +506,18 @@ else:
                 if pa is None or pb is None: st.error("Could not process one of the selected districts.")
                 else:
                     col1, col2 = st.columns(2)
-                    with col1: st.markdown(f'<div class="battle-card battle-card-blue"><div class="battle-title" style="color: #2563EB;">{district_a}</div><div class="battle-row"><span>Total Samples</span> <span class="battle-val">{sa["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sa["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sa)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sa["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
-                    with col2: st.markdown(f'<div class="battle-card battle-card-red"><div class="battle-title" style="color: #DC2626;">{district_b}</div><div class="battle-row"><span>Total Samples</span> <span class="battle-val">{sb["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sb["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sb)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sb["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    with col1: st.markdown(f'<div class="battle-card battle-card-blue"><div class="battle-title" style="color: #2563EB;">{district_a}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sa["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sa["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sa)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sa["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    with col2: st.markdown(f'<div class="battle-card battle-card-red"><div class="battle-title" style="color: #DC2626;">{district_b}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sb["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sb["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sb)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sb["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
                     
-                    st.markdown("#### Daily Sample Trend — Overlaid")
+                    st.markdown("#### Daily Patient Trend — Overlaid")
                     def get_trend(p, cols, name):
                         d = []
                         for c in cols:
                             dv = extract_date(c); t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
-                            if pd.notna(dv): d.append({'Date': dv, 'Samples': t, 'District': name})
+                            if pd.notna(dv): d.append({'Date': dv, 'Patients': t, 'District': name})
                         return pd.DataFrame(d)
                     combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
-                    fig_c = px.line(combined, x='Date', y='Samples', color='District', markers=True, color_discrete_map={district_a: '#2563EB', district_b: '#DC2626'})
+                    fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#2563EB', district_b: '#DC2626'})
                     fig_c.update_layout(**PLOTLY_LAYOUT)
                     fig_c.update_layout(height=450)
                     st.plotly_chart(fig_c, use_container_width=True)
