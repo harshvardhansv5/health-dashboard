@@ -139,7 +139,6 @@ def process_district_df(df, time_filter, start_date=None, end_date=None):
     sorted_cols = [c for c, d in paired]
     
     if time_filter == "Custom Range" and start_date and end_date:
-        # Filter based on custom dates
         active_date_cols = [c for c, d in paired if start_date <= d.date() <= end_date]
     else:
         latest_data_idx = next((i for i in range(len(sorted_cols) - 1, -1, -1) if pd.to_numeric(df[sorted_cols[i]], errors='coerce').fillna(0).sum() > 0), len(sorted_cols) - 1)
@@ -148,7 +147,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None):
         elif time_filter == "Last 30 Days": active_date_cols = sorted_cols[max(0, latest_data_idx - 29): latest_data_idx + 1]
         else: active_date_cols = sorted_cols
 
-    if not active_date_cols: active_date_cols = sorted_cols # fallback
+    if not active_date_cols: active_date_cols = sorted_cols
     
     plot_df = df[[facility_col] + active_date_cols].copy()
     for col in active_date_cols: plot_df[col] = pd.to_numeric(plot_df[col], errors='coerce').fillna(0)
@@ -193,27 +192,25 @@ def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "�
 class PDFReport(FPDF):
     def header(self):
         self.set_font('Helvetica', 'B', 16)
-        self.set_text_color(15, 23, 42) # Slate 900
+        self.set_text_color(15, 23, 42)
         self.cell(0, 10, 'Bihar Health Dashboard - District Report Card', 0, 1, 'C')
         self.ln(5)
 
     def footer(self):
         self.set_y(-15)
         self.set_font('Helvetica', 'I', 8)
-        self.set_text_color(100, 116, 139) # Slate 500
+        self.set_text_color(100, 116, 139)
         self.cell(0, 10, f'Generated on {datetime.now().strftime("%d %b %Y, %H:%M")} | Page {self.page_no()}', 0, 0, 'C')
 
 def create_pdf(district, stats, scorecard, chart_img_bytes, date_range_str):
     pdf = PDFReport()
     pdf.add_page()
     
-    # Meta info
     pdf.set_font('Helvetica', '', 10)
     pdf.set_text_color(71, 85, 105)
     pdf.cell(0, 6, f'District: {district}   |   Period: {date_range_str}', 0, 1, 'C')
     pdf.ln(5)
     
-    # Key Metrics
     pdf.set_font('Helvetica', 'B', 12)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(0, 8, 'Key Metrics', 0, 1, 'L')
@@ -221,17 +218,14 @@ def create_pdf(district, stats, scorecard, chart_img_bytes, date_range_str):
     pdf.cell(0, 6, f"Total Patients: {stats['total']:,}   |   Weighted Avg/Day: {stats['weighted_avg']}   |   Facility Uptime: {calc_uptime(stats)}%", 0, 1, 'L')
     pdf.ln(5)
 
-    # Chart Image
     if chart_img_bytes:
-        # Save image to a temporary file to load into fpdf
         with open("temp_chart.png", "wb") as f:
             f.write(chart_img_bytes)
         pdf.image("temp_chart.png", x=10, y=None, w=190)
         pdf.ln(5)
 
-    # Table Header
     pdf.set_font('Helvetica', 'B', 10)
-    pdf.set_fill_color(241, 245, 249) # Slate 100
+    pdf.set_fill_color(241, 245, 249)
     pdf.set_text_color(15, 23, 42)
     pdf.cell(70, 8, 'Facility Name', 1, 0, 'L', True)
     pdf.cell(20, 8, 'Grade', 1, 0, 'C', True)
@@ -240,7 +234,6 @@ def create_pdf(district, stats, scorecard, chart_img_bytes, date_range_str):
     pdf.cell(25, 8, 'Total Pts', 1, 0, 'C', True)
     pdf.cell(25, 8, 'Zero Days', 1, 1, 'C', True)
 
-    # Table Body
     pdf.set_font('Helvetica', '', 9)
     for _, row in scorecard.iterrows():
         pdf.cell(70, 7, str(row['Facility'])[:45], 1, 0, 'L')
@@ -377,7 +370,12 @@ if view_mode == "📊 District View":
             current_avg = round(filtered[metric_col].mean(), 1) if metric_col in ['Uptime %', 'Total Patients'] else round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
                 
             fig.add_vline(x=current_avg, line_dash="dash", line_color="#2563EB", line_width=2, annotation_text=f"Avg: {current_avg}", annotation_position="top right", annotation_font_color="#2563EB", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#2563EB", annotation_borderwidth=1, annotation_borderpad=4)
-            fig.update_layout(**PLOTLY_LAYOUT, height=max(500, len(sorted_df) * 30), yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', tickfont=dict(size=12, color="#64748B")), showlegend=False, xaxis_title=metric_option, yaxis_title="", margin=dict(l=10, r=60, t=80, b=10))
+            
+            # FIXED: Removed duplicate margin parameter
+            layout_dict = PLOTLY_LAYOUT.copy()
+            layout_dict["margin"] = dict(l=10, r=60, t=80, b=10)
+            fig.update_layout(**layout_dict, height=max(500, len(sorted_df) * 30), yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', tickfont=dict(size=12, color="#64748B")), showlegend=False, xaxis_title=metric_option, yaxis_title="")
+            
             fig.update_traces(textposition='outside', textfont=dict(color="#1E293B", size=12, weight="bold"), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
 
@@ -391,19 +389,22 @@ if view_mode == "📊 District View":
             if selected_drill_facility != "-- Select a facility to investigate --":
                 fac_row = plot_df[plot_df[facility_col] == selected_drill_facility].iloc[0]
                 
-                # Facility Metrics
                 m1, m2, m3 = st.columns(3)
                 m1.markdown(f"<div class='metric-card'><div class='metric-label'>Avg / Day</div><div class='metric-value'>{fac_row['Average Patients']}</div></div>", unsafe_allow_html=True)
                 m2.markdown(f"<div class='metric-card'><div class='metric-label'>Uptime</div><div class='metric-value'>{fac_row['Uptime %']}%</div></div>", unsafe_allow_html=True)
                 m3.markdown(f"<div class='metric-card'><div class='metric-label'>Zero Days</div><div class='metric-value'>{fac_row['Zero Days']}</div></div>", unsafe_allow_html=True)
                 
-                # Facility Trend Line
                 drill_trend = [{'Date': extract_date(c), 'Patients': fac_row[c]} for c in stats['active_date_cols'] if pd.notna(extract_date(c))]
                 if drill_trend:
                     dt_df = pd.DataFrame(drill_trend).sort_values('Date')
                     fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True)
                     fig_dt.update_traces(line_color='#2563EB', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')), fillcolor='rgba(37, 99, 235, 0.1)')
-                    fig_dt.update_layout(**PLOTLY_LAYOUT, height=300, xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), margin=dict(l=10, r=10, t=20, b=10))
+                    
+                    # FIXED: Removed duplicate margin parameter
+                    dt_layout = PLOTLY_LAYOUT.copy()
+                    dt_layout["margin"] = dict(l=10, r=10, t=20, b=10)
+                    fig_dt.update_layout(**dt_layout, height=300, xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'))
+                    
                     st.plotly_chart(fig_dt, use_container_width=True)
 
     with d_tab2:
@@ -447,22 +448,16 @@ if view_mode == "📊 District View":
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- FEATURE: PDF GENERATION ---
         col_pdf1, col_pdf2 = st.columns([1, 2])
         with col_pdf1:
             if st.button("📄 Generate PDF Report", use_container_width=True):
                 with st.spinner("Generating PDF & Rendering Chart..."):
-                    # 1. Recreate the bar chart for the PDF
                     pdf_fig = px.bar(scorecard.head(15), y=facility_col, x='Average Patients', orientation='h', title='Top 15 Facilities (Avg Patients)')
-                    pdf_fig.update_layout(**PLOTLY_LAYOUT, yaxis=dict(autorange="reversed"), height=400, width=800, margin=dict(l=10, r=10, t=40, b=10))
+                    pdf_fig.update_layout(**PLOTLY_LAYOUT, yaxis=dict(autorange="reversed"), height=400, width=800)
                     
-                    # 2. Export chart to PNG
                     img_bytes = pdf_fig.to_image(format="png", scale=2)
-                    
-                    # 3. Generate PDF
                     pdf_bytes = create_pdf(selected_district_zm, stats, display, img_bytes, date_range_str)
                     
-                    # 4. Download Button
                     st.download_button(
                         label="📥 Click here to Download",
                         data=pdf_bytes,
@@ -474,7 +469,6 @@ if view_mode == "📊 District View":
         with col_pdf2:
             st.info("The PDF contains District Metrics, a Trend Chart, and the full Spoke Scorecard.")
         
-        # Keep the CSV download as a secondary option
         export = scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
         export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Patients', 'Zero Days']
         st.download_button("📥 Download Raw Data (CSV)", export.to_csv(index=False).encode('utf-8'), f'{selected_district_zm}_ReportCard.csv', 'text/csv')
@@ -505,9 +499,4 @@ if view_mode == "📊 District View":
 # ==============================================================================
 else:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Bihar State Master View</h3>", unsafe_allow_html=True)
-    
-    # State view logic remains mostly the same, you can add PDF export here later if needed!
-    st.info("State View currently does not support custom date ranges. Switch to District View to generate customized reports.")
-    
-    # [Truncated for brevity - The state view logic remains exactly as it was in the previous version]
-    st.write("Please use the District View for detailed reporting.")
+    st.info("State View does not support Custom Date Ranges yet. Please switch to District View for deep-dive analysis.")
