@@ -61,17 +61,44 @@ st.markdown("""
     .status-dot { width: 8px; height: 8px; background-color: #10B981; border-radius: 50%; }
     .header-date { font-size: 13px; color: #64748B; font-weight: 500; }
 
-    /* NUCLEAR OPTION: Dropdowns & Segmented Control */
-    div[data-baseweb="select"] { border: 1px solid #CBD5E1 !important; border-radius: 8px !important; background-color: #FFFFFF !important; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important; transition: all 0.2s ease !important; min-height: 44px !important; display: flex !important; align-items: center !important; }
-    div[data-baseweb="select"] > div { border: none !important; background-color: transparent !important; box-shadow: none !important; width: 100%; }
-    div[data-baseweb="select"]:hover { border-color: #2563EB !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1) !important; }
-    div[data-baseweb="select"]:focus-within { border-color: #2563EB !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
-    div[data-baseweb="select"] span { color: #0F172A !important; font-weight: 600 !important; }
-    label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 600 !important; font-size: 14px !important; margin-bottom: 4px !important; }
-    div[data-testid="stRadio"] label > div:first-child { display: none !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] { display: inline-flex !important; background-color: #F1F5F9 !important; padding: 4px !important; border-radius: 10px !important; gap: 4px !important; border: 1px solid #E2E8F0 !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label { padding: 8px 16px !important; border-radius: 6px !important; cursor: pointer !important; transition: all 0.2s ease !important; color: #475569 !important; font-weight: 600 !important; font-size: 14px !important; margin: 0 !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) { background-color: #FFFFFF !important; color: #2563EB !important; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important; }
+        /* --- SOLID DROPDOWN DIFFERENTIATOR --- */
+    
+    /* Target the main dropdown box */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
+        background-color: #F1F5F9 !important; /* Light slate background to contrast with white cards */
+        border: 1.5px solid #94A3B8 !important; /* Solid, darker border */
+        border-radius: 8px !important;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+        transition: all 0.2s ease !important;
+        min-height: 44px !important;
+    }
+
+    /* Hover state - turns white with a blue border */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:hover {
+        background-color: #FFFFFF !important;
+        border-color: #2563EB !important;
+    }
+
+    /* Focus state (when clicked) */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div:focus-within {
+        background-color: #FFFFFF !important;
+        border-color: #2563EB !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+    }
+
+    /* Text inside the dropdown */
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] span {
+        color: #0F172A !important;
+        font-weight: 600 !important;
+    }
+
+    /* Label above the dropdown */
+    label[data-testid="stWidgetLabel"] p {
+        color: #1E293B !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        margin-bottom: 4px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
