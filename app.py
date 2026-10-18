@@ -94,39 +94,16 @@ st.markdown("""
     /* Custom Info Banner */
     .info-banner { background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 16px; color: #1E3A8A; display: flex; align-items: center; gap: 12px; margin-top: 20px; }
 
-    /* --- PREMIUM DROPDOWNS (Selectboxes) --- */
+    /* Premium Selectbox */
     div[data-baseweb="select"] > div {
-        border-radius: 8px !important;
-        border: 1px solid #CBD5E1 !important;
-        background-color: #FFFFFF !important;
-        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
-        transition: all 0.2s ease-in-out !important;
-        min-height: 44px;
+        border-radius: 8px !important; border: 1px solid #CBD5E1 !important;
+        background-color: #FFFFFF !important; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+        transition: all 0.2s ease-in-out !important; min-height: 44px;
     }
-    
-    /* Hover state */
-    div[data-baseweb="select"] > div:hover {
-        border-color: #2563EB !important;
-    }
-    
-    /* Focus state (when clicked) */
-    div[data-baseweb="select"] > div:focus-within {
-        border-color: #2563EB !important;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
-    }
-
-    /* Make the dropdown text slightly bolder */
-    div[data-baseweb="select"] span {
-        color: #0F172A !important;
-        font-weight: 500 !important;
-    }
-
-    /* Make the "Select District" label bolder */
-    label[data-testid="stWidgetLabel"] p {
-        color: #1E293B !important;
-        font-weight: 600 !important;
-        font-size: 14px !important;
-    }
+    div[data-baseweb="select"] > div:hover { border-color: #2563EB !important; }
+    div[data-baseweb="select"] > div:focus-within { border-color: #2563EB !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
+    div[data-baseweb="select"] span { color: #0F172A !important; font-weight: 500 !important; }
+    label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 600 !important; font-size: 14px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -434,11 +411,8 @@ if view_mode == "📊 District View":
                 sorted_df.loc[sorted_df.nlargest(5, metric_col).index, 'Highlight'] = 'Top 5'
                 sorted_df.loc[sorted_df.nsmallest(5, metric_col).index, 'Highlight'] = 'Bottom 5'
             
-            # --- PREPARE DATA LABELS ---
-            if metric_col == 'Uptime %':
-                text_labels = [f"{v:.1f}%" for v in sorted_df[metric_col]]
-            else:
-                text_labels = [f"{v:.1f}" if v % 1 != 0 else f"{int(v)}" for v in sorted_df[metric_col]]
+            if metric_col == 'Uptime %': text_labels = [f"{v:.1f}%" for v in sorted_df[metric_col]]
+            else: text_labels = [f"{v:.1f}" if v % 1 != 0 else f"{int(v)}" for v in sorted_df[metric_col]]
                 
             fig = px.bar(
                 sorted_df, y=facility_col, x=metric_col, orientation='h', 
@@ -448,11 +422,8 @@ if view_mode == "📊 District View":
                 title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {time_filter}</span>"
             )
             
-            # --- AVERAGE LINE ---
-            if metric_col == 'Uptime %' or metric_col == 'Total Patients': 
-                current_avg = round(filtered[metric_col].mean(), 1)
-            else: 
-                current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
+            if metric_col == 'Uptime %' or metric_col == 'Total Patients': current_avg = round(filtered[metric_col].mean(), 1)
+            else: current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
                 
             fig.add_vline(
                 x=current_avg, line_dash="dash", line_color="#2563EB", line_width=2,
@@ -462,26 +433,15 @@ if view_mode == "📊 District View":
                 annotation_borderwidth=1, annotation_borderpad=4
             )
             
-            # --- CLEAN LAYOUT ---
             fig.update_layout(**PLOTLY_LAYOUT)
             fig.update_layout(
-                height=max(500, len(sorted_df) * 30), # Extra height for bolder fonts
-                yaxis=dict(
-                    autorange="reversed", showgrid=False, 
-                    tickfont=dict(size=13, color="#1E293B", weight="bold") # Bolder Y-axis labels
-                ),
-                xaxis=dict(
-                    showgrid=True, gridwidth=1, gridcolor='#E2E8F0',
-                    tickfont=dict(size=12, color="#64748B")
-                ),
-                showlegend=False, # Hide legend
-                xaxis_title=metric_option, yaxis_title="",
-                margin=dict(l=10, r=60, t=80, b=10) # Extra right margin so text labels don't get cut off
+                height=max(500, len(sorted_df) * 30),
+                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")),
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', tickfont=dict(size=12, color="#64748B")),
+                showlegend=False, xaxis_title=metric_option, yaxis_title="",
+                margin=dict(l=10, r=60, t=80, b=10)
             )
-            
-            # Add bold text labels to the end of the bars
             fig.update_traces(textposition='outside', textfont=dict(color="#1E293B", size=12, weight="bold"), cliponaxis=False)
-            
             st.plotly_chart(fig, use_container_width=True)
 
     with d_tab2:
@@ -538,6 +498,7 @@ if view_mode == "📊 District View":
         st.download_button("📥 Download Report Card (CSV)", export.to_csv(index=False).encode('utf-8'), f'{selected_district_zm}_ReportCard.csv', 'text/csv')
 
     with d_tab3:
+        # --- 1. UPGRADED LINE CHART (AREA STYLE) ---
         st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>Daily Patient Trend</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
             trend_data = []
@@ -546,18 +507,54 @@ if view_mode == "📊 District View":
                 if pd.notna(d): trend_data.append({'Date': d, 'Patients': dt})
             if trend_data:
                 trend_df = pd.DataFrame(trend_data).sort_values('Date')
-                fig_t = px.line(trend_df, x='Date', y='Patients', markers=True)
-                fig_t.update_traces(line_color='#2563EB', line_width=3)
+                
+                # Use px.area for a filled gradient look
+                fig_t = px.area(trend_df, x='Date', y='Patients', markers=True)
+                fig_t.update_traces(
+                    line_color='#2563EB', line_width=3,
+                    marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')),
+                    fillcolor='rgba(37, 99, 235, 0.1)' # Light blue fill
+                )
                 fig_t.update_layout(**PLOTLY_LAYOUT)
-                fig_t.update_layout(xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'))
+                fig_t.update_layout(
+                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
+                    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0')
+                )
                 st.plotly_chart(fig_t, use_container_width=True)
                 
-        st.markdown("<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
+        # --- 2. UPGRADED HEATMAP ---
+        st.markdown("<h4 style='color:#0F172A; margin-top:30px; margin-bottom:10px;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
+        st.caption("White = 0 patients. Dark blue = high patient volume.")
+        
+        # Prepare and SORT the heatmap data (best facilities at the top)
         heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
-        heatmap_df.columns = [extract_date(c).strftime('%d-%b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
-        fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale='RdYlGn')
+        
+        # Sort by total patients so the best facilities are at the top
+        heatmap_df['Total'] = heatmap_df.sum(axis=1)
+        heatmap_df = heatmap_df.sort_values(by='Total', ascending=True) # ascending for reversed y-axis
+        heatmap_df = heatmap_df.drop(columns=['Total'])
+        
+        # Format x-axis dates
+        heatmap_df.columns = [extract_date(c).strftime('%d %b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
+
+        # Use a White-to-Blue color scale (Cleaner than Red-Yellow-Green)
+        fig_h = px.imshow(
+            heatmap_df, 
+            aspect='auto', 
+            color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#DBEAFE'], [1, '#1E3A8A']],
+            labels=dict(x="Date", y="", color="Patients")
+        )
+        
+        # Add gaps between cells for readability
+        fig_h.update_traces(xgap=2, ygap=2)
+        
         fig_h.update_layout(**PLOTLY_LAYOUT)
-        fig_h.update_layout(height=max(600, len(heatmap_df) * 20), yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")))
+        fig_h.update_layout(
+            height=max(400, len(heatmap_df) * 35), # Dynamic height
+            yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")),
+            xaxis=dict(tickfont=dict(size=11, color="#475569")),
+            coloraxis_colorbar=dict(title="Patients", thickness=15)
+        )
         st.plotly_chart(fig_h, use_container_width=True)
 
 # ==============================================================================
