@@ -194,6 +194,19 @@ def district_grade(plot_df):
 
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
+@st.cache_data(show_spinner=False)
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter):
+    xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
+    data = []
+    for sheet in sheet_names_tuple:
+        try:
+            sdf = read_sheet_robust(xls, sheet)
+            _, _, s = process_district_df(sdf, time_filter)
+            if s:
+                data.append({'District': sheet, 'Total Patients': s['total'], 'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s), 'Facilities': s['num_facilities'], 'Days Reported': s['num_days']})
+        except Exception: pass
+    return pd.DataFrame(data)
+
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Control Panel</h3>", unsafe_allow_html=True)
@@ -249,11 +262,35 @@ view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View"], ho
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
-    **📊 Weighted Avg / Day** — *The efficiency score.* Total patients divided by (facilities × days). This accounts for all facility-days equally.
-    **⏱️ Uptime %** — *The reliability score.* The percentage of days each facility reported more than 0 patients. 
-    **📉 Zero Days** — *The failure indicator.* The total number of days a facility reported exactly 0 patients.
-    **🏆 Grading System** — **A (Excellent):** Uptime > 85% AND Avg > 10 | **B (Good):** Uptime > 70% AND Avg > 5 | **C (Fair):** Uptime > 50% AND Avg > 2 | **D (Poor):** Uptime > 30% AND Avg > 1 | **F (Critical):** Uptime < 30% OR Avg = 0
+    **📊 Weighted Avg / Day** — *The efficiency score.*  
+    Total patients divided by (facilities × days). This accounts for all facility-days equally.
+    
+    **⏱️ Uptime %** — *The reliability score.*  
+    The percentage of days each facility reported more than 0 patients.
+    
+    **📉 Zero Days** — *The failure indicator.*  
+    The total number of days a facility reported exactly 0 patients.
+    
+    **🏆 Grading System**  
+    Grades are assigned based on a combination of Uptime (Reliability) and Average Patients (Volume):
     """)
+    
+    grade_data = pd.DataFrame({
+        "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
+        "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
+        "Avg Patients Requirement": ["> 10", "> 5", "> 2", "> 1", "0"]
+    })
+    
+    st.dataframe(
+        grade_data, 
+        hide_index=True, 
+        use_container_width=True,
+        column_config={
+            "Grade": st.column_config.TextColumn("Grade", width="medium"),
+            "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
+            "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
+        }
+    )
 st.markdown("<br>", unsafe_allow_html=True)
 
 PLOTLY_LAYOUT = dict(template="plotly_white", font=dict(family="Inter, sans-serif", size=13, color="#475569"), title_font=dict(size=16, color="#0F172A", family="Inter, sans-serif", weight="bold"), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=60, b=10))
@@ -395,20 +432,15 @@ if view_mode == "📊 District View":
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # --- FEATURE: EXCEL EXPORT ---
         col_dl1, col_dl2 = st.columns([1, 2])
         
-        # Prepare the Excel file in memory
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            # Sheet 1: Summary
             summary_df = pd.DataFrame({
                 'Metric': ['District', 'ZM', 'Hub', 'Period', 'Total Patients', 'Weighted Avg / Day', 'Facility Uptime', 'District Grade'],
                 'Value': [selected_district_zm, zm_name_for_district, selected_hub_zm, date_range_str, stats['total'], stats['weighted_avg'], f"{calc_uptime(stats)}%", d_grade]
             })
             summary_df.to_excel(writer, index=False, sheet_name='Summary')
-            
-            # Sheet 2: Scorecard
             display.to_excel(writer, index=False, sheet_name='Scorecard')
             
         with col_dl1:
@@ -448,4 +480,78 @@ if view_mode == "📊 District View":
 # ==============================================================================
 else:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Bihar State Master View</h3>", unsafe_allow_html=True)
-    st.info("State View does not support Custom Date Ranges yet. Please switch to District View for deep-dive analysis.")
+    
+    with st.spinner("Loading State Data..."):
+        state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
+        
+    if not state_df.empty:
+        total_state_patients = state_df['Total Patients'].sum()
+        avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
+        
+        st.markdown(f'''
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Bihar Patients</div>
+                <div class="metric-value">{total_state_patients:,}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Active Districts</div>
+                <div class="metric-value">{len(state_df)}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Statewide Avg Uptime</div>
+                <div class="metric-value">{avg_state_uptime}%</div>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+        
+        s_tab1, s_tab2 = st.tabs(["Leaderboard", "District vs District"])
+        with s_tab1:
+            state_metric_label = st.radio("Rank & Compare by:", ["Total Patient Count", "Weighted Avg", "Uptime %"], horizontal=True)
+            state_metric_col = {"Total Patient Count": "Total Patients", "Weighted Avg": "Weighted Avg", "Uptime %": "Uptime %"}[state_metric_label]
+            lb_df = state_df.copy()
+            if state_metric_col == "Weighted Avg":
+                lb_df = lb_df[lb_df['Days Reported'] >= 7]
+                st.caption("⚠️ Districts with less than 7 days of data are hidden to ensure fair comparison.")
+            lb_df = lb_df.sort_values(state_metric_col, ascending=False).reset_index(drop=True)
+            lb_df.index = lb_df.index + 1; lb_df.index.name = 'Rank'
+            def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
+            lb_df['District'] = lb_df.apply(lambda row: f"{medal(row.name)} {row['District']}".strip(), axis=1)
+            st.dataframe(lb_df, use_container_width=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
+            
+            st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Top 15 Districts (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
+            top15 = lb_df.head(15)
+            fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
+            fig_lb.update_layout(**PLOTLY_LAYOUT)
+            fig_lb.update_layout(yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), height=500)
+            st.plotly_chart(fig_lb, use_container_width=True)
+            
+        with s_tab2:
+            sorted_sheets = sorted(available_sheets)
+            ca, cb = st.columns(2)
+            with ca: district_a = st.selectbox("District A", sorted_sheets, index=0, key='cmp_a')
+            with cb: district_b = st.selectbox("District B", sorted_sheets, index=min(1, len(sorted_sheets) - 1), key='cmp_b')
+            
+            if district_a and district_b:
+                df_a = read_sheet_robust(xls, district_a); df_b = read_sheet_robust(xls, district_b)
+                pa, ra, sa = process_district_df(df_a, time_filter); pb, rb, sb = process_district_df(df_b, time_filter)
+                if pa is None or pb is None: st.error("Could not process one of the selected districts.")
+                else:
+                    col1, col2 = st.columns(2)
+                    with col1: st.markdown(f'<div class="battle-card battle-card-blue"><div class="battle-title" style="color: #2563EB;">{district_a}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sa["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sa["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sa)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sa["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    with col2: st.markdown(f'<div class="battle-card battle-card-red"><div class="battle-title" style="color: #DC2626;">{district_b}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sb["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sb["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sb)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sb["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    
+                    st.markdown("#### Daily Patient Trend — Overlaid")
+                    def get_trend(p, cols, name):
+                        d = []
+                        for c in cols:
+                            dv = extract_date(c); t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
+                            if pd.notna(dv): d.append({'Date': dv, 'Patients': t, 'District': name})
+                        return pd.DataFrame(d)
+                    combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
+                    fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#2563EB', district_b: '#DC2626'})
+                    fig_c.update_layout(**PLOTLY_LAYOUT)
+                    fig_c.update_layout(height=450, xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'))
+                    st.plotly_chart(fig_c, use_container_width=True)
+    else:
+        st.warning("No district data available for the selected time range.")
