@@ -228,7 +228,6 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
             sdf = read_sheet_robust(xls, sheet)
             _, _, s = process_district_df(sdf, time_filter)
             if s:
-                # Renamed from Total Samples to Total Patients
                 data.append({'District': sheet, 'Total Patients': s['total'], 'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s), 'Facilities': s['num_facilities'], 'Days Reported': s['num_days']})
         except Exception: pass
     return pd.DataFrame(data)
@@ -274,7 +273,25 @@ st.markdown(f"""
 
 # Main Navigation
 view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View"], horizontal=True, label_visibility="collapsed")
-st.markdown("<hr style='margin: 10px 0 30px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
+st.markdown("<hr style='margin: 10px 0 15px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
+
+# --- DEFINITIONS EXPANDER ---
+with st.expander("ℹ️ Metric Definitions & Grading System"):
+    st.markdown("""
+    **📊 Weighted Avg / Day** — *The efficiency score.* Total patients divided by (facilities × days). This accounts for all facility-days equally, preventing facilities with missing data from skewing the average.
+    
+    **⏱️ Uptime %** — *The reliability score.* The percentage of days each facility reported more than 0 patients. 
+    
+    **📉 Zero Days** — *The failure indicator.* The total number of days a facility reported exactly 0 patients.
+    
+    **🏆 Grading System** — Grades are assigned based on a combination of Uptime (Reliability) and Average Patients (Volume):
+    *   **A (Excellent):** Uptime > 85% AND Avg > 10
+    *   **B (Good):** Uptime > 70% AND Avg > 5
+    *   **C (Fair):** Uptime > 50% AND Avg > 2
+    *   **D (Poor):** Uptime > 30% AND Avg > 1
+    *   **F (Critical):** Uptime < 30% OR Avg = 0
+    """)
+st.markdown("<br>", unsafe_allow_html=True)
 
 # Universal Plotly layout for the enterprise look
 PLOTLY_LAYOUT = dict(
