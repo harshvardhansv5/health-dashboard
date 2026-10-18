@@ -93,6 +93,40 @@ st.markdown("""
 
     /* Custom Info Banner */
     .info-banner { background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 16px; color: #1E3A8A; display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+
+    /* --- PREMIUM DROPDOWNS (Selectboxes) --- */
+    div[data-baseweb="select"] > div {
+        border-radius: 8px !important;
+        border: 1px solid #CBD5E1 !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+        transition: all 0.2s ease-in-out !important;
+        min-height: 44px;
+    }
+    
+    /* Hover state */
+    div[data-baseweb="select"] > div:hover {
+        border-color: #2563EB !important;
+    }
+    
+    /* Focus state (when clicked) */
+    div[data-baseweb="select"] > div:focus-within {
+        border-color: #2563EB !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+    }
+
+    /* Make the dropdown text slightly bolder */
+    div[data-baseweb="select"] span {
+        color: #0F172A !important;
+        font-weight: 500 !important;
+    }
+
+    /* Make the "Select District" label bolder */
+    label[data-testid="stWidgetLabel"] p {
+        color: #1E293B !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
