@@ -8,7 +8,7 @@ import io
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
-# --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme v2) ---
+# --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme v3) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -18,7 +18,7 @@ st.markdown("""
     }
     .material-symbols-rounded, [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
     
-    /* --- THE NEW SLATE CANVAS (Less White) --- */
+    /* --- THE NEW SLATE CANVAS --- */
     .stApp { background-color: #E2E8F0 !important; } 
     section[data-testid="stSidebar"] { background-color: #F8FAFC !important; border-right: 1px solid #CBD5E1; }
     
@@ -50,6 +50,15 @@ st.markdown("""
     .grade-C { background-color: #FEF3C7; color: #92400E; border: 1px solid #FBBF24; }
     .grade-D { background-color: #FFEDD5; color: #9A3412; border: 1px solid #FB923C; }
     .grade-F { background-color: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
+
+    /* Compare Battle Cards */
+    .battle-card { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .battle-card-blue { border-top: 4px solid #2563EB; }
+    .battle-card-red { border-top: 4px solid #DC2626; }
+    .battle-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding: 10px 0; font-size: 14px; color: #475569; }
+    .battle-row:last-child { border-bottom: none; }
+    .battle-val { font-weight: 600; color: #0F172A; }
 
     /* Header */
     .app-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
@@ -497,7 +506,6 @@ if view_mode == "📊 District View":
         fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#DBEAFE'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
         fig_h.update_traces(xgap=2, ygap=2)
         
-        # Fixed duplicate axis error
         hm_layout = PLOTLY_LAYOUT.copy()
         hm_layout.update(dict(
             height=max(400, len(heatmap_df) * 35),
@@ -590,7 +598,6 @@ else:
                     combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
                     fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#2563EB', district_b: '#DC2626'})
                     
-                    # Fixed duplicate axis error here too
                     cmp_layout = PLOTLY_LAYOUT.copy()
                     cmp_layout.update(dict(
                         height=450,
