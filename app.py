@@ -6,96 +6,96 @@ import re
 import io
 
 # --- PAGE SETUP ---
-st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
+st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide", initial_sidebar_state="expanded")
 
-# --- FORCED LIGHT THEME & PREMIUM FONTS ---
+# --- ENTERPRISE UI CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-    /* Force global font */
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif !important;
-    }
-
-    /* Force Light Background */
-    .stApp { background-color: #F4F7F6 !important; }
-    section[data-testid="stSidebar"] { background-color: #FFFFFF !important; border-right: 1px solid #E2E8F0; }
-    section[data-testid="stSidebar"] * { color: #1E293B !important; font-family: 'Inter', sans-serif !important; }
+    /* Global Typography & Background */
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
+    .stApp { background-color: #F8FAFC !important; }
     
-    /* Global Typography */
-    h1, h2, h3 { color: #0F172A !important; font-weight: 700 !important; letter-spacing: -0.02em; }
-    p, span, div { color: #475569; font-family: 'Inter', sans-serif !important; }
-
-    /* --- FIX THE FILE UPLOADER DARK BOX --- */
+    /* Hide default Streamlit elements for a custom app feel */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #FFFFFF !important;
+        border-right: 1px solid #E2E8F0;
+        padding-top: 2rem;
+    }
+    section[data-testid="stSidebar"] * { color: #0F172A !important; font-family: 'Inter', sans-serif !important; }
+    
+    /* FIX THE BROKEN FILE UPLOADER */
     [data-testid="stFileUploadDropzone"] {
         background-color: #F8FAFC !important;
         border: 1px dashed #CBD5E1 !important;
-        border-radius: 10px !important;
-    }
-    [data-testid="stFileUploadDropzone"]:hover {
-        border-color: #0057B8 !important;
+        border-radius: 8px !important;
     }
     [data-testid="stFileUploadDropzone"] button {
-        background-color: #0057B8 !important;
+        background-color: #2563EB !important;
         color: #FFFFFF !important;
         border: none !important;
-        font-weight: 600 !important;
+        padding: 0.5rem 1rem !important;
+        font-weight: 500 !important;
     }
-    [data-testid="stFileUploadDropzone"] small { color: #64748B !important; }
+    /* Prevent the double text bug */
+    [data-testid="stFileUploadDropzone"] button span { display: none; }
+    [data-testid="stFileUploadDropzone"] button::after { content: "Browse File"; }
 
-    /* Metric Cards */
-    div[data-testid="stMetric"] {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    /* Custom Enterprise Metric Cards */
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .metric-card {
+        background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px;
+        padding: 20px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        display: flex; flex-direction: column;
     }
-    div[data-testid="stMetric"] label { color: #64748B !important; font-size: 14px; font-weight: 500; }
-    div[data-testid="stMetric"] div[data-testid="stMetricValue"] { color: #0F172A !important; font-weight: 700; font-size: 32px; }
+    .metric-label { color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .metric-value { color: #0F172A; font-size: 28px; font-weight: 700; line-height: 1; }
+    .metric-delta { font-size: 13px; font-weight: 500; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
 
-    /* Dataframe Polish */
+    /* Custom Dataframe Style */
     [data-testid="stDataFrame"] { 
-        background-color: #FFFFFF !important; 
-        border-radius: 12px; 
-        padding: 10px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        border: 1px solid #E2E8F0;
+        background-color: #FFFFFF !important; border-radius: 10px; border: 1px solid #E2E8F0;
+        box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); padding: 4px;
     }
-    [data-testid="stDataFrame"] * { color: #1E293B !important; font-family: 'Inter', sans-serif !important; font-size: 14px; }
 
-    /* Custom ZM Card */
-    .zm-card {
-        background-color: #F8FAFC !important; border: 1px solid #E2E8F0; border-left: 4px solid #0057B8;
-        border-radius: 8px; padding: 16px; margin-top: 10px; margin-bottom: 24px;
-    }
-    .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;}
-    .zm-card-name { color: #0F172A; font-size: 16px; font-weight: 700; margin-bottom: 2px;}
-    .zm-card-zone { color: #0057B8; font-size: 13px; font-weight: 600;}
+    /* ZM Card */
+    .zm-card { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+    .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;}
+    .zm-card-name { color: #0F172A; font-size: 15px; font-weight: 600; margin-bottom: 2px;}
+    .zm-card-zone { color: #2563EB; font-size: 13px; font-weight: 500;}
 
     /* Report Header */
-    .report-header { background-color: #FFFFFF !important; border: 1px solid #E2E8F0; border-top: 4px solid #0057B8; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); }
-    .report-title { color: #0F172A; font-size: 24px; font-weight: 700; margin-bottom: 8px; }
+    .report-header { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); }
+    .report-title { color: #0F172A; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
     .report-meta { color: #64748B; font-size: 14px; line-height: 1.6; }
-    .report-meta strong { color: #1E293B; }
-
+    
     /* Grade Badges */
-    .grade-badge { display: inline-block; padding: 8px 20px; border-radius: 8px; font-size: 24px; font-weight: 800; }
-    .grade-A { background-color: #D1FAE5; color: #065F46; }
-    .grade-B { background-color: #ECFCCB; color: #3F6212; }
-    .grade-C { background-color: #FEF3C7; color: #92400E; }
-    .grade-D { background-color: #FFEDD5; color: #9A3412; }
-    .grade-F { background-color: #FEE2E2; color: #991B1B; }
+    .grade-badge { display: inline-block; padding: 6px 16px; border-radius: 6px; font-size: 20px; font-weight: 700; }
+    .grade-A { background-color: #D1FAE5; color: #065F46; border: 1px solid #34D399; }
+    .grade-B { background-color: #ECFCCB; color: #3F6212; border: 1px solid #A3E635; }
+    .grade-C { background-color: #FEF3C7; color: #92400E; border: 1px solid #FBBF24; }
+    .grade-D { background-color: #FFEDD5; color: #9A3412; border: 1px solid #FB923C; }
+    .grade-F { background-color: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
 
     /* Compare Battle Cards */
-    .battle-card { background-color: #FFFFFF !important; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; }
-    .battle-card-blue { border-top: 4px solid #3B82F6; }
-    .battle-card-red { border-top: 4px solid #EF4444; }
-    .battle-title { font-size: 20px; font-weight: 700; margin-bottom: 16px; }
-    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding: 8px 0; font-size: 15px; color: #475569; }
+    .battle-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 24px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); margin-bottom: 16px; }
+    .battle-card-blue { border-top: 4px solid #2563EB; }
+    .battle-card-red { border-top: 4px solid #DC2626; }
+    .battle-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding: 10px 0; font-size: 14px; color: #475569; }
     .battle-row:last-child { border-bottom: none; }
-    .battle-val { font-weight: 700; color: #0F172A; }
+    .battle-val { font-weight: 600; color: #0F172A; }
+
+    /* Top App Header */
+    .app-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid #E2E8F0; margin-bottom: 32px; }
+    .app-title { font-size: 24px; font-weight: 700; color: #0F172A; display: flex; align-items: center; gap: 12px; }
+    .app-subtitle { font-size: 14px; color: #64748B; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -252,40 +252,58 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.title("Control Panel")
-    uploaded_data_file = st.file_uploader("Upload Main Data File", type=["xlsx", "csv"])
+    st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Control Panel</h3>", unsafe_allow_html=True)
+    uploaded_data_file = st.file_uploader("Upload Data File", type=["xlsx", "csv"], label_visibility="collapsed")
+    
     if uploaded_data_file is not None:
         try:
             file_bytes = uploaded_data_file.getvalue()
             xls = pd.ExcelFile(uploaded_data_file)
             available_sheets = xls.sheet_names
-            st.divider()
-            time_filter = st.selectbox("Select Time Range:", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"])
+            st.markdown("<hr style='margin: 20px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
+            
+            st.markdown("<p style='font-size:13px; font-weight:600; color:#64748B; text-transform:uppercase; margin-bottom:5px;'>Time Range</p>", unsafe_allow_html=True)
+            time_filter = st.selectbox("Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"], label_visibility="collapsed")
         except Exception as e:
             st.error(f"Error: {e}")
 
 # --- MAIN AREA ---
-st.title("🏥 Bihar District Hub & Spoke Dashboard")
 if uploaded_data_file is None:
+    st.markdown("""
+    <div class="app-header">
+        <div class="app-title">🏥 Bihar Health Dashboard</div>
+        <div class="app-subtitle">Enterprise Edition</div>
+    </div>
+    """, unsafe_allow_html=True)
     st.info("👈 Please upload the Main Data File from the sidebar to begin.")
     st.stop()
 
-st.markdown("### Select View")
-view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View"], horizontal=True, label_visibility="collapsed")
-st.divider()
+st.markdown(f"""
+<div class="app-header">
+    <div class="app-title">🏥 Bihar Health Dashboard</div>
+    <div class="app-subtitle">Data refreshed: {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}</div>
+</div>
+""", unsafe_allow_html=True)
 
-# Apply universal Plotly layout settings for the light theme
+# Main Navigation
+view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View"], horizontal=True, label_visibility="collapsed")
+st.markdown("<hr style='margin: 10px 0 30px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
+
+# Universal Plotly layout for the enterprise look
 PLOTLY_LAYOUT = dict(
     template="plotly_white",
-    font=dict(family="Inter, sans-serif", size=14, color="#334155"),
-    title_font=dict(size=18, color="#0F172A", family="Inter, sans-serif"),
+    font=dict(family="Inter, sans-serif", size=13, color="#475569"),
+    title_font=dict(size=16, color="#0F172A", family="Inter, sans-serif", weight="bold"),
     plot_bgcolor='rgba(0,0,0,0)',
     paper_bgcolor='rgba(0,0,0,0)',
-    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9'),
-    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9'),
-    margin=dict(l=20, r=20, t=50, b=20)
+    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
+    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
+    margin=dict(l=10, r=10, t=40, b=10)
 )
 
+# ==============================================================================
+# VIEW: DISTRICT VIEW
+# ==============================================================================
 if view_mode == "📊 District View":
     col_d, col_h = st.columns(2)
     with col_d: selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
@@ -299,7 +317,7 @@ if view_mode == "📊 District View":
         display_zm = zm_name_for_district.split("(")[0].strip()
         zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone"
 
-    st.markdown(f'<div class="zm-card"><div class="zm-card-header">👤 Zone Manager</div><div class="zm-card-name">{display_zm}</div><div class="zm-card-zone">{zone_name}</div></div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="zm-card"><div class="zm-card-header">Zone Manager</div><div class="zm-card-name">{display_zm}</div><div class="zm-card-zone">{zone_name}</div></div>', unsafe_allow_html=True)
 
     target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
     sheet_found = False
@@ -315,14 +333,27 @@ if view_mode == "📊 District View":
     if plot_df is None: st.error(f"Could not process the sheet '{sheet_to_load}'."); st.stop()
     facility_col = stats['facility_col']
 
-    d_tab1, d_tab2, d_tab3 = st.tabs(["📊 Dashboard", "📋 Report Card", "📈 Trends & Analytics"])
+    d_tab1, d_tab2, d_tab3 = st.tabs(["Dashboard", "Report Card", "Trends & Analytics"])
 
     with d_tab1:
-        col1, col2, col3 = st.columns(3)
-        with col1: st.metric(label=f"Total Samples ({time_filter})", value=f"{stats['total']:,}")
-        with col2: st.metric(label="Weighted Avg Daily Samples", value=f"{stats['weighted_avg']}")
-        with col3: st.metric(label="Facility Uptime %", value=f"{calc_uptime(stats)}%")
-        st.divider()
+        # Custom HTML Metrics
+        st.markdown(f'''
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Samples</div>
+                <div class="metric-value">{stats['total']:,}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Weighted Avg / Day</div>
+                <div class="metric-value">{stats['weighted_avg']}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Facility Uptime</div>
+                <div class="metric-value">{calc_uptime(stats)}%</div>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+        
         c1, c2, c3 = st.columns([2, 1, 1])
         with c1: metric_option = st.radio("Metric:", ("Average Samples", "Total Samples", "Uptime %"), horizontal=True, key="d1")
         with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d2")
@@ -344,7 +375,7 @@ if view_mode == "📊 District View":
             if metric_col == 'Uptime %' or metric_col == 'Total Patients': current_avg = round(filtered[metric_col].mean(), 1)
             else: current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
                 
-            fig.add_vline(x=current_avg, line_dash="dash", line_color="#0057B8", annotation_text=f"Avg: {current_avg}", annotation_font_color="#0057B8")
+            fig.add_vline(x=current_avg, line_dash="dash", line_color="#2563EB", annotation_text=f"Avg: {current_avg}", annotation_font_color="#2563EB")
             
             fig.update_layout(**PLOTLY_LAYOUT)
             fig.update_layout(height=max(500, len(sorted_df) * 25), yaxis=dict(autorange="reversed", showgrid=False), legend_title="", xaxis_title=metric_option, yaxis_title="")
@@ -356,14 +387,40 @@ if view_mode == "📊 District View":
             fd = extract_date(stats['active_date_cols'][0]); ld = extract_date(stats['active_date_cols'][-1])
             if pd.notna(fd) and pd.notna(ld): period_str = f"{fd.strftime('%d %b %Y')} – {ld.strftime('%d %b %Y')}"
         d_grade = district_grade(plot_df)
-        st.markdown(f'<div class="report-header"><div class="report-title">📋 District Report Card — {selected_district_zm}</div><div class="report-meta"><strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; <strong>Period:</strong> {period_str} ({stats["num_days"]} days) &nbsp;|&nbsp; <strong>Generated:</strong> {pd.Timestamp.now().strftime("%d %b %Y, %H:%M")}</div></div>', unsafe_allow_html=True)
-        col1, col2, col3, col4 = st.columns(4)
-        with col1: st.metric("Total Samples", f"{stats['total']:,}")
-        with col2: st.metric("Weighted Avg / Day", f"{stats['weighted_avg']}")
-        with col3: st.metric("Facility Uptime", f"{calc_uptime(stats)}%")
-        with col4: st.markdown(f'<div style="background-color:#FFFFFF !important; border:1px solid #E2E8F0; padding:15px; border-radius:12px; text-align:center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);"><div style="color:#64748B; font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:1px; margin-bottom:8px;">District Grade</div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div>', unsafe_allow_html=True)
-        st.divider()
-        st.markdown("### 🏥 Spoke Scorecard")
+        
+        st.markdown(f'''
+        <div class="report-header">
+            <div class="report-title">District Report Card — {selected_district_zm}</div>
+            <div class="report-meta">
+                <strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; 
+                <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; 
+                <strong>Period:</strong> {period_str} ({stats["num_days"]} days)
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+        
+        st.markdown(f'''
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Samples</div>
+                <div class="metric-value">{stats['total']:,}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Weighted Avg / Day</div>
+                <div class="metric-value">{stats['weighted_avg']}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Facility Uptime</div>
+                <div class="metric-value">{calc_uptime(stats)}%</div>
+            </div>
+            <div class="metric-card" style="background-color:#F8FAFC;">
+                <div class="metric-label">District Grade</div>
+                <div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+
+        st.markdown("<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Spoke Scorecard</h4>", unsafe_allow_html=True)
         scorecard = plot_df.copy()
         scorecard['Grade'] = scorecard.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
         scorecard = scorecard.sort_values(by=['Grade', 'Uptime %', 'Average Patients'], ascending=[True, False, False])
@@ -371,13 +428,14 @@ if view_mode == "📊 District View":
         display['Facility'] = scorecard[facility_col]; display['Grade'] = scorecard['Grade'].apply(grade_emoji); display['Uptime %'] = scorecard['Uptime %']
         display['Avg / Day'] = scorecard['Average Patients']; display['Total Samples'] = scorecard['Total Patients'].astype(int); display['Zero Days'] = scorecard['Zero Days'].astype(int)
         st.dataframe(display, use_container_width=True, hide_index=True, column_config={"Facility": st.column_config.TextColumn("Facility", width="large"), "Grade": st.column_config.TextColumn("Grade", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"), "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"), "Total Samples": st.column_config.NumberColumn("Total Samples", format="%d"), "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d")})
-        st.divider()
+        
+        st.markdown("<br>", unsafe_allow_html=True)
         export = scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
         export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Samples', 'Zero Days']
         st.download_button("📥 Download Report Card (CSV)", export.to_csv(index=False).encode('utf-8'), f'{selected_district_zm}_ReportCard.csv', 'text/csv')
 
     with d_tab3:
-        st.markdown("#### Daily Sample Trend")
+        st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>Daily Sample Trend</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
             trend_data = []
             for col in stats['active_date_cols']:
@@ -386,11 +444,11 @@ if view_mode == "📊 District View":
             if trend_data:
                 trend_df = pd.DataFrame(trend_data).sort_values('Date')
                 fig_t = px.line(trend_df, x='Date', y='Samples', markers=True)
-                fig_t.update_traces(line_color='#0057B8', line_width=3)
+                fig_t.update_traces(line_color='#2563EB', line_width=3)
                 fig_t.update_layout(**PLOTLY_LAYOUT)
                 st.plotly_chart(fig_t, use_container_width=True)
-        st.divider()
-        st.markdown("#### Spoke Heatmap (Facility vs. Date)")
+                
+        st.markdown("<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
         heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
         heatmap_df.columns = [extract_date(c).strftime('%d-%b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
         fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale='RdYlGn')
@@ -398,21 +456,37 @@ if view_mode == "📊 District View":
         fig_h.update_layout(height=max(600, len(heatmap_df) * 20))
         st.plotly_chart(fig_h, use_container_width=True)
 
+# ==============================================================================
+# VIEW: STATE VIEW
+# ==============================================================================
 else:
-    st.markdown("### 🌐 Bihar State Master View")
+    st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Bihar State Master View</h3>", unsafe_allow_html=True)
+    
     with st.spinner("Loading State Data..."):
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
         
     if not state_df.empty:
         total_state_samples = state_df['Total Samples'].sum()
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
-        sc1, sc2, sc3 = st.columns(3)
-        with sc1: st.metric("Total Bihar Samples", f"{total_state_samples:,}")
-        with sc2: st.metric("Active Districts", f"{len(state_df)}")
-        with sc3: st.metric("Statewide Avg Uptime", f"{avg_state_uptime}%")
-        st.divider()
         
-        s_tab1, s_tab2 = st.tabs(["🏆 Leaderboard", "⚖️ District vs District"])
+        st.markdown(f'''
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-label">Total Bihar Samples</div>
+                <div class="metric-value">{total_state_samples:,}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Active Districts</div>
+                <div class="metric-value">{len(state_df)}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Statewide Avg Uptime</div>
+                <div class="metric-value">{avg_state_uptime}%</div>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+        
+        s_tab1, s_tab2 = st.tabs(["Leaderboard", "District vs District"])
         with s_tab1:
             state_metric_label = st.radio("Rank & Compare by:", ["Total Sample Count", "Weighted Avg", "Uptime %"], horizontal=True)
             state_metric_col = {"Total Sample Count": "Total Samples", "Weighted Avg": "Weighted Avg", "Uptime %": "Uptime %"}[state_metric_label]
@@ -425,8 +499,8 @@ else:
             def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
             lb_df['District'] = lb_df.apply(lambda row: f"{medal(row.name)} {row['District']}".strip(), axis=1)
             st.dataframe(lb_df, use_container_width=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
-            st.divider()
-            st.markdown(f"#### Top 15 Districts Chart (Ranked by {state_metric_label})")
+            
+            st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Top 15 Districts (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
             top15 = lb_df.head(15)
             fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
             fig_lb.update_layout(**PLOTLY_LAYOUT)
@@ -434,11 +508,10 @@ else:
             st.plotly_chart(fig_lb, use_container_width=True)
             
         with s_tab2:
-            st.markdown(f"#### Head-to-Head Comparison")
             sorted_sheets = sorted(available_sheets)
             ca, cb = st.columns(2)
-            with ca: district_a = st.selectbox("🔵 District A", sorted_sheets, index=0, key='cmp_a')
-            with cb: district_b = st.selectbox("🔴 District B", sorted_sheets, index=min(1, len(sorted_sheets) - 1), key='cmp_b')
+            with ca: district_a = st.selectbox("District A", sorted_sheets, index=0, key='cmp_a')
+            with cb: district_b = st.selectbox("District B", sorted_sheets, index=min(1, len(sorted_sheets) - 1), key='cmp_b')
             
             if district_a and district_b:
                 df_a = read_sheet_robust(xls, district_a); df_b = read_sheet_robust(xls, district_b)
@@ -446,10 +519,10 @@ else:
                 if pa is None or pb is None: st.error("Could not process one of the selected districts.")
                 else:
                     col1, col2 = st.columns(2)
-                    with col1: st.markdown(f'<div class="battle-card battle-card-blue"><div class="battle-title" style="color: #3B82F6;">🔵 {district_a}</div><div class="battle-row"><span>Total Samples</span> <span class="battle-val">{sa["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sa["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sa)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sa["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
-                    with col2: st.markdown(f'<div class="battle-card battle-card-red"><div class="battle-title" style="color: #EF4444;">🔴 {district_b}</div><div class="battle-row"><span>Total Samples</span> <span class="battle-val">{sb["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sb["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sb)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sb["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
-                    st.divider()
-                    st.markdown("#### 📈 Daily Sample Trend — Overlaid")
+                    with col1: st.markdown(f'<div class="battle-card battle-card-blue"><div class="battle-title" style="color: #2563EB;">{district_a}</div><div class="battle-row"><span>Total Samples</span> <span class="battle-val">{sa["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sa["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sa)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sa["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    with col2: st.markdown(f'<div class="battle-card battle-card-red"><div class="battle-title" style="color: #DC2626;">{district_b}</div><div class="battle-row"><span>Total Samples</span> <span class="battle-val">{sb["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sb["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sb)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sb["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    
+                    st.markdown("#### Daily Sample Trend — Overlaid")
                     def get_trend(p, cols, name):
                         d = []
                         for c in cols:
@@ -457,7 +530,7 @@ else:
                             if pd.notna(dv): d.append({'Date': dv, 'Samples': t, 'District': name})
                         return pd.DataFrame(d)
                     combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
-                    fig_c = px.line(combined, x='Date', y='Samples', color='District', markers=True, color_discrete_map={district_a: '#3B82F6', district_b: '#EF4444'})
+                    fig_c = px.line(combined, x='Date', y='Samples', color='District', markers=True, color_discrete_map={district_a: '#2563EB', district_b: '#DC2626'})
                     fig_c.update_layout(**PLOTLY_LAYOUT)
                     fig_c.update_layout(height=450)
                     st.plotly_chart(fig_c, use_container_width=True)
