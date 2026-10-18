@@ -17,10 +17,11 @@ st.markdown("""
     html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
     .stApp { background-color: #F8FAFC !important; }
     
-    /* Hide default Streamlit elements for a custom app feel */
+    /* Hide default Streamlit elements */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    [data-testid="collapsedControl"] { display: none; } /* Hides the keyboard_double arrow */
     
     /* Sidebar Styling */
     section[data-testid="stSidebar"] {
@@ -30,22 +31,21 @@ st.markdown("""
     }
     section[data-testid="stSidebar"] * { color: #0F172A !important; font-family: 'Inter', sans-serif !important; }
     
-    /* FIX THE BROKEN FILE UPLOADER */
+    /* Clean File Uploader */
     [data-testid="stFileUploadDropzone"] {
         background-color: #F8FAFC !important;
         border: 1px dashed #CBD5E1 !important;
         border-radius: 8px !important;
+        padding: 20px;
     }
     [data-testid="stFileUploadDropzone"] button {
         background-color: #2563EB !important;
         color: #FFFFFF !important;
         border: none !important;
-        padding: 0.5rem 1rem !important;
+        padding: 8px 16px !important;
         font-weight: 500 !important;
+        border-radius: 6px !important;
     }
-    /* Prevent the double text bug */
-    [data-testid="stFileUploadDropzone"] button span { display: none; }
-    [data-testid="stFileUploadDropzone"] button::after { content: "Browse File"; }
 
     /* Custom Enterprise Metric Cards */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
@@ -56,7 +56,6 @@ st.markdown("""
     }
     .metric-label { color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .metric-value { color: #0F172A; font-size: 28px; font-weight: 700; line-height: 1; }
-    .metric-delta { font-size: 13px; font-weight: 500; margin-top: 8px; display: flex; align-items: center; gap: 4px; }
 
     /* Custom Dataframe Style */
     [data-testid="stDataFrame"] { 
@@ -96,6 +95,9 @@ st.markdown("""
     .app-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid #E2E8F0; margin-bottom: 32px; }
     .app-title { font-size: 24px; font-weight: 700; color: #0F172A; display: flex; align-items: center; gap: 12px; }
     .app-subtitle { font-size: 14px; color: #64748B; }
+    
+    /* Custom Info Banner */
+    .info-banner { background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 16px; color: #1E3A8A; display: flex; align-items: center; gap: 12px; margin-top: 20px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -253,7 +255,8 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Control Panel</h3>", unsafe_allow_html=True)
-    uploaded_data_file = st.file_uploader("Upload Data File", type=["xlsx", "csv"], label_visibility="collapsed")
+    # Native uploader, no custom text hacks
+    uploaded_data_file = st.file_uploader("Upload Data File", type=["xlsx", "csv"])
     
     if uploaded_data_file is not None:
         try:
@@ -274,8 +277,11 @@ if uploaded_data_file is None:
         <div class="app-title">🏥 Bihar Health Dashboard</div>
         <div class="app-subtitle">Enterprise Edition</div>
     </div>
+    <div class="info-banner">
+        <span style="font-size: 20px;">👈</span>
+        <span style="font-weight: 500;">Please upload the Main Data File from the sidebar to begin.</span>
+    </div>
     """, unsafe_allow_html=True)
-    st.info("👈 Please upload the Main Data File from the sidebar to begin.")
     st.stop()
 
 st.markdown(f"""
