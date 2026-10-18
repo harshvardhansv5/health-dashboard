@@ -586,7 +586,21 @@ if view_mode == "📊 District View":
         heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
         heatmap_df['Total'] = heatmap_df.sum(axis=1)
         heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
-        heatmap_df.columns = [extract_date(c).strftime('%d %b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
+        
+        # --- FIX: Deduplicate column names to prevent Plotly DuplicateError ---
+        _new_cols = []
+        _seen = {}
+        for _c in heatmap_df.columns:
+            _d = extract_date(_c)
+            _lbl = _d.strftime('%d %b') if pd.notna(_d) else str(_c)
+            if _lbl in _seen:
+                _seen[_lbl] += 1
+                _lbl = f"{_lbl} ({_seen[_lbl]})"
+            else:
+                _seen[_lbl] = 0
+            _new_cols.append(_lbl)
+        heatmap_df.columns = _new_cols
+        # ---------------------------------------------------------------------
 
         fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#DBEAFE'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
         fig_h.update_traces(xgap=2, ygap=2)
