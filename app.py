@@ -6,47 +6,27 @@ import re
 import io
 
 # --- PAGE SETUP ---
-st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
-# --- ENTERPRISE UI CSS ---
+# --- CLEAN ENTERPRISE UI CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-    /* Global Typography & Background */
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif !important; }
-    .stApp { background-color: #F8FAFC !important; }
-    
-    /* Hide default Streamlit elements */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    [data-testid="collapsedControl"] { display: none; } /* Hides the keyboard_double arrow */
-    
-    /* Sidebar Styling */
-    section[data-testid="stSidebar"] {
-        background-color: #FFFFFF !important;
-        border-right: 1px solid #E2E8F0;
-        padding-top: 2rem;
+    /* Apply font safely without breaking Streamlit icons */
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
-    section[data-testid="stSidebar"] * { color: #0F172A !important; font-family: 'Inter', sans-serif !important; }
     
-    /* Clean File Uploader */
-    [data-testid="stFileUploadDropzone"] {
-        background-color: #F8FAFC !important;
-        border: 1px dashed #CBD5E1 !important;
-        border-radius: 8px !important;
-        padding: 20px;
-    }
-    [data-testid="stFileUploadDropzone"] button {
-        background-color: #2563EB !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        padding: 8px 16px !important;
-        font-weight: 500 !important;
-        border-radius: 6px !important;
+    /* Protect Material Icons */
+    .material-symbols-rounded, [data-testid="stIconMaterial"] {
+        font-family: 'Material Symbols Rounded' !important;
     }
 
+    /* Global Backgrounds */
+    .stApp { background-color: #F8FAFC !important; }
+    section[data-testid="stSidebar"] { background-color: #FFFFFF !important; border-right: 1px solid #E2E8F0; }
+    
     /* Custom Enterprise Metric Cards */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .metric-card {
@@ -255,6 +235,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Control Panel</h3>", unsafe_allow_html=True)
+    
     # Native uploader, no custom text hacks
     uploaded_data_file = st.file_uploader("Upload Data File", type=["xlsx", "csv"])
     
