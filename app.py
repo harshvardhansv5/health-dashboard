@@ -4,8 +4,6 @@ import plotly.express as px
 from datetime import timedelta, datetime
 import re
 import io
-from fpdf import FPDF
-import base64
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
@@ -63,52 +61,17 @@ st.markdown("""
 
     /* --- DEFINITIVE DROPDOWN STYLING --- */
     div[data-testid="stSelectbox"] { margin-bottom: 12px; }
-
-    /* Target the actual clickable button element */
-    div[data-testid="stSelectbox"] div[role="combobox"] {
-        background-color: #F8FAFC !important; /* Light grey to contrast with white cards */
-        border: 2px solid #CBD5E1 !important; /* Thick, visible border */
-        border-radius: 8px !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important;
-        transition: all 0.2s ease-in-out !important;
-        min-height: 44px !important;
-    }
-
-    /* Force inner wrapper to be transparent */
-    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {
-        background-color: transparent !important;
-        border: none !important;
-    }
-
-    /* Hover State */
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover {
-        border-color: #2563EB !important;
-        background-color: #FFFFFF !important;
-    }
-
-    /* Focus State */
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within {
-        border-color: #2563EB !important;
-        background-color: #FFFFFF !important;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
-    }
-
-    /* Text and Arrow */
+    div[data-testid="stSelectbox"] div[role="combobox"] { background-color: #F8FAFC !important; border: 2px solid #CBD5E1 !important; border-radius: 8px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 44px !important; }
+    div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #2563EB !important; background-color: #FFFFFF !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #2563EB !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #64748B !important; }
-
-    /* Label */
     label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 600 !important; font-size: 14px !important; margin-bottom: 4px !important; }
 
     /* Date Picker */
-    div[data-testid="stDateInput"] div[data-baseweb="input"] {
-        border: 2px solid #CBD5E1 !important; border-radius: 8px !important;
-        background-color: #F8FAFC !important; min-height: 44px !important;
-    }
-    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within {
-        border-color: #2563EB !important; background-color: #FFFFFF !important;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
-    }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #CBD5E1 !important; border-radius: 8px !important; background-color: #F8FAFC !important; min-height: 44px !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #2563EB !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
 
     /* Segmented Control (Radio Buttons) */
     div[data-testid="stRadio"] label > div:first-child { display: none !important; }
@@ -230,63 +193,6 @@ def district_grade(plot_df):
     return reverse_map[max(1, min(5, int(round(sum(grades) / len(grades)))))] if grades else "F"
 
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
-
-# --- PDF GENERATOR CLASS ---
-class PDFReport(FPDF):
-    def header(self):
-        self.set_font('Helvetica', 'B', 16)
-        self.set_text_color(15, 23, 42)
-        self.cell(0, 10, 'Bihar Health Dashboard - District Report Card', 0, 1, 'C')
-        self.ln(5)
-
-    def footer(self):
-        self.set_y(-15)
-        self.set_font('Helvetica', 'I', 8)
-        self.set_text_color(100, 116, 139)
-        self.cell(0, 10, f'Generated on {datetime.now().strftime("%d %b %Y, %H:%M")} | Page {self.page_no()}', 0, 0, 'C')
-
-def create_pdf(district, stats, scorecard, chart_img_bytes, date_range_str):
-    pdf = PDFReport()
-    pdf.add_page()
-    
-    pdf.set_font('Helvetica', '', 10)
-    pdf.set_text_color(71, 85, 105)
-    pdf.cell(0, 6, f'District: {district}   |   Period: {date_range_str}', 0, 1, 'C')
-    pdf.ln(5)
-    
-    pdf.set_font('Helvetica', 'B', 12)
-    pdf.set_text_color(15, 23, 42)
-    pdf.cell(0, 8, 'Key Metrics', 0, 1, 'L')
-    pdf.set_font('Helvetica', '', 10)
-    pdf.cell(0, 6, f"Total Patients: {stats['total']:,}   |   Weighted Avg/Day: {stats['weighted_avg']}   |   Facility Uptime: {calc_uptime(stats)}%", 0, 1, 'L')
-    pdf.ln(5)
-
-    if chart_img_bytes:
-        with open("temp_chart.png", "wb") as f:
-            f.write(chart_img_bytes)
-        pdf.image("temp_chart.png", x=10, y=None, w=190)
-        pdf.ln(5)
-
-    pdf.set_font('Helvetica', 'B', 10)
-    pdf.set_fill_color(241, 245, 249)
-    pdf.set_text_color(15, 23, 42)
-    pdf.cell(70, 8, 'Facility Name', 1, 0, 'L', True)
-    pdf.cell(20, 8, 'Grade', 1, 0, 'C', True)
-    pdf.cell(25, 8, 'Uptime %', 1, 0, 'C', True)
-    pdf.cell(25, 8, 'Avg / Day', 1, 0, 'C', True)
-    pdf.cell(25, 8, 'Total Pts', 1, 0, 'C', True)
-    pdf.cell(25, 8, 'Zero Days', 1, 1, 'C', True)
-
-    pdf.set_font('Helvetica', '', 9)
-    for _, row in scorecard.iterrows():
-        pdf.cell(70, 7, str(row['Facility'])[:45], 1, 0, 'L')
-        pdf.cell(20, 7, str(row['Grade']).replace('🟢 ','').replace('🟡 ','').replace('🟠 ','').replace('🔴 ',''), 1, 0, 'C')
-        pdf.cell(25, 7, f"{row['Uptime %']}%", 1, 0, 'C')
-        pdf.cell(25, 7, str(row['Avg / Day']), 1, 0, 'C')
-        pdf.cell(25, 7, str(row['Total Patients']), 1, 0, 'C')
-        pdf.cell(25, 7, str(row['Zero Days']), 1, 1, 'C')
-
-    return bytes(pdf.output())
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -489,30 +395,32 @@ if view_mode == "📊 District View":
         
         st.markdown("<br>", unsafe_allow_html=True)
         
-        col_pdf1, col_pdf2 = st.columns([1, 2])
-        with col_pdf1:
-            if st.button("📄 Generate PDF Report", use_container_width=True):
-                with st.spinner("Generating PDF & Rendering Chart..."):
-                    pdf_fig = px.bar(scorecard.head(15), y=facility_col, x='Average Patients', orientation='h', title='Top 15 Facilities (Avg Patients)')
-                    pdf_fig.update_layout(**PLOTLY_LAYOUT, yaxis=dict(autorange="reversed"), height=400, width=800)
-                    
-                    img_bytes = pdf_fig.to_image(format="png", scale=2)
-                    pdf_bytes = create_pdf(selected_district_zm, stats, display, img_bytes, date_range_str)
-                    
-                    st.download_button(
-                        label="📥 Click here to Download",
-                        data=pdf_bytes,
-                        file_name=f"{selected_district_zm}_Report_{pd.Timestamp.now().strftime('%Y%m%d')}.pdf",
-                        mime="application/pdf",
-                        key="download_pdf"
-                    )
-
-        with col_pdf2:
-            st.info("The PDF contains District Metrics, a Trend Chart, and the full Spoke Scorecard.")
+        # --- FEATURE: EXCEL EXPORT ---
+        col_dl1, col_dl2 = st.columns([1, 2])
         
-        export = scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Total Patients', 'Zero Days']].copy()
-        export.columns = ['Facility', 'Grade', 'Uptime %', 'Avg Per Day', 'Total Patients', 'Zero Days']
-        st.download_button("📥 Download Raw Data (CSV)", export.to_csv(index=False).encode('utf-8'), f'{selected_district_zm}_ReportCard.csv', 'text/csv')
+        # Prepare the Excel file in memory
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            # Sheet 1: Summary
+            summary_df = pd.DataFrame({
+                'Metric': ['District', 'ZM', 'Hub', 'Period', 'Total Patients', 'Weighted Avg / Day', 'Facility Uptime', 'District Grade'],
+                'Value': [selected_district_zm, zm_name_for_district, selected_hub_zm, date_range_str, stats['total'], stats['weighted_avg'], f"{calc_uptime(stats)}%", d_grade]
+            })
+            summary_df.to_excel(writer, index=False, sheet_name='Summary')
+            
+            # Sheet 2: Scorecard
+            display.to_excel(writer, index=False, sheet_name='Scorecard')
+            
+        with col_dl1:
+            st.download_button(
+                label="📥 Download Excel Report",
+                data=buffer.getvalue(),
+                file_name=f"{selected_district_zm}_Report_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+        with col_dl2:
+            st.info("The Excel file contains two sheets: one for the District Summary and one for the full Spoke Scorecard.")
 
     with d_tab3:
         st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>Daily Patient Trend</h4>", unsafe_allow_html=True)
