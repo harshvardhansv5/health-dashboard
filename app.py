@@ -94,17 +94,48 @@ st.markdown("""
     /* Custom Info Banner */
     .info-banner { background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 16px; color: #1E3A8A; display: flex; align-items: center; gap: 12px; margin-top: 20px; }
 
-    /* Premium Selectbox */
-    div[data-baseweb="select"] > div {
-        border-radius: 8px !important; border: 1px solid #CBD5E1 !important;
-        background-color: #FFFFFF !important; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
-        transition: all 0.2s ease-in-out !important; min-height: 44px;
+        /* --- NUCLEAR PREMIUM SELECTBOX --- */
+    
+    /* 1. Target the widget container */
+    div[data-testid="stSelectbox"] {
+        margin-bottom: 10px;
     }
-    div[data-baseweb="select"] > div:hover { border-color: #2563EB !important; }
-    div[data-baseweb="select"] > div:focus-within { border-color: #2563EB !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
-    div[data-baseweb="select"] span { color: #0F172A !important; font-weight: 500 !important; }
-    label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 600 !important; font-size: 14px !important; }
 
+    /* 2. Force the border on the BaseWeb wrapper */
+    div[data-baseweb="select"] > div {
+        border: 1.5px solid #CBD5E1 !important; /* Thicker, darker border */
+        border-radius: 8px !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important; /* Adds depth */
+        transition: all 0.2s ease !important;
+        min-height: 46px !important;
+    }
+
+    /* 3. Hover state */
+    div[data-baseweb="select"] > div:hover {
+        border-color: #2563EB !important;
+        box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1) !important;
+    }
+
+    /* 4. Focus state (when clicked) */
+    div[data-baseweb="select"] > div:focus-within {
+        border-color: #2563EB !important;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+    }
+
+    /* 5. Text styling inside */
+    div[data-baseweb="select"] span {
+        color: #0F172A !important;
+        font-weight: 600 !important;
+    }
+
+    /* 6. Label styling */
+    label[data-testid="stWidgetLabel"] p {
+        color: #1E293B !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+        margin-bottom: 4px !important;
+    }
     /* --- PREMIUM SEGMENTED CONTROL (Radio Buttons) --- */
     div[role="radiogroup"] > label > div:first-child { display: none !important; }
     div[role="radiogroup"] {
