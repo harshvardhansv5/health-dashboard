@@ -24,6 +24,7 @@ st.markdown("""
     .stApp { background-color: #F8FAFC !important; }
     section[data-testid="stSidebar"] { background-color: #FFFFFF !important; border-right: 1px solid #E2E8F0; }
     
+    /* Custom Enterprise Metric Cards */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .metric-card {
         background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px;
@@ -33,20 +34,24 @@ st.markdown("""
     .metric-label { color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .metric-value { color: #0F172A; font-size: 28px; font-weight: 700; line-height: 1; }
 
+    /* Custom Dataframe Style */
     [data-testid="stDataFrame"] { 
         background-color: #FFFFFF !important; border-radius: 10px; border: 1px solid #E2E8F0;
         box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); padding: 4px;
     }
 
+    /* ZM Card */
     .zm-card { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
     .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;}
     .zm-card-name { color: #0F172A; font-size: 15px; font-weight: 600; margin-bottom: 2px;}
     .zm-card-zone { color: #2563EB; font-size: 13px; font-weight: 500;}
 
+    /* Report Header */
     .report-header { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); }
     .report-title { color: #0F172A; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
     .report-meta { color: #64748B; font-size: 14px; line-height: 1.6; }
     
+    /* Grade Badges */
     .grade-badge { display: inline-block; padding: 6px 16px; border-radius: 6px; font-size: 20px; font-weight: 700; }
     .grade-A { background-color: #D1FAE5; color: #065F46; border: 1px solid #34D399; }
     .grade-B { background-color: #ECFCCB; color: #3F6212; border: 1px solid #A3E635; }
@@ -54,6 +59,7 @@ st.markdown("""
     .grade-D { background-color: #FFEDD5; color: #9A3412; border: 1px solid #FB923C; }
     .grade-F { background-color: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
 
+    /* Compare Battle Cards */
     .battle-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 24px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); margin-bottom: 16px; }
     .battle-card-blue { border-top: 4px solid #2563EB; }
     .battle-card-red { border-top: 4px solid #DC2626; }
@@ -62,10 +68,30 @@ st.markdown("""
     .battle-row:last-child { border-bottom: none; }
     .battle-val { font-weight: 600; color: #0F172A; }
 
-    .app-header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid #E2E8F0; margin-bottom: 32px; }
-    .app-title { font-size: 24px; font-weight: 700; color: #0F172A; display: flex; align-items: center; gap: 12px; }
-    .app-subtitle { font-size: 14px; color: #64748B; }
-    
+    /* Top App Header (Enterprise Card Style) */
+    .app-header { 
+        display: flex; align-items: center; justify-content: space-between; 
+        padding: 16px 24px; background-color: #FFFFFF; 
+        border-radius: 12px; border: 1px solid #E2E8F0;
+        box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); margin-bottom: 24px; 
+    }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .header-icon { 
+        display: flex; align-items: center; justify-content: center;
+        width: 44px; height: 44px; background-color: #EFF6FF; 
+        border-radius: 10px; font-size: 22px; 
+    }
+    .header-title { font-size: 22px; font-weight: 700; color: #0F172A; letter-spacing: -0.5px; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .status-badge { 
+        background-color: #D1FAE5; color: #065F46; padding: 6px 14px; 
+        border-radius: 20px; font-size: 12px; font-weight: 600; 
+        display: flex; align-items: center; gap: 8px; 
+    }
+    .status-dot { width: 8px; height: 8px; background-color: #10B981; border-radius: 50%; }
+    .header-date { font-size: 13px; color: #64748B; font-weight: 500; }
+
+    /* Custom Info Banner */
     .info-banner { background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 8px; padding: 16px; color: #1E3A8A; display: flex; align-items: center; gap: 12px; margin-top: 20px; }
 </style>
 """, unsafe_allow_html=True)
@@ -243,8 +269,13 @@ with st.sidebar:
 if uploaded_data_file is None:
     st.markdown("""
     <div class="app-header">
-        <div class="app-title">🏥 Bihar Health Dashboard</div>
-        <div class="app-subtitle">Enterprise Edition</div>
+        <div class="header-left">
+            <div class="header-icon">🏥</div>
+            <div class="header-title">Bihar Health Dashboard</div>
+        </div>
+        <div class="header-right">
+            <div class="status-badge"><div class="status-dot"></div> System Active</div>
+        </div>
     </div>
     <div class="info-banner">
         <span style="font-size: 20px;">👈</span>
@@ -255,8 +286,16 @@ if uploaded_data_file is None:
 
 st.markdown(f"""
 <div class="app-header">
-    <div class="app-title">🏥 Bihar Health Dashboard</div>
-    <div class="app-subtitle">Data refreshed: {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}</div>
+    <div class="header-left">
+        <div class="header-icon">🏥</div>
+        <div class="header-title">Bihar Health Dashboard</div>
+    </div>
+    <div class="header-right">
+        <div class="status-badge"><div class="status-dot"></div> System Active</div>
+        <div class="header-date">
+            Refreshed: {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}
+        </div>
+    </div>
 </div>
 """, unsafe_allow_html=True)
 
