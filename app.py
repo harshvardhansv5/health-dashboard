@@ -8,7 +8,7 @@ import io
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
-# --- CLEAN ENTERPRISE UI CSS ---
+# --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -17,21 +17,23 @@ st.markdown("""
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     .material-symbols-rounded, [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
-    .stApp { background-color: #F8FAFC !important; }
+    
+    /* --- THE COOL STEEL CANVAS --- */
+    .stApp { background-color: #F1F5F9 !important; } /* Slate 100 */
     section[data-testid="stSidebar"] { background-color: #FFFFFF !important; border-right: 1px solid #E2E8F0; }
     
     /* Metric Cards */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .metric-card {
         background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px;
-        padding: 20px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1); display: flex; flex-direction: column;
+        padding: 20px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); display: flex; flex-direction: column;
     }
     .metric-label { color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .metric-value { color: #0F172A; font-size: 28px; font-weight: 700; line-height: 1; }
 
     /* Tables & Cards */
     [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 10px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); padding: 4px; }
-    .zm-card { background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+    .zm-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
     .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;}
     .zm-card-name { color: #0F172A; font-size: 15px; font-weight: 600; margin-bottom: 2px;}
     .zm-card-zone { color: #2563EB; font-size: 13px; font-weight: 500;}
@@ -61,21 +63,28 @@ st.markdown("""
 
     /* --- DEFINITIVE DROPDOWN STYLING --- */
     div[data-testid="stSelectbox"] { margin-bottom: 12px; }
-    div[data-testid="stSelectbox"] div[role="combobox"] { background-color: #F8FAFC !important; border: 2px solid #CBD5E1 !important; border-radius: 8px !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 44px !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] { 
+        background-color: #FFFFFF !important; 
+        border: 2px solid #CBD5E1 !important; 
+        border-radius: 8px !important; 
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; 
+        transition: all 0.2s ease-in-out !important; 
+        min-height: 44px !important; 
+    }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #2563EB !important; background-color: #FFFFFF !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #2563EB !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #2563EB !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #2563EB !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #64748B !important; }
     label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 600 !important; font-size: 14px !important; margin-bottom: 4px !important; }
 
     /* Date Picker */
-    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #CBD5E1 !important; border-radius: 8px !important; background-color: #F8FAFC !important; min-height: 44px !important; }
-    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #2563EB !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #CBD5E1 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 44px !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #2563EB !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
 
     /* Segmented Control (Radio Buttons) */
     div[data-testid="stRadio"] label > div:first-child { display: none !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] { display: inline-flex !important; background-color: #F1F5F9 !important; padding: 4px !important; border-radius: 10px !important; gap: 4px !important; border: 1px solid #E2E8F0 !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] { display: inline-flex !important; background-color: #E2E8F0 !important; padding: 4px !important; border-radius: 10px !important; gap: 4px !important; }
     div[data-testid="stRadio"] div[role="radiogroup"] label { padding: 8px 16px !important; border-radius: 6px !important; cursor: pointer !important; transition: all 0.2s ease !important; color: #475569 !important; font-weight: 600 !important; font-size: 14px !important; margin: 0 !important; }
     div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) { background-color: #FFFFFF !important; color: #2563EB !important; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important; }
 </style>
@@ -282,9 +291,7 @@ with st.expander("ℹ️ Metric Definitions & Grading System"):
     })
     
     st.dataframe(
-        grade_data, 
-        hide_index=True, 
-        use_container_width=True,
+        grade_data, hide_index=True, use_container_width=True,
         column_config={
             "Grade": st.column_config.TextColumn("Grade", width="medium"),
             "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
@@ -293,7 +300,15 @@ with st.expander("ℹ️ Metric Definitions & Grading System"):
     )
 st.markdown("<br>", unsafe_allow_html=True)
 
-PLOTLY_LAYOUT = dict(template="plotly_white", font=dict(family="Inter, sans-serif", size=13, color="#475569"), title_font=dict(size=16, color="#0F172A", family="Inter, sans-serif", weight="bold"), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', margin=dict(l=10, r=10, t=60, b=10))
+PLOTLY_LAYOUT = dict(
+    template="plotly_white", 
+    font=dict(family="Inter, sans-serif", size=13, color="#475569"), 
+    title_font=dict(size=16, color="#0F172A", family="Inter, sans-serif", weight="bold"), 
+    plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
+    margin=dict(l=10, r=10, t=60, b=10),
+    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
+    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0')
+)
 
 # ==============================================================================
 # VIEW: DISTRICT VIEW
