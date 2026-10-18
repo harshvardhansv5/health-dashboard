@@ -8,7 +8,7 @@ import io
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
-# --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme) ---
+# --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme v2) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -18,28 +18,28 @@ st.markdown("""
     }
     .material-symbols-rounded, [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
     
-    /* --- THE COOL STEEL CANVAS --- */
-    .stApp { background-color: #F1F5F9 !important; }
-    section[data-testid="stSidebar"] { background-color: #FFFFFF !important; border-right: 1px solid #E2E8F0; }
+    /* --- THE NEW SLATE CANVAS (Less White) --- */
+    .stApp { background-color: #E2E8F0 !important; } 
+    section[data-testid="stSidebar"] { background-color: #F8FAFC !important; border-right: 1px solid #CBD5E1; }
     
     /* Metric Cards */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .metric-card {
-        background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px;
-        padding: 20px; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06); display: flex; flex-direction: column;
+        background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px;
+        padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column;
     }
     .metric-label { color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .metric-value { color: #0F172A; font-size: 28px; font-weight: 700; line-height: 1; }
 
     /* Tables & Cards */
-    [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 10px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); padding: 4px; }
-    .zm-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
+    [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 10px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 4px; }
+    .zm-card { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: 0 2px 4px 0 rgba(0,0,0,0.05); }
     .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;}
     .zm-card-name { color: #0F172A; font-size: 15px; font-weight: 600; margin-bottom: 2px;}
     .zm-card-zone { color: #2563EB; font-size: 13px; font-weight: 500;}
 
     /* Report Header */
-    .report-header { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.1); }
+    .report-header { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
     .report-title { color: #0F172A; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
     .report-meta { color: #64748B; font-size: 14px; line-height: 1.6; }
     
@@ -52,7 +52,7 @@ st.markdown("""
     .grade-F { background-color: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
 
     /* Header */
-    .app-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .app-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
     .header-left { display: flex; align-items: center; gap: 16px; }
     .header-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background-color: #EFF6FF; border-radius: 10px; font-size: 22px; }
     .header-title { font-size: 22px; font-weight: 700; color: #0F172A; letter-spacing: -0.5px; }
@@ -64,23 +64,23 @@ st.markdown("""
     /* --- DEFINITIVE DROPDOWN STYLING --- */
     div[data-testid="stSelectbox"] { margin-bottom: 12px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
-        background-color: #FFFFFF !important; border: 2px solid #CBD5E1 !important; border-radius: 8px !important; 
+        background-color: #F8FAFC !important; border: 1px solid #94A3B8 !important; border-radius: 8px !important; 
         box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 44px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #2563EB !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #2563EB !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #2563EB !important; background-color: #FFFFFF !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #2563EB !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #64748B !important; }
     label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 600 !important; font-size: 14px !important; margin-bottom: 4px !important; }
 
     /* Date Picker */
-    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #CBD5E1 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 44px !important; }
-    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #2563EB !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1px solid #94A3B8 !important; border-radius: 8px !important; background-color: #F8FAFC !important; min-height: 44px !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #2563EB !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
 
     /* Segmented Control (Radio Buttons) */
     div[data-testid="stRadio"] label > div:first-child { display: none !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] { display: inline-flex !important; background-color: #E2E8F0 !important; padding: 4px !important; border-radius: 10px !important; gap: 4px !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] { display: inline-flex !important; background-color: #E2E8F0 !important; padding: 4px !important; border-radius: 10px !important; gap: 4px !important; border: 1px solid #CBD5E1 !important; }
     div[data-testid="stRadio"] div[role="radiogroup"] label { padding: 8px 16px !important; border-radius: 6px !important; cursor: pointer !important; transition: all 0.2s ease !important; color: #475569 !important; font-weight: 600 !important; font-size: 14px !important; margin: 0 !important; }
     div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) { background-color: #FFFFFF !important; color: #2563EB !important; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important; }
 </style>
@@ -223,7 +223,7 @@ with st.sidebar:
             xls = pd.ExcelFile(uploaded_data_file)
             available_sheets = xls.sheet_names
             
-            st.markdown("<hr style='margin: 20px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin: 20px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
             
             st.markdown("<p style='font-size:13px; font-weight:600; color:#64748B; text-transform:uppercase; margin-bottom:5px;'>Time Range</p>", unsafe_allow_html=True)
             time_filter = st.selectbox("Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days", "Custom Range"], label_visibility="collapsed")
@@ -302,8 +302,8 @@ PLOTLY_LAYOUT = dict(
     title_font=dict(size=16, color="#0F172A", family="Inter, sans-serif", weight="bold"), 
     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
     margin=dict(l=10, r=10, t=60, b=10),
-    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
-    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0')
+    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'),
+    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1')
 )
 
 # ==============================================================================
@@ -368,12 +368,11 @@ if view_mode == "📊 District View":
                 
             fig.add_vline(x=current_avg, line_dash="dash", line_color="#2563EB", line_width=2, annotation_text=f"Avg: {current_avg}", annotation_position="top right", annotation_font_color="#2563EB", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#2563EB", annotation_borderwidth=1, annotation_borderpad=4)
             
-            # Fix: Update layout_dict safely without duplicate keys
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
                 height=max(500, len(sorted_df) * 30),
                 yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")),
-                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', tickfont=dict(size=12, color="#64748B")),
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickfont=dict(size=12, color="#64748B")),
                 showlegend=False,
                 xaxis_title=metric_option,
                 yaxis_title="",
@@ -385,7 +384,7 @@ if view_mode == "📊 District View":
             st.plotly_chart(fig, use_container_width=True)
 
             # --- FEATURE: FACILITY DRILL-DOWN ---
-            st.markdown("<hr style='margin: 30px 0 20px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin: 30px 0 20px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
             st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>🔍 Facility Drill-Down</h4>", unsafe_allow_html=True)
             
             drill_options = ["-- Select a facility to investigate --"] + sorted_df[facility_col].tolist()
@@ -405,12 +404,11 @@ if view_mode == "📊 District View":
                     fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True)
                     fig_dt.update_traces(line_color='#2563EB', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')), fillcolor='rgba(37, 99, 235, 0.1)')
                     
-                    # Fix: Update dt_layout safely
                     dt_layout = PLOTLY_LAYOUT.copy()
                     dt_layout.update(dict(
                         height=300,
-                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
-                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
+                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'),
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'),
                         margin=dict(l=10, r=10, t=20, b=10)
                     ))
                     fig_dt.update_layout(**dt_layout)
@@ -498,7 +496,17 @@ if view_mode == "📊 District View":
 
         fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#DBEAFE'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
         fig_h.update_traces(xgap=2, ygap=2)
-        fig_h.update_layout(**PLOTLY_LAYOUT, height=max(400, len(heatmap_df) * 35), yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")), xaxis=dict(tickfont=dict(size=11, color="#475569")), coloraxis_colorbar=dict(title="Patients", thickness=15))
+        
+        # Fixed duplicate axis error
+        hm_layout = PLOTLY_LAYOUT.copy()
+        hm_layout.update(dict(
+            height=max(400, len(heatmap_df) * 35),
+            yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")),
+            xaxis=dict(tickfont=dict(size=11, color="#475569")),
+            coloraxis_colorbar=dict(title="Patients", thickness=15)
+        ))
+        fig_h.update_layout(**hm_layout)
+        
         st.plotly_chart(fig_h, use_container_width=True)
 
 # ==============================================================================
@@ -549,7 +557,6 @@ else:
             top15 = lb_df.head(15)
             fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
             
-            # Fix: Update layout safely
             lb_layout = PLOTLY_LAYOUT.copy()
             lb_layout.update(dict(
                 yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), 
@@ -582,8 +589,16 @@ else:
                         return pd.DataFrame(d)
                     combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
                     fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#2563EB', district_b: '#DC2626'})
-                    fig_c.update_layout(**PLOTLY_LAYOUT)
-                    fig_c.update_layout(height=450, xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'))
+                    
+                    # Fixed duplicate axis error here too
+                    cmp_layout = PLOTLY_LAYOUT.copy()
+                    cmp_layout.update(dict(
+                        height=450,
+                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'), 
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1')
+                    ))
+                    fig_c.update_layout(**cmp_layout)
+                    
                     st.plotly_chart(fig_c, use_container_width=True)
     else:
         st.warning("No district data available for the selected time range.")
