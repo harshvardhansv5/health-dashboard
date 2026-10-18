@@ -73,7 +73,7 @@ st.markdown("""
         display: flex; align-items: center; justify-content: space-between; 
         padding: 16px 24px; background-color: #FFFFFF; 
         border-radius: 12px; border: 1px solid #E2E8F0;
-        box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); margin-bottom: 24px; 
+        box-shadow: 0 1px 3px 0 rgba(0,0,0,0.05); margin-bottom: 20px; 
     }
     .header-left { display: flex; align-items: center; gap: 16px; }
     .header-icon { 
@@ -104,6 +104,34 @@ st.markdown("""
     div[data-baseweb="select"] > div:focus-within { border-color: #2563EB !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
     div[data-baseweb="select"] span { color: #0F172A !important; font-weight: 500 !important; }
     label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 600 !important; font-size: 14px !important; }
+
+    /* --- PREMIUM SEGMENTED CONTROL (Radio Buttons) --- */
+    div[role="radiogroup"] > label > div:first-child { display: none !important; }
+    div[role="radiogroup"] {
+        display: inline-flex !important;
+        background-color: #F1F5F9 !important;
+        padding: 4px !important;
+        border-radius: 10px !important;
+        gap: 4px !important;
+        margin-bottom: 0px !important;
+    }
+    div[role="radiogroup"] > label {
+        margin: 0 !important;
+        padding: 8px 16px !important;
+        border-radius: 8px !important;
+        cursor: pointer !important;
+        transition: all 0.2s ease !important;
+        color: #475569 !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+    }
+    div[role="radiogroup"] > label:hover { color: #0F172A !important; }
+    div[role="radiogroup"] > label[data-checked="true"] {
+        background-color: #FFFFFF !important;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06) !important;
+        color: #0F172A !important;
+    }
+    div[data-testid="stRadio"] { margin-bottom: -10px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -310,9 +338,8 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Main Navigation
+# Main Navigation (Toggle)
 view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View"], horizontal=True, label_visibility="collapsed")
-st.markdown("<hr style='margin: 10px 0 15px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
 
 # --- DEFINITIONS EXPANDER ---
 with st.expander("ℹ️ Metric Definitions & Grading System"):
@@ -498,7 +525,6 @@ if view_mode == "📊 District View":
         st.download_button("📥 Download Report Card (CSV)", export.to_csv(index=False).encode('utf-8'), f'{selected_district_zm}_ReportCard.csv', 'text/csv')
 
     with d_tab3:
-        # --- 1. UPGRADED LINE CHART (AREA STYLE) ---
         st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>Daily Patient Trend</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
             trend_data = []
@@ -507,50 +533,34 @@ if view_mode == "📊 District View":
                 if pd.notna(d): trend_data.append({'Date': d, 'Patients': dt})
             if trend_data:
                 trend_df = pd.DataFrame(trend_data).sort_values('Date')
-                
-                # Use px.area for a filled gradient look
                 fig_t = px.area(trend_df, x='Date', y='Patients', markers=True)
                 fig_t.update_traces(
                     line_color='#2563EB', line_width=3,
                     marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')),
-                    fillcolor='rgba(37, 99, 235, 0.1)' # Light blue fill
+                    fillcolor='rgba(37, 99, 235, 0.1)'
                 )
                 fig_t.update_layout(**PLOTLY_LAYOUT)
-                fig_t.update_layout(
-                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'),
-                    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0')
-                )
+                fig_t.update_layout(xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0'))
                 st.plotly_chart(fig_t, use_container_width=True)
                 
-        # --- 2. UPGRADED HEATMAP ---
         st.markdown("<h4 style='color:#0F172A; margin-top:30px; margin-bottom:10px;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
         st.caption("White = 0 patients. Dark blue = high patient volume.")
         
-        # Prepare and SORT the heatmap data (best facilities at the top)
         heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
-        
-        # Sort by total patients so the best facilities are at the top
         heatmap_df['Total'] = heatmap_df.sum(axis=1)
-        heatmap_df = heatmap_df.sort_values(by='Total', ascending=True) # ascending for reversed y-axis
+        heatmap_df = heatmap_df.sort_values(by='Total', ascending=True)
         heatmap_df = heatmap_df.drop(columns=['Total'])
-        
-        # Format x-axis dates
         heatmap_df.columns = [extract_date(c).strftime('%d %b') if pd.notna(extract_date(c)) else c for c in heatmap_df.columns]
 
-        # Use a White-to-Blue color scale (Cleaner than Red-Yellow-Green)
         fig_h = px.imshow(
-            heatmap_df, 
-            aspect='auto', 
+            heatmap_df, aspect='auto', 
             color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#DBEAFE'], [1, '#1E3A8A']],
             labels=dict(x="Date", y="", color="Patients")
         )
-        
-        # Add gaps between cells for readability
         fig_h.update_traces(xgap=2, ygap=2)
-        
         fig_h.update_layout(**PLOTLY_LAYOUT)
         fig_h.update_layout(
-            height=max(400, len(heatmap_df) * 35), # Dynamic height
+            height=max(400, len(heatmap_df) * 35),
             yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")),
             xaxis=dict(tickfont=dict(size=11, color="#475569")),
             coloraxis_colorbar=dict(title="Patients", thickness=15)
