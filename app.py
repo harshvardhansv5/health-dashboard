@@ -124,10 +124,7 @@ ZM_DATA = {
     "Krishna Prakash (Saran)": {"Gopalganj": ["DH Gopalganj"], "Saran": ["DH Saran"], "Siwan": ["DH Siwan"]}
 }
 DISTRICT_TO_ZM = {d: zm for zm, dists in ZM_DATA.items() for d in dists}
-
-# This maps the Excel sheet name to the official District name used in the ZM mapping
 DISTRICT_MAP = {"Seikhpura": "Sheikhpura", "Rohtas": "Sasaram"}
-# Create a reverse map to find the ZM for a given sheet
 REVERSE_DISTRICT_MAP = {v: k for k, v in DISTRICT_MAP.items()}
 
 def read_sheet_robust(xls, sheet_name):
@@ -168,8 +165,6 @@ def process_district_df(df, time_filter, start_date=None, end_date=None):
     facility_col = find_facility_column(df)
     if not facility_col: return None, None, None
     df = df[get_facility_mask(df, facility_col)].copy()
-    
-    # Drop duplicates so we don't count a facility twice
     df = df.drop_duplicates(subset=[facility_col])
     
     date_cols = find_date_columns(df)
@@ -182,7 +177,6 @@ def process_district_df(df, time_filter, start_date=None, end_date=None):
     if time_filter == "Custom Range" and start_date and end_date:
         active_date_cols = [c for c, d in paired if start_date <= d.date() <= end_date]
     else:
-        # Find the actual latest date that has data, and slice only up to that
         latest_data_idx = next((i for i in range(len(sorted_cols) - 1, -1, -1) if pd.to_numeric(df[sorted_cols[i]], errors='coerce').fillna(0).sum() > 0), len(sorted_cols) - 1)
         if time_filter == "Last 7 Days": active_date_cols = sorted_cols[max(0, latest_data_idx - 6): latest_data_idx + 1]
         elif time_filter == "Last 15 Days": active_date_cols = sorted_cols[max(0, latest_data_idx - 14): latest_data_idx + 1]
@@ -243,7 +237,6 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
         except Exception: pass
     return pd.DataFrame(data)
 
-# --- NEW CACHED FUNCTION FOR ZERO TRACKER ---
 @st.cache_data(show_spinner=False)
 def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
@@ -259,9 +252,10 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
             active_cols = stats['active_date_cols']
             max_days = len(active_cols)
             
-            # FIX: Correctly map sheet name to ZM name using the reverse map
             original_district_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
-            zm_name = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
+            raw_zm = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
+            # Clean ZM name by stripping the parenthetical district name
+            zm_name = raw_zm.split(" (")[0] if " (" in raw_zm else raw_zm
             
             for _, row in plot_df.iterrows():
                 fac_name = row[facility_col]
@@ -269,7 +263,6 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
                 streak = 0
                 last_active_date = "Never Reported"
                 
-                # Count backwards from the most recent date to find the current streak of 0s
                 for col in reversed(active_cols):
                     val = row[col]
                     if val == 0:
@@ -280,7 +273,6 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
                             last_active_date = date_obj.strftime('%d %b %Y')
                         break
                 
-                # If they never reported, their streak is the max number of days in the sheet
                 if last_active_date == "Never Reported":
                     streak = max_days
                 
@@ -297,12 +289,7 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
             
     tracker_df = pd.DataFrame(tracker_data)
     if not tracker_df.empty:
-        # Sort by the longest streak first, then by District
         tracker_df = tracker_df.sort_values(by=['Current Inactive Streak', 'District', 'Facility Name'], ascending=[False, True, True]).reset_index(drop=True)
-        # Add Serial Number
-        tracker_df.index = tracker_df.index + 1
-        tracker_df.index.name = 'S.No.'
-        tracker_df = tracker_df.reset_index()
     return tracker_df
 
 # --- SIDEBAR ---
@@ -724,9 +711,15 @@ else:
         
     if not tracker_df.empty:
         # Filter for streaks >= threshold
-        filtered_tracker = tracker_df[tracker_df['Current Inactive Streak'] >= streak_threshold]
+        filtered_tracker = tracker_df[tracker_df['Current Inactive Streak'] >= streak_threshold].copy()
         
         if not filtered_tracker.empty:
+            # FIX: Reset index and add S.No AFTER filtering so numbers are sequential
+            filtered_tracker = filtered_tracker.reset_index(drop=True)
+            filtered_tracker.index = filtered_tracker.index + 1
+            filtered_tracker.index.name = 'S.No.'
+            filtered_tracker = filtered_tracker.reset_index()
+            
             st.error(f"Found {len(filtered_tracker)} facilities with an inactive streak of {streak_threshold}+ days.")
             
             # Display the table
