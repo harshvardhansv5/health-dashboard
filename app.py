@@ -235,7 +235,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
         except Exception: pass
     return pd.DataFrame(data)
 
-# --- NEW CACHED FUNCTION FOR ZERO TRACKER ---
+# --- NEW CACHED FUNCTION FOR ZERO TRACKER (CONSECUTIVE STREAK) ---
 @st.cache_data(show_spinner=False)
 def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
@@ -254,34 +254,37 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
             for _, row in plot_df.iterrows():
                 fac_name = row[facility_col]
                 
-                # Helper to sum the last N days
-                def get_sum(days):
-                    if len(active_cols) == 0: return 0
-                    cols = active_cols[-days:] if len(active_cols) >= days else active_cols
-                    return int(row[cols].sum())
+                # Count backwards from the most recent date to find the current streak of 0s
+                streak = 0
+                last_active_date = None
                 
-                sum_5 = get_sum(5)
-                sum_7 = get_sum(7)
-                sum_14 = get_sum(14)
-                sum_21 = get_sum(21)
+                # We reverse the active columns to start from the latest date
+                for col in reversed(active_cols):
+                    val = row[col]
+                    if val == 0:
+                        streak += 1
+                    else:
+                        # Once we hit a non-zero value, the streak is broken
+                        date_obj = extract_date(col)
+                        if pd.notna(date_obj):
+                            last_active_date = date_obj.strftime('%d %b %Y')
+                        break
                 
-                # If any of the sums are 0, we add it to the master list
-                if sum_5 == 0 or sum_7 == 0 or sum_14 == 0 or sum_21 == 0:
+                # If they have a current streak of 0 (meaning they are currently dark), we add them to the list
+                if streak > 0:
                     tracker_data.append({
                         'District': sheet,
                         'Facility Name': fac_name,
-                        'Last 5 Days': sum_5,
-                        'Last 7 Days': sum_7,
-                        'Last 14 Days': sum_14,
-                        'Last 21 Days': sum_21
+                        'Last Active Date': last_active_date if last_active_date else "N/A",
+                        'Current Inactive Streak': streak
                     })
         except Exception:
             pass
             
-    # Convert to DataFrame and sort by District, then Facility
+    # Convert to DataFrame and sort by Streak (highest first), then District
     tracker_df = pd.DataFrame(tracker_data)
     if not tracker_df.empty:
-        tracker_df = tracker_df.sort_values(by=['District', 'Facility Name']).reset_index(drop=True)
+        tracker_df = tracker_df.sort_values(by=['Current Inactive Streak', 'District'], ascending=[False, True]).reset_index(drop=True)
     return tracker_df
 
 # --- SIDEBAR ---
@@ -350,7 +353,6 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# UPDATED NAVIGATION WITH 3 OPTIONS
 view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
@@ -692,40 +694,49 @@ elif view_mode == "🌐 State View":
 # ==============================================================================
 else:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>⚠️ Statewide Zero-Sample Tracker</h3>", unsafe_allow_html=True)
-    st.markdown("This table lists all facilities across the state that have reported **0 samples** for at least one of the lookback periods. The table is sorted by District.")
+    st.markdown("This table lists all facilities that are **currently inactive** (a streak of 0 patients ending on the latest date).")
     
-    with st.spinner("Scanning all districts for dark facilities..."):
+    # New Filter
+    col_filter, _ = st.columns([1, 2])
+    with col_filter:
+        streak_threshold = st.selectbox("Show facilities inactive for at least:", [5, 7, 14, 21], format_func=lambda x: f"{x} consecutive days")
+    
+    with st.spinner("Scanning all districts for inactive facilities..."):
         tracker_df = generate_zero_tracker_data(tuple(available_sheets), file_bytes)
         
     if not tracker_df.empty:
-        st.error(f"Found {len(tracker_df)} facilities across the state with zero samples in one or more periods.")
+        # Apply the threshold filter
+        filtered_tracker = tracker_df[tracker_df['Current Inactive Streak'] >= streak_threshold]
         
-        # Display the table
-        st.dataframe(
-            tracker_df, 
-            use_container_width=True, 
-            hide_index=True,
-            column_config={
-                "District": st.column_config.TextColumn("District", width="medium"),
-                "Facility Name": st.column_config.TextColumn("Facility Name", width="large"),
-                "Last 5 Days": st.column_config.NumberColumn("Last 5 Days", format="%d"),
-                "Last 7 Days": st.column_config.NumberColumn("Last 7 Days", format="%d"),
-                "Last 14 Days": st.column_config.NumberColumn("Last 14 Days", format="%d"),
-                "Last 21 Days": st.column_config.NumberColumn("Last 21 Days", format="%d"),
-            }
-        )
-        
-        # Download Button
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            tracker_df.to_excel(writer, index=False, sheet_name='Zero Samples')
+        if not filtered_tracker.empty:
+            st.error(f"Found {len(filtered_tracker)} facilities with an inactive streak of {streak_threshold}+ days.")
             
-        st.download_button(
-            label="📥 Download Zero-Sample Master List",
-            data=buffer.getvalue(),
-            file_name=f"Statewide_Zero_Sample_Tracker_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            use_container_width=True
-        )
+            # Display the table
+            st.dataframe(
+                filtered_tracker, 
+                use_container_width=True, 
+                hide_index=True,
+                column_config={
+                    "District": st.column_config.TextColumn("District", width="medium"),
+                    "Facility Name": st.column_config.TextColumn("Facility Name", width="large"),
+                    "Last Active Date": st.column_config.TextColumn("Last Active Date", width="medium"),
+                    "Current Inactive Streak": st.column_config.NumberColumn("Current Inactive Streak", format="%d days"),
+                }
+            )
+            
+            # Download Button
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                filtered_tracker.to_excel(writer, index=False, sheet_name='Inactive Facilities')
+                
+            st.download_button(
+                label=f"📥 Download List ({streak_threshold}+ Days)",
+                data=buffer.getvalue(),
+                file_name=f"Statewide_Inactive_Tracker_{streak_threshold}Days_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+        else:
+            st.success(f"✅ Excellent! No facilities found with an inactive streak of {streak_threshold}+ days.")
     else:
-        st.success("✅ Excellent! No facilities found with zero samples in the state.")
+        st.success("✅ Excellent! No facilities found with any inactive streaks in the state.")
