@@ -8,17 +8,17 @@ import io
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
-# --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme v3) ---
+# --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme v3 + Animations) ---
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
     html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     .material-symbols-rounded, [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
     
-    /* --- THE NEW SLATE CANVAS --- */
+    /* --- THE SLATE CANVAS --- */
     .stApp { background-color: #E2E8F0 !important; } 
     section[data-testid="stSidebar"] { background-color: #F8FAFC !important; border-right: 1px solid #CBD5E1; }
     
@@ -51,6 +51,30 @@ st.markdown("""
     .grade-D { background-color: #FFEDD5; color: #9A3412; border: 1px solid #FB923C; }
     .grade-F { background-color: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
 
+    /* --- UPGRADED HEADER & PULSING DOT --- */
+    .app-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .header-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background-color: #EFF6FF; border-radius: 10px; font-size: 22px; }
+    
+    .header-title { font-size: 22px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; }
+    .header-subtitle { font-size: 13px; font-weight: 500; color: #64748B; margin-top: 2px; }
+
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .status-badge { background-color: #D1FAE5; color: #065F46; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; border: 1px solid #A7F3D0; }
+    
+    /* Blinking Radar Dot */
+    .status-dot { 
+        width: 8px; height: 8px; background-color: #10B981; border-radius: 50%; 
+        animation: pulse-green 2s infinite; 
+    }
+    @keyframes pulse-green {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+    
+    .header-date { font-size: 13px; color: #64748B; font-weight: 500; }
+
     /* Compare Battle Cards */
     .battle-card { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; }
     .battle-card-blue { border-top: 4px solid #2563EB; }
@@ -59,16 +83,6 @@ st.markdown("""
     .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding: 10px 0; font-size: 14px; color: #475569; }
     .battle-row:last-child { border-bottom: none; }
     .battle-val { font-weight: 600; color: #0F172A; }
-
-    /* Header */
-    .app-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .header-left { display: flex; align-items: center; gap: 16px; }
-    .header-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background-color: #EFF6FF; border-radius: 10px; font-size: 22px; }
-    .header-title { font-size: 22px; font-weight: 700; color: #0F172A; letter-spacing: -0.5px; }
-    .header-right { display: flex; align-items: center; gap: 16px; }
-    .status-badge { background-color: #D1FAE5; color: #065F46; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-    .status-dot { width: 8px; height: 8px; background-color: #10B981; border-radius: 50%; }
-    .header-date { font-size: 13px; color: #64748B; font-weight: 500; }
 
     /* --- DEFINITIVE DROPDOWN STYLING --- */
     div[data-testid="stSelectbox"] { margin-bottom: 12px; }
@@ -253,8 +267,17 @@ with st.sidebar:
 if uploaded_data_file is None:
     st.markdown("""
     <div class="app-header">
-        <div class="header-left"><div class="header-icon">🏥</div><div class="header-title">Bihar Health Dashboard</div></div>
-        <div class="header-right"><div class="status-badge"><div class="status-dot"></div> System Active</div></div>
+        <div class="header-left">
+            <div class="header-icon">🏥</div>
+            <div>
+                <div class="header-title">Bihar Health Dashboard</div>
+                <div class="header-subtitle">Statewide Operations & Pathology Management</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="status-badge"><div class="status-dot"></div> System Active</div>
+            <div class="header-date">Refreshed: --</div>
+        </div>
     </div>
     <div class="info-banner" style="background-color:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px; padding:16px; color:#1E3A8A; display:flex; align-items:center; gap:12px; margin-top:20px;">
         <span style="font-size: 20px;">👈</span><span style="font-weight: 500;">Please upload the Main Data File from the sidebar to begin.</span>
@@ -264,7 +287,13 @@ if uploaded_data_file is None:
 
 st.markdown(f"""
 <div class="app-header">
-    <div class="header-left"><div class="header-icon">🏥</div><div class="header-title">Bihar Health Dashboard</div></div>
+    <div class="header-left">
+        <div class="header-icon">🏥</div>
+        <div>
+            <div class="header-title">Bihar Health Dashboard</div>
+            <div class="header-subtitle">Statewide Operations & Pathology Management</div>
+        </div>
+    </div>
     <div class="header-right">
         <div class="status-badge"><div class="status-dot"></div> System Active</div>
         <div class="header-date">Refreshed: {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}</div>
