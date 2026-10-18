@@ -124,7 +124,11 @@ ZM_DATA = {
     "Krishna Prakash (Saran)": {"Gopalganj": ["DH Gopalganj"], "Saran": ["DH Saran"], "Siwan": ["DH Siwan"]}
 }
 DISTRICT_TO_ZM = {d: zm for zm, dists in ZM_DATA.items() for d in dists}
+
+# This maps the Excel sheet name to the official District name used in the ZM mapping
 DISTRICT_MAP = {"Seikhpura": "Sheikhpura", "Rohtas": "Sasaram"}
+# Create a reverse map to find the ZM for a given sheet
+REVERSE_DISTRICT_MAP = {v: k for k, v in DISTRICT_MAP.items()}
 
 def read_sheet_robust(xls, sheet_name):
     try:
@@ -255,6 +259,10 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
             active_cols = stats['active_date_cols']
             max_days = len(active_cols)
             
+            # FIX: Correctly map sheet name to ZM name using the reverse map
+            original_district_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
+            zm_name = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
+            
             for _, row in plot_df.iterrows():
                 fac_name = row[facility_col]
                 
@@ -278,7 +286,7 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
                 
                 if streak > 0:
                     tracker_data.append({
-                        'ZM': DISTRICT_TO_ZM.get(sheet, "Unknown"),
+                        'ZM': zm_name,
                         'District': sheet,
                         'Facility Name': fac_name,
                         'Last Active Date': last_active_date,
