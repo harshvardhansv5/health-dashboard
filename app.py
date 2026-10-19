@@ -178,34 +178,33 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     df = df[get_facility_mask(df, facility_col)].copy()
     df = df.drop_duplicates(subset=[facility_col])
     
-    total_absolute_facilities = len(df) # FIX: Store absolute facility count before date filtering
+    total_absolute_facilities = len(df) # Store absolute facility count before date filtering
     
     date_cols = find_date_columns(df)
-    if not date_cols: return None, None, None
+    
+    # FIX: If no dates exist (e.g., empty sheets), return a valid zero-metric state
+    if not date_cols:
+        df['dummy_date'] = 0
+        plot_df = df[[facility_col, 'dummy_date']].copy()
+        plot_df['Total Patients'] = 0
+        plot_df['Average Patients'] = 0.0
+        plot_df['Zero Days'] = 1 
+        plot_df['Uptime %'] = 0.0
+        return plot_df, None, {
+            'total': 0, 'weighted_avg': 0.0, 'zero_days': len(df), 
+            'num_facilities': len(df), 'num_days': 1, 
+            'facility_col': facility_col, 'active_date_cols': ['dummy_date'], 
+            'text_records': [], 'active_facilities': 0,
+            'total_absolute_facilities': total_absolute_facilities
+        }
+
     paired = [(c, extract_date(c)) for c in date_cols]
     paired = [(c, d) for c, d in paired if pd.notna(d)]
     paired.sort(key=lambda x: x[1])
     sorted_cols = [c for c, d in paired]
     
-    # NEW: Anchor Date Logic for State View
     if time_filter == "All Available Data" and anchor_date:
         active_date_cols = [c for c, d in paired if d.date() <= anchor_date]
-        if not active_date_cols:
-            # District has no data before anchor. Return 0s but keep facility count.
-            dummy_col = sorted_cols[0]
-            plot_df = df[[facility_col]].copy()
-            plot_df[dummy_col] = 0
-            plot_df['Total Patients'] = 0
-            plot_df['Average Patients'] = 0.0
-            plot_df['Zero Days'] = 1
-            plot_df['Uptime %'] = 0.0
-            return plot_df, None, {
-                'total': 0, 'weighted_avg': 0.0, 'zero_days': len(df), 
-                'num_facilities': len(df), 'num_days': 1, 
-                'facility_col': facility_col, 'active_date_cols': [dummy_col], 
-                'text_records': [], 'active_facilities': 0, 
-                'total_absolute_facilities': total_absolute_facilities
-            }
     elif time_filter == "Custom Range" and start_date and end_date:
         active_date_cols = [c for c, d in paired if start_date <= d.date() <= end_date]
     else:
@@ -217,7 +216,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
 
     if not active_date_cols: active_date_cols = sorted_cols
     
-    # --- TEXT SCAVENGER ---
+    # TEXT SCAVENGER
     text_records = []
     def is_text_note(x):
         if not isinstance(x, str): return False
@@ -239,8 +238,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
                     'Raw_Note': raw_note,
                     'Category': categorize_reason(raw_note)
                 })
-    # ---------------------------
-    
+            
     plot_df = df[[facility_col] + active_date_cols].copy()
     for col in active_date_cols: plot_df[col] = pd.to_numeric(plot_df[col], errors='coerce').fillna(0)
         
@@ -248,7 +246,6 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     plot_df['Average Patients'] = plot_df[active_date_cols].mean(axis=1).round(1)
     plot_df['Zero Days'] = (plot_df[active_date_cols] == 0).sum(axis=1)
     
-    # Calculate active spokes on the last available day in the selection
     last_day_col = active_date_cols[-1]
     active_facilities = int((plot_df[last_day_col] > 0).sum())
     
@@ -330,10 +327,9 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
                     'Total Patients': s['total'], 
                     'Weighted Avg': s['weighted_avg'], 
                     'Uptime %': calc_uptime(s), 
-                    'Facilities': s['total_absolute_facilities'], # FIX: Use absolute count
+                    'Facilities': s['total_absolute_facilities'], # Use absolute count
                     'Days Reported': s['num_days'],
-                    'Active Spokes': s['active_facilities'],
-                    'Zero Days': s['zero_days']
+                    'Active Spokes': s['active_facilities']
                 })
         except Exception: pass
     return pd.DataFrame(data), anchor_date
@@ -793,22 +789,17 @@ elif view_mode == "🌐 State View":
     if not state_df.empty:
         total_active = state_df['Active Spokes'].sum()
         total_facilities = state_df['Facilities'].sum()
-        total_zero_days = state_df['Zero Days'].sum()
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
         
-        # Show the anchor date caption if "All Available Data" is selected
         if time_filter == "All Available Data" and anchor_date:
             st.caption(f"ℹ️ **Statewide Totals are anchored to {anchor_date.strftime('%d %b %Y')}.** Data after this date is excluded to ensure a fair comparison across all districts.")
         
+        # --- UPGRADED: 2 Cards Only ---
         st.markdown(f'''
-        <div class="metric-grid">
+        <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
             <div class="metric-card">
                 <div class="metric-label">Active Spokes (Latest Date)</div>
                 <div class="metric-value">{total_active} <span class="metric-sub">/ {total_facilities} Total</span></div>
-            </div>
-            <div class="metric-card" style="border-left: 4px solid #DC2626;">
-                <div class="metric-label">Statewide Zero Days</div>
-                <div class="metric-value" style="color:#DC2626;">{total_zero_days:,}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Statewide Avg Uptime</div>
@@ -851,7 +842,6 @@ elif view_mode == "🌐 State View":
             
             if district_a and district_b:
                 df_a = read_sheet_robust(xls, district_a); df_b = read_sheet_robust(xls, district_b)
-                # Pass anchor_date here too so the comparison is fair
                 pa, ra, sa = process_district_df(df_a, time_filter, anchor_date=anchor_date); pb, rb, sb = process_district_df(df_b, time_filter, anchor_date=anchor_date)
                 if pa is None or pb is None: st.error("Could not process one of the selected districts.")
                 else:
