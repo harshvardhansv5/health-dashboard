@@ -163,29 +163,20 @@ def find_facility_column(df):
     return best_col
 
 def extract_date(col_name):
-    """
-    THE SANITIZATION ENGINE: Aggressively parses messy Excel dates.
-    Handles: HTML tags, typos (0810/2026), variations in text.
-    """
     if isinstance(col_name, pd.Timestamp): return col_name
     s = str(col_name).lower()
     
-    # 1. Strip common noise
     s = s.replace('<br>', ' ').replace('<br/>', ' ').replace('\n', ' ')
     s = re.sub(r'total number of patients( on)?', '', s)
-    s = re.sub(r'\(.*?\)', '', s) # Remove (Thursday), etc.
+    s = re.sub(r'\(.*?\)', '', s) 
     s = s.strip()
     
-    # 2. Look for standard date patterns
-    # YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, DD-Mon-YY
     match = re.search(r'(\d{4}[-/]\d{1,2}[-/]\d{1,2})|(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})|(\d{1,2}[-/][a-z]{3}[-/]\d{2,4})', s)
     if match:
         raw_date = match.group(0)
-        # Fix missing slashes (e.g., 0810/2026 -> 08/10/2026)
         if re.match(r'^\d{4}/\d{4}$', raw_date):
             raw_date = raw_date[:2] + '/' + raw_date[2:]
         
-        # Try parsing
         try:
             return pd.to_datetime(raw_date, dayfirst=True, errors='coerce')
         except:
@@ -194,7 +185,6 @@ def extract_date(col_name):
     return pd.NaT
 
 def find_date_columns(df):
-    # Only return columns that can be parsed into a valid date
     date_cols = []
     for c in df.columns:
         if pd.notna(extract_date(c)):
@@ -241,11 +231,9 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
             'total_absolute_facilities': total_absolute_facilities
         }
 
-    # Map columns to dates and group by date to handle duplicates
     paired = [(c, extract_date(c)) for c in date_cols]
     paired = [(c, d) for c, d in paired if pd.notna(d)]
     
-    # Handle duplicate dates (e.g., Sheohar) by keeping the max value
     date_map = {}
     for c, d in paired:
         if d not in date_map:
@@ -254,23 +242,19 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
         
     sorted_dates = sorted(date_map.keys())
     
-    # Create a clean DataFrame with unique date columns
     clean_df = df[[facility_col]].copy()
     for d in sorted_dates:
         cols = date_map[d]
         if len(cols) > 1:
-            # If duplicate dates exist, take the max of the row to avoid double counting
             merged_series = df[cols].apply(pd.to_numeric, errors='coerce').fillna(0).max(axis=1)
             clean_df[d] = merged_series
         else:
             clean_df[d] = pd.to_numeric(df[cols[0]], errors='coerce').fillna(0)
             
-    # Drop completely empty date columns (e.g., Madhubani November)
     clean_df = clean_df.loc[:, (clean_df != 0).any(axis=0) | (clean_df.columns == facility_col)]
     sorted_dates = [d for d in sorted_dates if d in clean_df.columns]
     
     if not sorted_dates:
-         # If all date columns were empty
         plot_df = df[[facility_col]].copy()
         plot_df['Total Patients'] = 0
         plot_df['Average Patients'] = 0.0
@@ -284,21 +268,18 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
             'total_absolute_facilities': total_absolute_facilities
         }
 
-    # Date Filtering
     active_dates = sorted_dates
     if time_filter == "All Available Data" and anchor_date:
         active_dates = [d for d in sorted_dates if d.date() <= anchor_date]
     elif time_filter == "Custom Range" and start_date and end_date:
         active_dates = [d for d in sorted_dates if start_date <= d.date() <= end_date]
     else:
-        # For Last 7/15/30 days, just take the last N columns
         if time_filter == "Last 7 Days": active_dates = sorted_dates[-7:]
         elif time_filter == "Last 15 Days": active_dates = sorted_dates[-15:]
         elif time_filter == "Last 30 Days": active_dates = sorted_dates[-30:]
         
     if not active_dates: active_dates = sorted_dates
 
-    # TEXT SCAVENGER (look at original df columns)
     text_records = []
     def is_text_note(x):
         if not isinstance(x, str): return False
@@ -339,7 +320,6 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     if num_days > 0: plot_df['Uptime %'] = ((num_days - plot_df['Zero Days']) / num_days * 100).round(1)
     else: plot_df['Uptime %'] = 0
         
-    # Rename active_dates back to strings for UI rendering
     col_map = {d: d.strftime('%d %b') for d in active_dates}
     plot_df = plot_df.rename(columns=col_map)
         
@@ -386,7 +366,6 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
             paired.sort(key=lambda x: x[1])
             sorted_dates = [d for c, d in paired]
             
-            # Check from the end to find the last date with actual data
             for d in reversed(sorted_dates):
                 cols = [c for c, dv in paired if dv == d]
                 total = df[cols].apply(pd.to_numeric, errors='coerce').fillna(0).sum().sum()
@@ -398,7 +377,7 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v10.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v11.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -425,7 +404,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v10.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v11.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -446,7 +425,6 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_bu
             raw_zm = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
             zm_name = raw_zm.split(" (")[0] if " (" in raw_zm else raw_zm
             
-            # Calculate streaks
             for idx, row in plot_df.iterrows():
                 streak = 0
                 last_active_date = "Never Reported"
@@ -874,7 +852,13 @@ elif view_mode == "🌐 State View":
     if not state_df.empty:
         total_active = state_df['Active Spokes'].sum()
         total_facilities = TOTAL_SPOKES 
-        avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
+        
+        # NEW: Only average districts that actually reported data
+        reporting_districts = state_df[state_df['Days Reported'] > 0]
+        if not reporting_districts.empty:
+            avg_state_uptime = round(reporting_districts['Uptime %'].mean(), 1)
+        else:
+            avg_state_uptime = 0.0
         
         if time_filter == "All Available Data" and anchor_date:
             st.caption(f"ℹ️ **Statewide Totals are anchored to {anchor_date.strftime('%d %b %Y')}.** Data after this date is excluded to ensure a fair comparison across all districts.")
@@ -886,7 +870,7 @@ elif view_mode == "🌐 State View":
                 <div class="metric-value">{total_active} <span class="metric-sub">/ {total_facilities} Total</span></div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Statewide Avg Uptime</div>
+                <div class="metric-label">Statewide Avg Uptime (Active Districts)</div>
                 <div class="metric-value">{avg_state_uptime}%</div>
             </div>
         </div>
