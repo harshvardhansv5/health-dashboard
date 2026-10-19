@@ -4,6 +4,7 @@ import plotly.express as px
 from datetime import timedelta, datetime
 import re
 import io
+import math
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
@@ -157,8 +158,17 @@ def find_date_columns(df):
 def get_facility_mask(df, facility_col):
     mask = df[facility_col].notna()
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('TOTAL', na=False)
+    mask &= ~df[facility_col].astype(str).str.upper().str.contains('JAIL', na=False) # NEW: Exclude Jail
     mask &= ~df[facility_col].astype(str).str.strip().str.lower().isin(['nan', 'none', ''])
     return mask
+
+def categorize_reason(text):
+    if not text or str(text).strip().lower() in ['nan', 'none', '', '0', '0.0']: return 'Unknown'
+    t = str(text).lower()
+    if any(w in t for w in ['leave', 'nahi', 'nhi', 'unavailable', 'absent', 'lt']): return 'Staffing / Leave'
+    if any(w in t for w in ['denied', 'prescribing', 'refuse', 'no test']): return 'Refusal'
+    if any(w in t for w in ['closed', 'machine', 'breakdown']): return 'Infrastructure'
+    return 'Other / Unspecified'
 
 def process_district_df(df, time_filter, start_date=None, end_date=None):
     if df is None: return None, None, None
@@ -185,6 +195,30 @@ def process_district_df(df, time_filter, start_date=None, end_date=None):
 
     if not active_date_cols: active_date_cols = sorted_cols
     
+    # --- NEW: TEXT SCAVENGER ---
+    text_records = []
+    def is_text_note(x):
+        if not isinstance(x, str): return False
+        v = x.strip().lower()
+        if v in ['', 'nan', 'none', '0', '0.0']: return False
+        try:
+            float(v); return False
+        except ValueError:
+            return True
+            
+    for col in active_date_cols:
+        str_mask = df[col].apply(is_text_note)
+        if str_mask.any():
+            for idx in df[str_mask].index:
+                raw_note = str(df.loc[idx, col]).strip()
+                text_records.append({
+                    'Facility': df.loc[idx, facility_col],
+                    'Date': extract_date(col),
+                    'Raw_Note': raw_note,
+                    'Category': categorize_reason(raw_note)
+                })
+    # ---------------------------
+    
     plot_df = df[[facility_col] + active_date_cols].copy()
     for col in active_date_cols: plot_df[col] = pd.to_numeric(plot_df[col], errors='coerce').fillna(0)
         
@@ -201,7 +235,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None):
     if num_days > 0: plot_df['Uptime %'] = ((num_days - plot_df['Zero Days']) / num_days * 100).round(1)
     else: plot_df['Uptime %'] = 0
         
-    return plot_df, None, {'total': district_total, 'weighted_avg': weighted_avg, 'zero_days': total_zero, 'num_facilities': num_facilities, 'num_days': num_days, 'facility_col': facility_col, 'active_date_cols': active_date_cols}
+    return plot_df, None, {'total': district_total, 'weighted_avg': weighted_avg, 'zero_days': total_zero, 'num_facilities': num_facilities, 'num_days': num_days, 'facility_col': facility_col, 'active_date_cols': active_date_cols, 'text_records': text_records}
 
 def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
@@ -220,7 +254,11 @@ def district_grade(plot_df):
     grade_map = {"A": 5, "B": 4, "C": 3, "D": 2, "F": 1}
     reverse_map = {5: "A", 4: "B", 3: "C", 2: "D", 1: "F"}
     grades = [grade_map[calculate_grade(row['Uptime %'], row['Average Patients'])] for _, row in plot_df.iterrows()]
-    return reverse_map[max(1, min(5, int(round(sum(grades) / len(grades)))))] if grades else "F"
+    if not grades: return "F"
+    # FIXED: Standard rounding (round half up)
+    avg_grade = sum(grades) / len(grades)
+    rounded_grade = math.floor(avg_grade + 0.5)
+    return reverse_map[max(1, min(5, int(rounded_grade)))]
 
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
@@ -251,45 +289,57 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
             facility_col = stats['facility_col']
             active_cols = stats['active_date_cols']
             max_days = len(active_cols)
+            text_records = stats.get('text_records', [])
             
             original_district_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
             raw_zm = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
-            # Clean ZM name by stripping the parenthetical district name
             zm_name = raw_zm.split(" (")[0] if " (" in raw_zm else raw_zm
             
-            for _, row in plot_df.iterrows():
-                fac_name = row[facility_col]
+            # VECTORIZED STREAK CALCULATION
+            rev_cols = active_cols[::-1]
+            is_zero = plot_df[rev_cols].eq(0)
+            streaks = is_zero.cumprod(axis=1).sum(axis=1)
+            
+            for idx, row in plot_df.iterrows():
+                streak = int(streaks[idx])
+                if streak == 0: continue
                 
-                streak = 0
+                fac_name = row[facility_col]
                 last_active_date = "Never Reported"
                 
-                for col in reversed(active_cols):
-                    val = row[col]
-                    if val == 0:
-                        streak += 1
-                    else:
-                        date_obj = extract_date(col)
-                        if pd.notna(date_obj):
-                            last_active_date = date_obj.strftime('%d %b %Y')
-                        break
+                if streak < max_days:
+                    last_active_idx = (max_days - 1) - streak
+                    date_obj = extract_date(active_cols[last_active_idx])
+                    if pd.notna(date_obj):
+                        last_active_date = date_obj.strftime('%d %b %Y')
+                        
+                # Get primary reason for this facility
+                primary_reason = "No Note"
+                fac_texts = [t for t in text_records if t['Facility'] == fac_name]
+                if fac_texts:
+                    fac_texts.sort(key=lambda x: x['Date'] if pd.notna(x['Date']) else pd.Timestamp.min, reverse=True)
+                    primary_reason = fac_texts[0]['Raw_Note']
+                    
+                if streak >= 30: severity = "🔴 Critical"
+                elif streak >= 15: severity = "🟠 High Risk"
+                elif streak >= 7: severity = "🟡 Warning"
+                else: severity = "⚪ Monitor"
                 
-                if last_active_date == "Never Reported":
-                    streak = max_days
-                
-                if streak > 0:
-                    tracker_data.append({
-                        'ZM': zm_name,
-                        'District': sheet,
-                        'Facility Name': fac_name,
-                        'Last Active Date': last_active_date,
-                        'Current Inactive Streak': streak
-                    })
+                tracker_data.append({
+                    'ZM': zm_name,
+                    'District': sheet,
+                    'Facility Name': fac_name,
+                    'Last Active Date': last_active_date,
+                    'Inactive Days': streak,
+                    'Severity': severity,
+                    'Primary Reason': primary_reason
+                })
         except Exception:
             pass
             
     tracker_df = pd.DataFrame(tracker_data)
     if not tracker_df.empty:
-        tracker_df = tracker_df.sort_values(by=['Current Inactive Streak', 'District', 'Facility Name'], ascending=[False, True, True]).reset_index(drop=True)
+        tracker_df = tracker_df.sort_values(by=['Inactive Days', 'District', 'Facility Name'], ascending=[False, True, True]).reset_index(drop=True)
     return tracker_df
 
 # --- SIDEBAR ---
@@ -427,7 +477,7 @@ if view_mode == "📊 District View":
     if plot_df is None: st.error(f"Could not process data."); st.stop()
     facility_col = stats['facility_col']
 
-    d_tab1, d_tab2, d_tab3 = st.tabs(["Dashboard", "Report Card", "Trends & Analytics"])
+    d_tab1, d_tab2, d_tab3, d_tab4 = st.tabs(["Dashboard", "Report Card", "Trends & Analytics", "🩺 Diagnosis"])
 
     with d_tab1:
         st.markdown(f'''
@@ -587,7 +637,6 @@ if view_mode == "📊 District View":
         heatmap_df['Total'] = heatmap_df.sum(axis=1)
         heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
         
-        # --- FIX: Deduplicate column names to prevent Plotly DuplicateError ---
         _new_cols = []
         _seen = {}
         for _c in heatmap_df.columns:
@@ -600,7 +649,6 @@ if view_mode == "📊 District View":
                 _seen[_lbl] = 0
             _new_cols.append(_lbl)
         heatmap_df.columns = _new_cols
-        # ---------------------------------------------------------------------
 
         fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#DBEAFE'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
         fig_h.update_traces(xgap=2, ygap=2)
@@ -614,6 +662,58 @@ if view_mode == "📊 District View":
         ))
         fig_h.update_layout(**hm_layout)
         st.plotly_chart(fig_h, use_container_width=True)
+
+    # ==============================================================================
+    # NEW TAB: DIAGNOSIS
+    # ==============================================================================
+    with d_tab4:
+        st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>🩺 Diagnosis & Root Cause Analysis</h4>", unsafe_allow_html=True)
+        text_records = stats.get('text_records', [])
+        
+        if not text_records:
+            st.success("✅ No text notes (reasons) were found for this district in the selected time range. All zero days are pure numerical zeroes.")
+        else:
+            df_texts = pd.DataFrame(text_records)
+            
+            top_cat = df_texts['Category'].value_counts().idxmax() if not df_texts.empty else "N/A"
+            worst_fac = plot_df.nsmallest(1, 'Uptime %')[facility_col].iloc[0] if not plot_df.empty else "N/A"
+            
+            st.markdown(f'''
+            <div class="metric-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="metric-card"><div class="metric-label">Total Missing Days (Zero Days)</div><div class="metric-value">{stats['zero_days']}</div></div>
+                <div class="metric-card"><div class="metric-label">Top Problem Category</div><div class="metric-value" style="font-size: 20px;">{top_cat}</div></div>
+                <div class="metric-card"><div class="metric-label">Worst Facility (Lowest Uptime)</div><div class="metric-value" style="font-size: 18px;">{worst_fac}</div></div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+            st.markdown("<h5 style='color:#0F172A; margin-top:20px;'>Root Cause Breakdown</h5>", unsafe_allow_html=True)
+            cat_counts = df_texts['Category'].value_counts().reset_index()
+            cat_counts.columns = ['Category', 'Count']
+            
+            fig_diag = px.bar(cat_counts, x='Count', y='Category', orientation='h', color='Category', 
+                              color_discrete_sequence=['#EF4444', '#F59E0B', '#10B981', '#64748B'])
+            fig_diag.update_layout(**PLOTLY_LAYOUT, height=300, showlegend=False, xaxis_title="Days Affected", yaxis_title="")
+            st.plotly_chart(fig_diag, use_container_width=True)
+
+            st.markdown("<h5 style='color:#0F172A; margin-top:20px;'>Facility Offenders</h5>", unsafe_allow_html=True)
+            offense_data = []
+            for _, row in plot_df.iterrows():
+                fac_name = row[facility_col]
+                z_days = row['Zero Days']
+                if z_days > 0:
+                    fac_texts = df_texts[df_texts['Facility'] == fac_name]
+                    primary_reason = fac_texts['Raw_Note'].value_counts().idxmax() if not fac_texts.empty else "Unknown / No Note"
+                    offense_data.append({
+                        'Facility': fac_name,
+                        'Zero Days': z_days,
+                        'Uptime %': row['Uptime %'],
+                        'Primary Reason': primary_reason
+                    })
+            if offense_data:
+                offense_df = pd.DataFrame(offense_data).sort_values('Zero Days', ascending=False)
+                st.dataframe(offense_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("No facilities had zero days in this period.")
 
 # ==============================================================================
 # VIEW: STATE VIEW
@@ -718,43 +818,63 @@ else:
     
     col_filter, _ = st.columns([1, 2])
     with col_filter:
-        streak_threshold = st.selectbox("Show facilities inactive for at least:", [5, 7, 14, 21], format_func=lambda x: f"{x} days")
+        streak_threshold = st.selectbox("Show facilities inactive for at least:", [7, 14, 21, 30], format_func=lambda x: f"{x} days")
     
     with st.spinner("Scanning all districts for inactive facilities..."):
         tracker_df = generate_zero_tracker_data(tuple(available_sheets), file_bytes)
         
     if not tracker_df.empty:
-        # Filter for streaks >= threshold
-        filtered_tracker = tracker_df[tracker_df['Current Inactive Streak'] >= streak_threshold].copy()
+        filtered_tracker = tracker_df[tracker_df['Inactive Days'] >= streak_threshold].copy()
         
         if not filtered_tracker.empty:
-            # FIX: Reset index and add S.No AFTER filtering so numbers are sequential
-            filtered_tracker = filtered_tracker.reset_index(drop=True)
-            filtered_tracker.index = filtered_tracker.index + 1
-            filtered_tracker.index.name = 'S.No.'
-            filtered_tracker = filtered_tracker.reset_index()
+            total_inactive = len(filtered_tracker)
+            critical_count = len(filtered_tracker[filtered_tracker['Severity'] == "🔴 Critical"])
+            high_risk_count = len(filtered_tracker[filtered_tracker['Severity'] == "🟠 High Risk"])
             
-            st.error(f"Found {len(filtered_tracker)} facilities with an inactive streak of {streak_threshold}+ days.")
+            st.markdown(f'''
+            <div class="metric-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <div class="metric-card">
+                    <div class="metric-label">Total Inactive Facilities</div>
+                    <div class="metric-value">{total_inactive}</div>
+                </div>
+                <div class="metric-card" style="border-left: 4px solid #DC2626;">
+                    <div class="metric-label">Critical (30+ Days)</div>
+                    <div class="metric-value" style="color:#DC2626;">{critical_count}</div>
+                </div>
+                <div class="metric-card" style="border-left: 4px solid #F97316;">
+                    <div class="metric-label">High Risk (15-29 Days)</div>
+                    <div class="metric-value" style="color:#F97316;">{high_risk_count}</div>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
             
-            # Display the table
+            display_tracker = filtered_tracker.copy()
+            display_tracker = display_tracker.reset_index(drop=True)
+            display_tracker.index = display_tracker.index + 1
+            display_tracker.index.name = 'S.No.'
+            display_tracker = display_tracker.reset_index()
+            
+            display_tracker = display_tracker[['S.No.', 'Severity', 'ZM', 'District', 'Facility Name', 'Last Active Date', 'Inactive Days', 'Primary Reason']]
+            
             st.dataframe(
-                filtered_tracker, 
+                display_tracker, 
                 use_container_width=True, 
                 hide_index=True,
                 column_config={
                     "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
+                    "Severity": st.column_config.TextColumn("Severity", width="small"),
                     "ZM": st.column_config.TextColumn("Zone Manager", width="medium"),
                     "District": st.column_config.TextColumn("District", width="medium"),
                     "Facility Name": st.column_config.TextColumn("Facility Name", width="large"),
                     "Last Active Date": st.column_config.TextColumn("Last Active Date", width="medium"),
-                    "Current Inactive Streak": st.column_config.NumberColumn("Current Inactive Streak", format="%d days"),
+                    "Inactive Days": st.column_config.NumberColumn("Inactive Days", format="%d days"),
+                    "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                 }
             )
             
-            # Download Button
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                filtered_tracker.to_excel(writer, index=False, sheet_name='Inactive Facilities')
+                display_tracker.to_excel(writer, index=False, sheet_name='Inactive Facilities')
                 
             st.download_button(
                 label=f"📥 Download List ({streak_threshold}+ Days)",
