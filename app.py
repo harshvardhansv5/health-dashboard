@@ -30,7 +30,8 @@ st.markdown("""
         padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column;
     }
     .metric-label { color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .metric-value { color: #0F172A; font-size: 28px; font-weight: 700; line-height: 1; }
+    .metric-value { color: #0F172A; font-size: 28px; font-weight: 700; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
+    .metric-sub { font-size: 16px; font-weight: 500; color: #64748B; }
 
     /* Tables & Cards */
     [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 10px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 4px; }
@@ -229,6 +230,10 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     plot_df['Average Patients'] = plot_df[active_date_cols].mean(axis=1).round(1)
     plot_df['Zero Days'] = (plot_df[active_date_cols] == 0).sum(axis=1)
     
+    # Calculate active spokes on the last available day in the selection
+    last_day_col = active_date_cols[-1]
+    active_facilities = int((plot_df[last_day_col] > 0).sum())
+    
     district_total = int(plot_df['Total Patients'].sum())
     num_facilities = len(plot_df)
     num_days = len(active_date_cols)
@@ -238,7 +243,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     if num_days > 0: plot_df['Uptime %'] = ((num_days - plot_df['Zero Days']) / num_days * 100).round(1)
     else: plot_df['Uptime %'] = 0
         
-    return plot_df, None, {'total': district_total, 'weighted_avg': weighted_avg, 'zero_days': total_zero, 'num_facilities': num_facilities, 'num_days': num_days, 'facility_col': facility_col, 'active_date_cols': active_date_cols, 'text_records': text_records}
+    return plot_df, None, {'total': district_total, 'weighted_avg': weighted_avg, 'zero_days': total_zero, 'num_facilities': num_facilities, 'num_days': num_days, 'facility_col': facility_col, 'active_date_cols': active_date_cols, 'text_records': text_records, 'active_facilities': active_facilities}
 
 def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
@@ -264,7 +269,6 @@ def district_grade(plot_df):
 
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
-# NEW: Find the earliest "latest date" across all sheets
 def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     latest_dates = []
@@ -293,7 +297,6 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
 def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
-    # Calculate anchor date if in "All Available Data"
     anchor_date = None
     if time_filter == "All Available Data":
         anchor_date = find_global_latest_date(sheet_names_tuple, uploaded_file_bytes)
@@ -302,7 +305,6 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
     for sheet in sheet_names_tuple:
         try:
             sdf = read_sheet_robust(xls, sheet)
-            # Pass anchor_date to process_district_df
             _, _, s = process_district_df(sdf, time_filter, anchor_date=anchor_date)
             if s:
                 data.append({
@@ -311,7 +313,8 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
                     'Weighted Avg': s['weighted_avg'], 
                     'Uptime %': calc_uptime(s), 
                     'Facilities': s['num_facilities'], 
-                    'Days Reported': s['num_days']
+                    'Days Reported': s['num_days'],
+                    'Active Spokes': s['active_facilities'] # NEW
                 })
         except Exception: pass
     return pd.DataFrame(data), anchor_date
@@ -769,9 +772,9 @@ elif view_mode == "🌐 State View":
         state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
         
     if not state_df.empty:
-        total_state_patients = state_df['Total Patients'].sum()
-        avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
+        total_active = state_df['Active Spokes'].sum()
         total_facilities = state_df['Facilities'].sum()
+        avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
         
         # Show the anchor date caption if "All Available Data" is selected
         if time_filter == "All Available Data" and anchor_date:
@@ -780,16 +783,16 @@ elif view_mode == "🌐 State View":
         st.markdown(f'''
         <div class="metric-grid">
             <div class="metric-card">
-                <div class="metric-label">Total Bihar Patients</div>
-                <div class="metric-value">{total_state_patients:,}</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Total Spokes</div>
-                <div class="metric-value">{total_facilities}</div>
+                <div class="metric-label">Active Spokes (Latest Date)</div>
+                <div class="metric-value">{total_active} <span class="metric-sub">/ {total_facilities} Total</span></div>
             </div>
             <div class="metric-card">
                 <div class="metric-label">Statewide Avg Uptime</div>
                 <div class="metric-value">{avg_state_uptime}%</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Total Bihar Patients</div>
+                <div class="metric-value">{int(state_df['Total Patients'].sum()):,}</div>
             </div>
         </div>
         ''', unsafe_allow_html=True)
