@@ -166,7 +166,6 @@ def extract_date(col_name):
     return pd.NaT
 
 def find_date_columns(df):
-    # FIXED: Find ALL date columns, regardless of header format
     date_cols = []
     for c in df.columns:
         if 'Total number of patients' in str(c) or pd.notna(extract_date(c)):
@@ -261,8 +260,9 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     plot_df['Average Patients'] = plot_df[active_date_cols].mean(axis=1).round(1)
     plot_df['Zero Days'] = (plot_df[active_date_cols] == 0).sum(axis=1)
     
-    last_day_col = active_date_cols[-1]
-    active_facilities = int((plot_df[last_day_col] > 0).sum())
+    # --- FIXED: SHS ACTIVE SPOKE DEFINITION ---
+    # A spoke is active if it received at least one patient on ANY day in the period.
+    active_facilities = int((plot_df['Total Patients'] > 0).sum())
     
     district_total = int(plot_df['Total Patients'].sum())
     num_facilities = len(plot_df)
@@ -324,7 +324,7 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v6.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v7.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -350,7 +350,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v6.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v7.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -817,7 +817,7 @@ elif view_mode == "🌐 State View":
         st.markdown(f'''
         <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
             <div class="metric-card">
-                <div class="metric-label">Active Spokes (Latest Date)</div>
+                <div class="metric-label">Active Spokes (Period Total)</div>
                 <div class="metric-value">{total_active} <span class="metric-sub">/ {total_facilities} Total</span></div>
             </div>
             <div class="metric-card">
