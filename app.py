@@ -158,7 +158,7 @@ def find_date_columns(df):
 def get_facility_mask(df, facility_col):
     mask = df[facility_col].notna()
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('TOTAL', na=False)
-    mask &= ~df[facility_col].astype(str).str.upper().str.contains('JAIL', na=False) # NEW: Exclude Jail
+    mask &= ~df[facility_col].astype(str).str.upper().str.contains('JAIL', na=False) # Exclude Jail
     mask &= ~df[facility_col].astype(str).str.strip().str.lower().isin(['nan', 'none', ''])
     return mask
 
@@ -195,7 +195,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None):
 
     if not active_date_cols: active_date_cols = sorted_cols
     
-    # --- NEW: TEXT SCAVENGER ---
+    # --- TEXT SCAVENGER ---
     text_records = []
     def is_text_note(x):
         if not isinstance(x, str): return False
@@ -724,20 +724,10 @@ elif view_mode == "🌐 State View":
     with st.spinner("Loading State Data..."):
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
         
-        # --- DEBUG: FIND GHOST FACILITIES ---
-        with st.expander("🔍 Debug: Show all counted facilities (Look for the 3 fakes)"):
-            all_facs = []
-            for sheet in available_sheets:
-                try:
-                    sdf = read_sheet_robust(xls, sheet)
-                    fac_col = find_facility_column(sdf)
-                    if fac_col:
-                        valid_rows = sdf[get_facility_mask(sdf, fac_col)]
-                        for name in valid_rows[fac_col]:
-                            all_facs.append({'District Sheet': sheet, 'Facility Name': str(name).strip()})
-                except: pass
-            st.dataframe(pd.DataFrame(all_facs), use_container_width=True)
-        # -----------------------------------
+    if not state_df.empty:
+        total_state_patients = state_df['Total Patients'].sum()
+        avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
+        total_facilities = state_df['Facilities'].sum()
         
         st.markdown(f'''
         <div class="metric-grid">
