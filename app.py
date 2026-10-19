@@ -170,7 +170,7 @@ def categorize_reason(text):
     if any(w in t for w in ['closed', 'machine', 'breakdown']): return 'Infrastructure'
     return 'Other / Unspecified'
 
-def process_district_df(df, time_filter, start_date=None, end_date=None):
+def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_date=None):
     if df is None: return None, None, None
     facility_col = find_facility_column(df)
     if not facility_col: return None, None, None
@@ -184,7 +184,10 @@ def process_district_df(df, time_filter, start_date=None, end_date=None):
     paired.sort(key=lambda x: x[1])
     sorted_cols = [c for c, d in paired]
     
-    if time_filter == "Custom Range" and start_date and end_date:
+    # NEW: Anchor Date Logic for State View
+    if time_filter == "All Available Data" and anchor_date:
+        active_date_cols = [c for c, d in paired if d.date() <= anchor_date]
+    elif time_filter == "Custom Range" and start_date and end_date:
         active_date_cols = [c for c, d in paired if start_date <= d.date() <= end_date]
     else:
         latest_data_idx = next((i for i in range(len(sorted_cols) - 1, -1, -1) if pd.to_numeric(df[sorted_cols[i]], errors='coerce').fillna(0).sum() > 0), len(sorted_cols) - 1)
@@ -261,18 +264,57 @@ def district_grade(plot_df):
 
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
+# NEW: Find the earliest "latest date" across all sheets
+def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
+    xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
+    latest_dates = []
+    for sheet in sheet_names_tuple:
+        try:
+            df = read_sheet_robust(xls, sheet)
+            fac_col = find_facility_column(df)
+            if not fac_col: continue
+            df = df[get_facility_mask(df, fac_col)]
+            date_cols = find_date_columns(df)
+            if not date_cols: continue
+            
+            paired = [(c, extract_date(c)) for c in date_cols]
+            paired = [(c, d) for c, d in paired if pd.notna(d)]
+            paired.sort(key=lambda x: x[1])
+            sorted_cols = [c for c, d in paired]
+            
+            latest_idx = next((i for i in range(len(sorted_cols) - 1, -1, -1) if pd.to_numeric(df[sorted_cols[i]], errors='coerce').fillna(0).sum() > 0), -1)
+            if latest_idx != -1:
+                latest_dates.append(paired[latest_idx][1].date())
+        except Exception:
+            pass
+    return min(latest_dates) if latest_dates else None
+
 @st.cache_data(show_spinner=False)
 def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
+    
+    # Calculate anchor date if in "All Available Data"
+    anchor_date = None
+    if time_filter == "All Available Data":
+        anchor_date = find_global_latest_date(sheet_names_tuple, uploaded_file_bytes)
+        
     data = []
     for sheet in sheet_names_tuple:
         try:
             sdf = read_sheet_robust(xls, sheet)
-            _, _, s = process_district_df(sdf, time_filter)
+            # Pass anchor_date to process_district_df
+            _, _, s = process_district_df(sdf, time_filter, anchor_date=anchor_date)
             if s:
-                data.append({'District': sheet, 'Total Patients': s['total'], 'Weighted Avg': s['weighted_avg'], 'Uptime %': calc_uptime(s), 'Facilities': s['num_facilities'], 'Days Reported': s['num_days']})
+                data.append({
+                    'District': sheet, 
+                    'Total Patients': s['total'], 
+                    'Weighted Avg': s['weighted_avg'], 
+                    'Uptime %': calc_uptime(s), 
+                    'Facilities': s['num_facilities'], 
+                    'Days Reported': s['num_days']
+                })
         except Exception: pass
-    return pd.DataFrame(data)
+    return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
 def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
@@ -724,12 +766,16 @@ elif view_mode == "🌐 State View":
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Bihar State Master View</h3>", unsafe_allow_html=True)
     
     with st.spinner("Loading State Data..."):
-        state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
+        state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
         
     if not state_df.empty:
         total_state_patients = state_df['Total Patients'].sum()
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
         total_facilities = state_df['Facilities'].sum()
+        
+        # Show the anchor date caption if "All Available Data" is selected
+        if time_filter == "All Available Data" and anchor_date:
+            st.caption(f"ℹ️ **Statewide Totals are anchored to {anchor_date.strftime('%d %b %Y')}.** Data after this date is excluded to ensure a fair comparison across all districts.")
         
         st.markdown(f'''
         <div class="metric-grid">
@@ -782,7 +828,8 @@ elif view_mode == "🌐 State View":
             
             if district_a and district_b:
                 df_a = read_sheet_robust(xls, district_a); df_b = read_sheet_robust(xls, district_b)
-                pa, ra, sa = process_district_df(df_a, time_filter); pb, rb, sb = process_district_df(df_b, time_filter)
+                # Pass anchor_date here too so the comparison is fair
+                pa, ra, sa = process_district_df(df_a, time_filter, anchor_date=anchor_date); pb, rb, sb = process_district_df(df_b, time_filter, anchor_date=anchor_date)
                 if pa is None or pb is None: st.error("Could not process one of the selected districts.")
                 else:
                     col1, col2 = st.columns(2)
