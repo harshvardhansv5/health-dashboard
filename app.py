@@ -7,7 +7,7 @@ import io
 import math
 
 # --- CONSTANTS ---
-TOTAL_SPOKES = 701  # Hardcoded absolute truth
+TOTAL_SPOKES = 701 
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
@@ -163,17 +163,41 @@ def find_facility_column(df):
     return best_col
 
 def extract_date(col_name):
+    """
+    THE SANITIZATION ENGINE: Aggressively parses messy Excel dates.
+    Handles: HTML tags, typos (0810/2026), variations in text.
+    """
     if isinstance(col_name, pd.Timestamp): return col_name
-    s = str(col_name)
-    for pattern, fmt in [(r'(\d{4}-\d{2}-\d{2})', None), (r'(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})', True), (r'(\d{1,2}-\w{3}-\d{2,4})', None)]:
-        match = re.search(pattern, s)
-        if match: return pd.to_datetime(match.group(1), dayfirst=fmt if fmt else False, errors='coerce')
+    s = str(col_name).lower()
+    
+    # 1. Strip common noise
+    s = s.replace('<br>', ' ').replace('<br/>', ' ').replace('\n', ' ')
+    s = re.sub(r'total number of patients( on)?', '', s)
+    s = re.sub(r'\(.*?\)', '', s) # Remove (Thursday), etc.
+    s = s.strip()
+    
+    # 2. Look for standard date patterns
+    # YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, DD-Mon-YY
+    match = re.search(r'(\d{4}[-/]\d{1,2}[-/]\d{1,2})|(\d{1,2}[-/]\d{1,2}[-/]\d{2,4})|(\d{1,2}[-/][a-z]{3}[-/]\d{2,4})', s)
+    if match:
+        raw_date = match.group(0)
+        # Fix missing slashes (e.g., 0810/2026 -> 08/10/2026)
+        if re.match(r'^\d{4}/\d{4}$', raw_date):
+            raw_date = raw_date[:2] + '/' + raw_date[2:]
+        
+        # Try parsing
+        try:
+            return pd.to_datetime(raw_date, dayfirst=True, errors='coerce')
+        except:
+            pass
+            
     return pd.NaT
 
 def find_date_columns(df):
+    # Only return columns that can be parsed into a valid date
     date_cols = []
     for c in df.columns:
-        if 'Total number of patients' in str(c) or pd.notna(extract_date(c)):
+        if pd.notna(extract_date(c)):
             date_cols.append(c)
     return date_cols
 
@@ -189,8 +213,8 @@ def categorize_reason(text):
     if not text or str(text).strip().lower() in ['nan', 'none', '', '0', '0.0']: return 'Unknown'
     t = str(text).lower()
     if any(w in t for w in ['leave', 'nahi', 'nhi', 'unavailable', 'absent', 'lt']): return 'Staffing / Leave'
-    if any(w in t for w in ['denied', 'prescribing', 'refuse', 'no test']): return 'Refusal'
-    if any(w in t for w in ['closed', 'machine', 'breakdown']): return 'Infrastructure'
+    if any(w in t for w in ['denied', 'prescribing', 'refuse', 'no test', 'doctor']): return 'Refusal'
+    if any(w in t for w in ['closed', 'machine', 'breakdown', 'flood', 'strike', 'merged', 'operational']): return 'Infrastructure'
     return 'Other / Unspecified'
 
 def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_date=None):
@@ -217,25 +241,64 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
             'total_absolute_facilities': total_absolute_facilities
         }
 
+    # Map columns to dates and group by date to handle duplicates
     paired = [(c, extract_date(c)) for c in date_cols]
     paired = [(c, d) for c, d in paired if pd.notna(d)]
-    paired.sort(key=lambda x: x[1])
-    sorted_cols = [c for c, d in paired]
     
-    if time_filter == "All Available Data" and anchor_date:
-        active_date_cols = [c for c, d in paired if d.date() <= anchor_date]
-    elif time_filter == "Custom Range" and start_date and end_date:
-        active_date_cols = [c for c, d in paired if start_date <= d.date() <= end_date]
-    else:
-        latest_data_idx = next((i for i in range(len(sorted_cols) - 1, -1, -1) if pd.to_numeric(df[sorted_cols[i]], errors='coerce').fillna(0).sum() > 0), len(sorted_cols) - 1)
-        if time_filter == "Last 7 Days": active_date_cols = sorted_cols[max(0, latest_data_idx - 6): latest_data_idx + 1]
-        elif time_filter == "Last 15 Days": active_date_cols = sorted_cols[max(0, latest_data_idx - 14): latest_data_idx + 1]
-        elif time_filter == "Last 30 Days": active_date_cols = sorted_cols[max(0, latest_data_idx - 29): latest_data_idx + 1]
-        else: active_date_cols = sorted_cols[:latest_data_idx + 1]
+    # Handle duplicate dates (e.g., Sheohar) by keeping the max value
+    date_map = {}
+    for c, d in paired:
+        if d not in date_map:
+            date_map[d] = []
+        date_map[d].append(c)
+        
+    sorted_dates = sorted(date_map.keys())
+    
+    # Create a clean DataFrame with unique date columns
+    clean_df = df[[facility_col]].copy()
+    for d in sorted_dates:
+        cols = date_map[d]
+        if len(cols) > 1:
+            # If duplicate dates exist, take the max of the row to avoid double counting
+            merged_series = df[cols].apply(pd.to_numeric, errors='coerce').fillna(0).max(axis=1)
+            clean_df[d] = merged_series
+        else:
+            clean_df[d] = pd.to_numeric(df[cols[0]], errors='coerce').fillna(0)
+            
+    # Drop completely empty date columns (e.g., Madhubani November)
+    clean_df = clean_df.loc[:, (clean_df != 0).any(axis=0) | (clean_df.columns == facility_col)]
+    sorted_dates = [d for d in sorted_dates if d in clean_df.columns]
+    
+    if not sorted_dates:
+         # If all date columns were empty
+        plot_df = df[[facility_col]].copy()
+        plot_df['Total Patients'] = 0
+        plot_df['Average Patients'] = 0.0
+        plot_df['Zero Days'] = 0
+        plot_df['Uptime %'] = 0.0
+        return plot_df, None, {
+            'total': 0, 'weighted_avg': 0.0, 'zero_days': 0, 
+            'num_facilities': len(df), 'num_days': 0, 
+            'facility_col': facility_col, 'active_date_cols': [], 
+            'text_records': [], 'active_facilities': 0,
+            'total_absolute_facilities': total_absolute_facilities
+        }
 
-    if not active_date_cols: active_date_cols = sorted_cols
-    
-    # TEXT SCAVENGER
+    # Date Filtering
+    active_dates = sorted_dates
+    if time_filter == "All Available Data" and anchor_date:
+        active_dates = [d for d in sorted_dates if d.date() <= anchor_date]
+    elif time_filter == "Custom Range" and start_date and end_date:
+        active_dates = [d for d in sorted_dates if start_date <= d.date() <= end_date]
+    else:
+        # For Last 7/15/30 days, just take the last N columns
+        if time_filter == "Last 7 Days": active_dates = sorted_dates[-7:]
+        elif time_filter == "Last 15 Days": active_dates = sorted_dates[-15:]
+        elif time_filter == "Last 30 Days": active_dates = sorted_dates[-30:]
+        
+    if not active_dates: active_dates = sorted_dates
+
+    # TEXT SCAVENGER (look at original df columns)
     text_records = []
     def is_text_note(x):
         if not isinstance(x, str): return False
@@ -246,38 +309,41 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
         except ValueError:
             return True
             
-    for col in active_date_cols:
-        str_mask = df[col].apply(is_text_note)
-        if str_mask.any():
-            for idx in df[str_mask].index:
-                raw_note = str(df.loc[idx, col]).strip()
-                text_records.append({
-                    'Facility': df.loc[idx, facility_col],
-                    'Date': extract_date(col),
-                    'Raw_Note': raw_note,
-                    'Category': categorize_reason(raw_note)
-                })
-            
-    plot_df = df[[facility_col] + active_date_cols].copy()
-    for col in active_date_cols: plot_df[col] = pd.to_numeric(plot_df[col], errors='coerce').fillna(0)
-        
-    plot_df['Total Patients'] = plot_df[active_date_cols].sum(axis=1)
-    plot_df['Average Patients'] = plot_df[active_date_cols].mean(axis=1).round(1)
-    plot_df['Zero Days'] = (plot_df[active_date_cols] == 0).sum(axis=1)
+    for c, d in paired:
+        if d in active_dates:
+            str_mask = df[c].apply(is_text_note)
+            if str_mask.any():
+                for idx in df[str_mask].index:
+                    raw_note = str(df.loc[idx, c]).strip()
+                    text_records.append({
+                        'Facility': df.loc[idx, facility_col],
+                        'Date': d,
+                        'Raw_Note': raw_note,
+                        'Category': categorize_reason(raw_note)
+                    })
+
+    plot_df = clean_df[[facility_col] + active_dates].copy()
     
-    # SHS ACTIVE SPOKE DEFINITION
+    plot_df['Total Patients'] = plot_df[active_dates].sum(axis=1)
+    plot_df['Average Patients'] = plot_df[active_dates].mean(axis=1).round(1)
+    plot_df['Zero Days'] = (plot_df[active_dates] == 0).sum(axis=1)
+    
     active_facilities = int((plot_df['Total Patients'] > 0).sum())
     
     district_total = int(plot_df['Total Patients'].sum())
     num_facilities = len(plot_df)
-    num_days = len(active_date_cols)
+    num_days = len(active_dates)
     weighted_avg = round(district_total / (num_facilities * num_days), 1) if num_facilities > 0 and num_days > 0 else 0
     total_zero = int(plot_df['Zero Days'].sum())
     
     if num_days > 0: plot_df['Uptime %'] = ((num_days - plot_df['Zero Days']) / num_days * 100).round(1)
     else: plot_df['Uptime %'] = 0
         
-    return plot_df, None, {'total': district_total, 'weighted_avg': weighted_avg, 'zero_days': total_zero, 'num_facilities': num_facilities, 'num_days': num_days, 'facility_col': facility_col, 'active_date_cols': active_date_cols, 'text_records': text_records, 'active_facilities': active_facilities, 'total_absolute_facilities': total_absolute_facilities}
+    # Rename active_dates back to strings for UI rendering
+    col_map = {d: d.strftime('%d %b') for d in active_dates}
+    plot_df = plot_df.rename(columns=col_map)
+        
+    return plot_df, None, {'total': district_total, 'weighted_avg': weighted_avg, 'zero_days': total_zero, 'num_facilities': num_facilities, 'num_days': num_days, 'facility_col': facility_col, 'active_date_cols': [col_map[d] for d in active_dates], 'text_records': text_records, 'active_facilities': active_facilities, 'total_absolute_facilities': total_absolute_facilities}
 
 def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
@@ -318,17 +384,21 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
             paired = [(c, extract_date(c)) for c in date_cols]
             paired = [(c, d) for c, d in paired if pd.notna(d)]
             paired.sort(key=lambda x: x[1])
-            sorted_cols = [c for c, d in paired]
+            sorted_dates = [d for c, d in paired]
             
-            latest_idx = next((i for i in range(len(sorted_cols) - 1, -1, -1) if pd.to_numeric(df[sorted_cols[i]], errors='coerce').fillna(0).sum() > 0), -1)
-            if latest_idx != -1:
-                latest_dates.append(paired[latest_idx][1].date())
+            # Check from the end to find the last date with actual data
+            for d in reversed(sorted_dates):
+                cols = [c for c, dv in paired if dv == d]
+                total = df[cols].apply(pd.to_numeric, errors='coerce').fillna(0).sum().sum()
+                if total > 0:
+                    latest_dates.append(d.date())
+                    break
         except Exception:
             pass
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v9.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v10.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -355,7 +425,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v9.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v10.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -376,23 +446,21 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_bu
             raw_zm = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
             zm_name = raw_zm.split(" (")[0] if " (" in raw_zm else raw_zm
             
-            rev_cols = active_cols[::-1]
-            is_zero = plot_df[rev_cols].eq(0)
-            streaks = is_zero.cumprod(axis=1).sum(axis=1)
-            
+            # Calculate streaks
             for idx, row in plot_df.iterrows():
-                streak = int(streaks[idx])
+                streak = 0
+                last_active_date = "Never Reported"
+                for c in reversed(active_cols):
+                    if row[c] == 0:
+                        streak += 1
+                    else:
+                        last_active_date = c
+                        break
+                        
                 if streak == 0: continue
                 
                 fac_name = row[facility_col]
-                last_active_date = "Never Reported"
                 
-                if streak < max_days:
-                    last_active_idx = (max_days - 1) - streak
-                    date_obj = extract_date(active_cols[last_active_idx])
-                    if pd.notna(date_obj):
-                        last_active_date = date_obj.strftime('%d %b %Y')
-                        
                 primary_reason = "No Note"
                 fac_texts = [t for t in text_records if t['Facility'] == fac_name]
                 if fac_texts:
@@ -431,13 +499,10 @@ with st.sidebar:
             file_bytes = uploaded_data_file.getvalue()
             xls = pd.ExcelFile(uploaded_data_file)
             
-            # --- FIX: FILTER ROGUE SHEETS ---
-            # Only keep sheets that correspond to a known district name or mapped name
             valid_keywords = set(DISTRICT_TO_ZM.keys()).union(set(DISTRICT_MAP.values())).union(set(DISTRICT_MAP.keys()))
             available_sheets = []
             for s in xls.sheet_names:
                 s_lower = s.lower()
-                # If the sheet name contains any valid district keyword, keep it
                 if any(kw.lower() in s_lower or s_lower in kw.lower() for kw in valid_keywords):
                     available_sheets.append(s)
             
@@ -631,7 +696,7 @@ if view_mode == "📊 District View":
                 m2.markdown(f"<div class='metric-card'><div class='metric-label'>Uptime</div><div class='metric-value'>{fac_row['Uptime %']}%</div></div>", unsafe_allow_html=True)
                 m3.markdown(f"<div class='metric-card'><div class='metric-label'>Zero Days</div><div class='metric-value'>{fac_row['Zero Days']}</div></div>", unsafe_allow_html=True)
                 
-                drill_trend = [{'Date': extract_date(c), 'Patients': fac_row[c]} for c in stats['active_date_cols'] if pd.notna(extract_date(c))]
+                drill_trend = [{'Date': pd.to_datetime(c, format='%d %b'), 'Patients': fac_row[c]} for c in stats['active_date_cols']]
                 if drill_trend:
                     dt_df = pd.DataFrame(drill_trend).sort_values('Date')
                     fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True)
@@ -651,8 +716,7 @@ if view_mode == "📊 District View":
     with d_tab2:
         period_str = "N/A"
         if stats['active_date_cols']:
-            fd, ld = extract_date(stats['active_date_cols'][0]), extract_date(stats['active_date_cols'][-1])
-            if pd.notna(fd) and pd.notna(ld): period_str = f"{fd.strftime('%d %b %Y')} – {ld.strftime('%d %b %Y')}"
+            period_str = f"{stats['active_date_cols'][0]} – {stats['active_date_cols'][-1]}"
         
         scorecard = plot_df.copy()
         scorecard['Grade'] = scorecard.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
@@ -718,7 +782,7 @@ if view_mode == "📊 District View":
     with d_tab3:
         st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>Daily Patient Trend</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
-            trend_data = [{'Date': extract_date(c), 'Patients': pd.to_numeric(plot_df[c], errors='coerce').fillna(0).sum()} for c in stats['active_date_cols'] if pd.notna(extract_date(c))]
+            trend_data = [{'Date': pd.to_datetime(c, format='%d %b'), 'Patients': pd.to_numeric(plot_df[c], errors='coerce').fillna(0).sum()} for c in stats['active_date_cols']]
             if trend_data:
                 fig_t = px.area(pd.DataFrame(trend_data).sort_values('Date'), x='Date', y='Patients', markers=True)
                 fig_t.update_traces(line_color='#2563EB', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')), fillcolor='rgba(37, 99, 235, 0.1)')
@@ -731,19 +795,6 @@ if view_mode == "📊 District View":
             heatmap_df['Total'] = heatmap_df.sum(axis=1)
             heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
             
-            _new_cols = []
-            _seen = {}
-            for _c in heatmap_df.columns:
-                _d = extract_date(_c)
-                _lbl = _d.strftime('%d %b') if pd.notna(_d) else str(_c)
-                if _lbl in _seen:
-                    _seen[_lbl] += 1
-                    _lbl = f"{_lbl} ({_seen[_lbl]})"
-                else:
-                    _seen[_lbl] = 0
-                _new_cols.append(_lbl)
-            heatmap_df.columns = _new_cols
-
             fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#DBEAFE'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
             fig_h.update_traces(xgap=2, ygap=2)
             
@@ -822,7 +873,7 @@ elif view_mode == "🌐 State View":
         
     if not state_df.empty:
         total_active = state_df['Active Spokes'].sum()
-        total_facilities = TOTAL_SPOKES # HARDCODED 701
+        total_facilities = TOTAL_SPOKES 
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
         
         if time_filter == "All Available Data" and anchor_date:
@@ -887,8 +938,8 @@ elif view_mode == "🌐 State View":
                     def get_trend(p, cols, name):
                         d = []
                         for c in cols:
-                            dv = extract_date(c); t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
-                            if pd.notna(dv): d.append({'Date': dv, 'Patients': t, 'District': name})
+                            t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
+                            d.append({'Date': pd.to_datetime(c, format='%d %b'), 'Patients': t, 'District': name})
                         return pd.DataFrame(d)
                     combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
                     fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#2563EB', district_b: '#DC2626'})
