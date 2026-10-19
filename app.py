@@ -129,8 +129,6 @@ ZM_DATA = {
     "Krishna Prakash (Saran)": {"Gopalganj": ["DH Gopalganj"], "Saran": ["DH Saran"], "Siwan": ["DH Siwan"]}
 }
 DISTRICT_TO_ZM = {d: zm for zm, dists in ZM_DATA.items() for d in dists}
-
-# FIXED: Added East Champaran -> Motihari and West Champaran -> Narkatiaganj
 DISTRICT_MAP = {
     "Seikhpura": "Sheikhpura", 
     "Rohtas": "Sasaram",
@@ -267,8 +265,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     plot_df['Average Patients'] = plot_df[active_date_cols].mean(axis=1).round(1)
     plot_df['Zero Days'] = (plot_df[active_date_cols] == 0).sum(axis=1)
     
-    # --- FIXED: SHS ACTIVE SPOKE DEFINITION ---
-    # A spoke is active if it received at least one patient on ANY day in the period.
+    # SHS ACTIVE SPOKE DEFINITION
     active_facilities = int((plot_df['Total Patients'] > 0).sum())
     
     district_total = int(plot_df['Total Patients'].sum())
@@ -331,7 +328,7 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v8.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v9.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -344,7 +341,6 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
             sdf = read_sheet_robust(xls, sheet)
             _, _, s = process_district_df(sdf, time_filter, anchor_date=anchor_date)
             if s:
-                # Map sheet name back to ZM district name for the leaderboard
                 display_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
                 data.append({
                     'District': display_name, 
@@ -359,7 +355,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v8.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v9.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -434,7 +430,16 @@ with st.sidebar:
         try:
             file_bytes = uploaded_data_file.getvalue()
             xls = pd.ExcelFile(uploaded_data_file)
-            available_sheets = xls.sheet_names
+            
+            # --- FIX: FILTER ROGUE SHEETS ---
+            # Only keep sheets that correspond to a known district name or mapped name
+            valid_keywords = set(DISTRICT_TO_ZM.keys()).union(set(DISTRICT_MAP.values())).union(set(DISTRICT_MAP.keys()))
+            available_sheets = []
+            for s in xls.sheet_names:
+                s_lower = s.lower()
+                # If the sheet name contains any valid district keyword, keep it
+                if any(kw.lower() in s_lower or s_lower in kw.lower() for kw in valid_keywords):
+                    available_sheets.append(s)
             
             st.markdown("<hr style='margin: 20px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
             
