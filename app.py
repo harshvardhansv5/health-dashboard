@@ -724,10 +724,20 @@ elif view_mode == "🌐 State View":
     with st.spinner("Loading State Data..."):
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
         
-    if not state_df.empty:
-        total_state_patients = state_df['Total Patients'].sum()
-        avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
-        total_facilities = state_df['Facilities'].sum()
+        # --- DEBUG: FIND GHOST FACILITIES ---
+        with st.expander("🔍 Debug: Show all counted facilities (Look for the 3 fakes)"):
+            all_facs = []
+            for sheet in available_sheets:
+                try:
+                    sdf = read_sheet_robust(xls, sheet)
+                    fac_col = find_facility_column(sdf)
+                    if fac_col:
+                        valid_rows = sdf[get_facility_mask(sdf, fac_col)]
+                        for name in valid_rows[fac_col]:
+                            all_facs.append({'District Sheet': sheet, 'Facility Name': str(name).strip()})
+                except: pass
+            st.dataframe(pd.DataFrame(all_facs), use_container_width=True)
+        # -----------------------------------
         
         st.markdown(f'''
         <div class="metric-grid">
