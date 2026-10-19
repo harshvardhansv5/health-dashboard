@@ -140,7 +140,11 @@ def read_sheet_robust(xls, sheet_name):
 
 def find_facility_column(df):
     for c in df.columns:
-        if 'name of the hospital' in str(c).lower() or ('hospital' in str(c).lower() and 'name' in str(c).lower()): return c
+        c_str = str(c).lower()
+        if 'name of the hospital' in c_str: return c
+        if 'hospital' in c_str and 'name' in c_str: return c
+        if 'facility' in c_str: return c
+        if 'spoke' in c_str: return c
     return None
 
 def extract_date(col_name):
@@ -178,22 +182,19 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     df = df[get_facility_mask(df, facility_col)].copy()
     df = df.drop_duplicates(subset=[facility_col])
     
-    total_absolute_facilities = len(df) # Store absolute facility count before date filtering
+    total_absolute_facilities = len(df)
     
     date_cols = find_date_columns(df)
-    
-    # FIX: If no dates exist (e.g., empty sheets), return a valid zero-metric state
     if not date_cols:
-        df['dummy_date'] = 0
-        plot_df = df[[facility_col, 'dummy_date']].copy()
+        plot_df = df[[facility_col]].copy()
         plot_df['Total Patients'] = 0
         plot_df['Average Patients'] = 0.0
-        plot_df['Zero Days'] = 1 
+        plot_df['Zero Days'] = 0
         plot_df['Uptime %'] = 0.0
         return plot_df, None, {
-            'total': 0, 'weighted_avg': 0.0, 'zero_days': len(df), 
-            'num_facilities': len(df), 'num_days': 1, 
-            'facility_col': facility_col, 'active_date_cols': ['dummy_date'], 
+            'total': 0, 'weighted_avg': 0.0, 'zero_days': 0, 
+            'num_facilities': len(df), 'num_days': 0, 
+            'facility_col': facility_col, 'active_date_cols': [], 
             'text_records': [], 'active_facilities': 0,
             'total_absolute_facilities': total_absolute_facilities
         }
@@ -309,7 +310,23 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter):
+def get_absolute_total_facilities(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v3.0"):
+    xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
+    total = 0
+    for sheet in sheet_names_tuple:
+        try:
+            df = read_sheet_robust(xls, sheet)
+            if df is None: continue
+            fac_col = find_facility_column(df)
+            if not fac_col: continue
+            valid_df = df[get_facility_mask(df, fac_col)]
+            total += len(valid_df.drop_duplicates(subset=[fac_col]))
+        except Exception:
+            pass
+    return total
+
+@st.cache_data(show_spinner=False)
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v3.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -327,7 +344,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
                     'Total Patients': s['total'], 
                     'Weighted Avg': s['weighted_avg'], 
                     'Uptime %': calc_uptime(s), 
-                    'Facilities': s['total_absolute_facilities'], # Use absolute count
+                    'Facilities': s['total_absolute_facilities'],
                     'Days Reported': s['num_days'],
                     'Active Spokes': s['active_facilities']
                 })
@@ -335,7 +352,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v3.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -349,6 +366,8 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
             active_cols = stats['active_date_cols']
             max_days = len(active_cols)
             text_records = stats.get('text_records', [])
+            
+            if max_days == 0: continue # Skip if no dates
             
             original_district_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
             raw_zm = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
@@ -695,35 +714,38 @@ if view_mode == "📊 District View":
                 st.plotly_chart(fig_t, use_container_width=True)
                 
         st.markdown("<h4 style='color:#0F172A; margin-top:30px; margin-bottom:10px;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
-        heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
-        heatmap_df['Total'] = heatmap_df.sum(axis=1)
-        heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
-        
-        _new_cols = []
-        _seen = {}
-        for _c in heatmap_df.columns:
-            _d = extract_date(_c)
-            _lbl = _d.strftime('%d %b') if pd.notna(_d) else str(_c)
-            if _lbl in _seen:
-                _seen[_lbl] += 1
-                _lbl = f"{_lbl} ({_seen[_lbl]})"
-            else:
-                _seen[_lbl] = 0
-            _new_cols.append(_lbl)
-        heatmap_df.columns = _new_cols
+        if stats['active_date_cols']:
+            heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
+            heatmap_df['Total'] = heatmap_df.sum(axis=1)
+            heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
+            
+            _new_cols = []
+            _seen = {}
+            for _c in heatmap_df.columns:
+                _d = extract_date(_c)
+                _lbl = _d.strftime('%d %b') if pd.notna(_d) else str(_c)
+                if _lbl in _seen:
+                    _seen[_lbl] += 1
+                    _lbl = f"{_lbl} ({_seen[_lbl]})"
+                else:
+                    _seen[_lbl] = 0
+                _new_cols.append(_lbl)
+            heatmap_df.columns = _new_cols
 
-        fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#DBEAFE'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
-        fig_h.update_traces(xgap=2, ygap=2)
-        
-        hm_layout = PLOTLY_LAYOUT.copy()
-        hm_layout.update(dict(
-            height=max(400, len(heatmap_df) * 35),
-            yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")),
-            xaxis=dict(tickfont=dict(size=11, color="#475569")),
-            coloraxis_colorbar=dict(title="Patients", thickness=15)
-        ))
-        fig_h.update_layout(**hm_layout)
-        st.plotly_chart(fig_h, use_container_width=True)
+            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#DBEAFE'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
+            fig_h.update_traces(xgap=2, ygap=2)
+            
+            hm_layout = PLOTLY_LAYOUT.copy()
+            hm_layout.update(dict(
+                height=max(400, len(heatmap_df) * 35),
+                yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")),
+                xaxis=dict(tickfont=dict(size=11, color="#475569")),
+                coloraxis_colorbar=dict(title="Patients", thickness=15)
+            ))
+            fig_h.update_layout(**hm_layout)
+            st.plotly_chart(fig_h, use_container_width=True)
+        else:
+            st.info("No date data available to display heatmap.")
 
     # ==============================================================================
     # NEW TAB: DIAGNOSIS
@@ -785,10 +807,11 @@ elif view_mode == "🌐 State View":
     
     with st.spinner("Loading State Data..."):
         state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
+        total_facilities_absolute = get_absolute_total_facilities(tuple(available_sheets), file_bytes)
         
     if not state_df.empty:
         total_active = state_df['Active Spokes'].sum()
-        total_facilities = state_df['Facilities'].sum()
+        total_facilities = total_facilities_absolute
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
         
         if time_filter == "All Available Data" and anchor_date:
