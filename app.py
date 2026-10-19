@@ -255,7 +255,6 @@ def district_grade(plot_df):
     reverse_map = {5: "A", 4: "B", 3: "C", 2: "D", 1: "F"}
     grades = [grade_map[calculate_grade(row['Uptime %'], row['Average Patients'])] for _, row in plot_df.iterrows()]
     if not grades: return "F"
-    # FIXED: Standard rounding (round half up)
     avg_grade = sum(grades) / len(grades)
     rounded_grade = math.floor(avg_grade + 0.5)
     return reverse_map[max(1, min(5, int(rounded_grade)))]
@@ -295,7 +294,6 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
             raw_zm = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
             zm_name = raw_zm.split(" (")[0] if " (" in raw_zm else raw_zm
             
-            # VECTORIZED STREAK CALCULATION
             rev_cols = active_cols[::-1]
             is_zero = plot_df[rev_cols].eq(0)
             streaks = is_zero.cumprod(axis=1).sum(axis=1)
@@ -313,7 +311,6 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes):
                     if pd.notna(date_obj):
                         last_active_date = date_obj.strftime('%d %b %Y')
                         
-                # Get primary reason for this facility
                 primary_reason = "No Note"
                 fac_texts = [t for t in text_records if t['Facility'] == fac_name]
                 if fac_texts:
@@ -574,7 +571,12 @@ if view_mode == "📊 District View":
         
         st.markdown(f'''
         <div class="report-header">
-            <div class="report-title">District Report Card — {selected_district_zm}</div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <div class="report-title" style="margin-bottom: 0;">District Report Card — {selected_district_zm}</div>
+                <div style="background-color: #EFF6FF; color: #1D4ED8; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; border: 1px solid #BFDBFE; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    🏥 <span>Total Spokes: {stats['num_facilities']}</span>
+                </div>
+            </div>
             <div class="report-meta"><strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; <strong>Period:</strong> {period_str} ({stats["num_days"]} days)</div>
         </div>
         ''', unsafe_allow_html=True)
