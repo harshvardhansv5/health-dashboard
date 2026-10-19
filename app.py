@@ -129,7 +129,14 @@ ZM_DATA = {
     "Krishna Prakash (Saran)": {"Gopalganj": ["DH Gopalganj"], "Saran": ["DH Saran"], "Siwan": ["DH Siwan"]}
 }
 DISTRICT_TO_ZM = {d: zm for zm, dists in ZM_DATA.items() for d in dists}
-DISTRICT_MAP = {"Seikhpura": "Sheikhpura", "Rohtas": "Sasaram"}
+
+# FIXED: Added East Champaran -> Motihari and West Champaran -> Narkatiaganj
+DISTRICT_MAP = {
+    "Seikhpura": "Sheikhpura", 
+    "Rohtas": "Sasaram",
+    "East Champaran": "Motihari",
+    "West Champaran": "Narkatiaganj"
+}
 REVERSE_DISTRICT_MAP = {v: k for k, v in DISTRICT_MAP.items()}
 
 def read_sheet_robust(xls, sheet_name):
@@ -324,7 +331,7 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v7.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v8.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -337,8 +344,10 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
             sdf = read_sheet_robust(xls, sheet)
             _, _, s = process_district_df(sdf, time_filter, anchor_date=anchor_date)
             if s:
+                # Map sheet name back to ZM district name for the leaderboard
+                display_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
                 data.append({
-                    'District': sheet, 
+                    'District': display_name, 
                     'Total Patients': s['total'], 
                     'Weighted Avg': s['weighted_avg'], 
                     'Uptime %': calc_uptime(s), 
@@ -350,7 +359,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v7.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v8.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -401,7 +410,7 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_bu
                 
                 tracker_data.append({
                     'ZM': zm_name,
-                    'District': sheet,
+                    'District': original_district_name,
                     'Facility Name': fac_name,
                     'Last Active Date': last_active_date,
                     'Inactive Days': streak,
