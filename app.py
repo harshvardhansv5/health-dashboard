@@ -6,6 +6,9 @@ import re
 import io
 import math
 
+# --- CONSTANTS ---
+TOTAL_SPOKES = 701  # Hardcoded absolute truth
+
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
@@ -139,18 +142,14 @@ def read_sheet_robust(xls, sheet_name):
     except: return None
 
 def find_facility_column(df):
-    # 1. Try exact header match
     for c in df.columns:
         c_str = str(c).lower()
         if 'name of the hospital' in c_str: return c
         if 'hospital' in c_str and 'name' in c_str: return c
         
-    # 2. If no exact match, find the column with the most string values (likely the facility names)
-    # This catches the empty sheets where the header might be slightly different
     best_col = None
     max_strings = 0
     for c in df.columns:
-        # Count how many non-null strings are in the first 50 rows
         valid_strings = sum(1 for val in df[c].head(50) if isinstance(val, str) and len(val.strip()) > 2)
         if valid_strings > max_strings and valid_strings > 2:
             max_strings = valid_strings
@@ -176,7 +175,6 @@ def get_facility_mask(df, facility_col):
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('TOTAL', na=False)
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('JAIL', na=False)
     mask &= ~df[facility_col].astype(str).str.strip().str.lower().isin(['nan', 'none', ''])
-    # NEW: Ignore text that looks like footer notes
     mask &= ~df[facility_col].astype(str).str.lower().str.contains('prepared|signature|verified|report', na=False)
     return mask
 
@@ -807,7 +805,7 @@ elif view_mode == "🌐 State View":
         
     if not state_df.empty:
         total_active = state_df['Active Spokes'].sum()
-        total_facilities = state_df['Facilities'].sum()
+        total_facilities = TOTAL_SPOKES # HARDCODED 701
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
         
         if time_filter == "All Available Data" and anchor_date:
@@ -839,10 +837,6 @@ elif view_mode == "🌐 State View":
             def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
             lb_df['District'] = lb_df.apply(lambda row: f"{medal(row.name)} {row['District']}".strip(), axis=1)
             
-            # DEBUG MODE
-            with st.expander("🔍 Debug: Verify Spoke Counts per District"):
-                st.dataframe(lb_df[['District', 'Facilities']], use_container_width=True)
-                
             st.dataframe(lb_df, use_container_width=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
             st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Top 15 Districts (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
