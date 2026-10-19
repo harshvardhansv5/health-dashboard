@@ -139,12 +139,9 @@ def read_sheet_robust(xls, sheet_name):
     except: return None
 
 def find_facility_column(df):
+    # REVERTED: Strict column matching to avoid counting random notes as facilities
     for c in df.columns:
-        c_str = str(c).lower()
-        if 'name of the hospital' in c_str: return c
-        if 'hospital' in c_str and 'name' in c_str: return c
-        if 'facility' in c_str: return c
-        if 'spoke' in c_str: return c
+        if 'name of the hospital' in str(c).lower() or ('hospital' in str(c).lower() and 'name' in str(c).lower()): return c
     return None
 
 def extract_date(col_name):
@@ -163,7 +160,7 @@ def find_date_columns(df):
 def get_facility_mask(df, facility_col):
     mask = df[facility_col].notna()
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('TOTAL', na=False)
-    mask &= ~df[facility_col].astype(str).str.upper().str.contains('JAIL', na=False) # Exclude Jail
+    mask &= ~df[facility_col].astype(str).str.upper().str.contains('JAIL', na=False)
     mask &= ~df[facility_col].astype(str).str.strip().str.lower().isin(['nan', 'none', ''])
     return mask
 
@@ -310,23 +307,7 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def get_absolute_total_facilities(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v3.0"):
-    xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
-    total = 0
-    for sheet in sheet_names_tuple:
-        try:
-            df = read_sheet_robust(xls, sheet)
-            if df is None: continue
-            fac_col = find_facility_column(df)
-            if not fac_col: continue
-            valid_df = df[get_facility_mask(df, fac_col)]
-            total += len(valid_df.drop_duplicates(subset=[fac_col]))
-        except Exception:
-            pass
-    return total
-
-@st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v3.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v4.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -352,7 +333,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v3.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v4.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -367,7 +348,7 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_bu
             max_days = len(active_cols)
             text_records = stats.get('text_records', [])
             
-            if max_days == 0: continue # Skip if no dates
+            if max_days == 0: continue
             
             original_district_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
             raw_zm = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
@@ -807,17 +788,15 @@ elif view_mode == "🌐 State View":
     
     with st.spinner("Loading State Data..."):
         state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
-        total_facilities_absolute = get_absolute_total_facilities(tuple(available_sheets), file_bytes)
         
     if not state_df.empty:
         total_active = state_df['Active Spokes'].sum()
-        total_facilities = total_facilities_absolute
+        total_facilities = state_df['Facilities'].sum()
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
         
         if time_filter == "All Available Data" and anchor_date:
             st.caption(f"ℹ️ **Statewide Totals are anchored to {anchor_date.strftime('%d %b %Y')}.** Data after this date is excluded to ensure a fair comparison across all districts.")
         
-        # --- UPGRADED: 2 Cards Only ---
         st.markdown(f'''
         <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
             <div class="metric-card">
