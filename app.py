@@ -166,9 +166,12 @@ def extract_date(col_name):
     return pd.NaT
 
 def find_date_columns(df):
-    date_cols = [c for c in df.columns if 'Total number of patients' in str(c)]
-    if date_cols: return date_cols
-    return [c for c in df.columns if pd.notna(extract_date(c))]
+    # FIXED: Find ALL date columns, regardless of header format
+    date_cols = []
+    for c in df.columns:
+        if 'Total number of patients' in str(c) or pd.notna(extract_date(c)):
+            date_cols.append(c)
+    return date_cols
 
 def get_facility_mask(df, facility_col):
     mask = df[facility_col].notna()
@@ -321,7 +324,7 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v5.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v6.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -347,7 +350,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v5.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v6.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
