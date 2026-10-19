@@ -178,6 +178,8 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     df = df[get_facility_mask(df, facility_col)].copy()
     df = df.drop_duplicates(subset=[facility_col])
     
+    total_absolute_facilities = len(df) # FIX: Store absolute facility count before date filtering
+    
     date_cols = find_date_columns(df)
     if not date_cols: return None, None, None
     paired = [(c, extract_date(c)) for c in date_cols]
@@ -188,6 +190,22 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     # NEW: Anchor Date Logic for State View
     if time_filter == "All Available Data" and anchor_date:
         active_date_cols = [c for c, d in paired if d.date() <= anchor_date]
+        if not active_date_cols:
+            # District has no data before anchor. Return 0s but keep facility count.
+            dummy_col = sorted_cols[0]
+            plot_df = df[[facility_col]].copy()
+            plot_df[dummy_col] = 0
+            plot_df['Total Patients'] = 0
+            plot_df['Average Patients'] = 0.0
+            plot_df['Zero Days'] = 1
+            plot_df['Uptime %'] = 0.0
+            return plot_df, None, {
+                'total': 0, 'weighted_avg': 0.0, 'zero_days': len(df), 
+                'num_facilities': len(df), 'num_days': 1, 
+                'facility_col': facility_col, 'active_date_cols': [dummy_col], 
+                'text_records': [], 'active_facilities': 0, 
+                'total_absolute_facilities': total_absolute_facilities
+            }
     elif time_filter == "Custom Range" and start_date and end_date:
         active_date_cols = [c for c, d in paired if start_date <= d.date() <= end_date]
     else:
@@ -243,7 +261,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     if num_days > 0: plot_df['Uptime %'] = ((num_days - plot_df['Zero Days']) / num_days * 100).round(1)
     else: plot_df['Uptime %'] = 0
         
-    return plot_df, None, {'total': district_total, 'weighted_avg': weighted_avg, 'zero_days': total_zero, 'num_facilities': num_facilities, 'num_days': num_days, 'facility_col': facility_col, 'active_date_cols': active_date_cols, 'text_records': text_records, 'active_facilities': active_facilities}
+    return plot_df, None, {'total': district_total, 'weighted_avg': weighted_avg, 'zero_days': total_zero, 'num_facilities': num_facilities, 'num_days': num_days, 'facility_col': facility_col, 'active_date_cols': active_date_cols, 'text_records': text_records, 'active_facilities': active_facilities, 'total_absolute_facilities': total_absolute_facilities}
 
 def calc_uptime(s):
     total_fd = s['num_facilities'] * s['num_days']
@@ -312,9 +330,10 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter)
                     'Total Patients': s['total'], 
                     'Weighted Avg': s['weighted_avg'], 
                     'Uptime %': calc_uptime(s), 
-                    'Facilities': s['num_facilities'], 
+                    'Facilities': s['total_absolute_facilities'], # FIX: Use absolute count
                     'Days Reported': s['num_days'],
-                    'Active Spokes': s['active_facilities'] # NEW
+                    'Active Spokes': s['active_facilities'],
+                    'Zero Days': s['zero_days']
                 })
         except Exception: pass
     return pd.DataFrame(data), anchor_date
@@ -774,6 +793,7 @@ elif view_mode == "🌐 State View":
     if not state_df.empty:
         total_active = state_df['Active Spokes'].sum()
         total_facilities = state_df['Facilities'].sum()
+        total_zero_days = state_df['Zero Days'].sum()
         avg_state_uptime = round(state_df['Uptime %'].mean(), 1)
         
         # Show the anchor date caption if "All Available Data" is selected
@@ -786,13 +806,13 @@ elif view_mode == "🌐 State View":
                 <div class="metric-label">Active Spokes (Latest Date)</div>
                 <div class="metric-value">{total_active} <span class="metric-sub">/ {total_facilities} Total</span></div>
             </div>
+            <div class="metric-card" style="border-left: 4px solid #DC2626;">
+                <div class="metric-label">Statewide Zero Days</div>
+                <div class="metric-value" style="color:#DC2626;">{total_zero_days:,}</div>
+            </div>
             <div class="metric-card">
                 <div class="metric-label">Statewide Avg Uptime</div>
                 <div class="metric-value">{avg_state_uptime}%</div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-label">Total Bihar Patients</div>
-                <div class="metric-value">{int(state_df['Total Patients'].sum()):,}</div>
             </div>
         </div>
         ''', unsafe_allow_html=True)
@@ -836,8 +856,8 @@ elif view_mode == "🌐 State View":
                 if pa is None or pb is None: st.error("Could not process one of the selected districts.")
                 else:
                     col1, col2 = st.columns(2)
-                    with col1: st.markdown(f'<div class="battle-card battle-card-blue"><div class="battle-title" style="color: #2563EB;">{district_a}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sa["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sa["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sa)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sa["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
-                    with col2: st.markdown(f'<div class="battle-card battle-card-red"><div class="battle-title" style="color: #DC2626;">{district_b}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sb["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sb["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sb)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sb["num_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    with col1: st.markdown(f'<div class="battle-card battle-card-blue"><div class="battle-title" style="color: #2563EB;">{district_a}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sa["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sa["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sa)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sa["total_absolute_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    with col2: st.markdown(f'<div class="battle-card battle-card-red"><div class="battle-title" style="color: #DC2626;">{district_b}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sb["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sb["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sb)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sb["total_absolute_facilities"]}</span></div></div>', unsafe_allow_html=True)
                     
                     st.markdown("#### Daily Patient Trend — Overlaid")
                     def get_trend(p, cols, name):
