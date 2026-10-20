@@ -16,7 +16,6 @@ DISTANCE_FALLBACK = {
     # "PHC Barh": 16.0,
     # "SDH Danapur": 12.5
 }
-DEFAULT_DISTANCE = 15.0
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
@@ -384,7 +383,7 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v13.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v14.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -411,7 +410,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v13.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v14.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -861,52 +860,77 @@ if view_mode == "📊 District View":
             dist_data = df_raw[[facility_col, dist_col]].copy()
             dist_data.columns = ['Facility', 'Raw_Distance']
             
-            # Clean distance values
             def clean_distance(val):
-                if pd.isna(val): return DEFAULT_DISTANCE
+                if pd.isna(val): return None
                 s = str(val).strip().replace(' ', '')
-                # Fix typos like .21.2
                 s = re.sub(r'^\.', '', s)
                 try:
                     return float(s)
                 except ValueError:
-                    return DISTANCE_FALLBACK.get(val, DEFAULT_DISTANCE)
+                    return DISTANCE_FALLBACK.get(str(val).strip(), None)
                     
             dist_data['Distance'] = dist_data['Raw_Distance'].apply(clean_distance)
             
-            # Merge with scorecard to get grades
             polar_df = pd.merge(scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients']], 
                                 dist_data[['Facility', 'Distance']], 
                                 left_on=facility_col, right_on='Facility')
             
-            # Create the polar chart
-            st.markdown(f"**Hub Center:** {selected_hub_zm}")
-            st.caption("Bar length represents distance from Hub (km). Color represents Facility Grade.")
+            valid_polar_df = polar_df.dropna(subset=['Distance']).copy()
+            missing_polar_df = polar_df[polar_df['Distance'].isna()]
             
-            fig_polar = px.bar_polar(polar_df, r="Distance", theta=facility_col, color="Grade",
-                                     color_discrete_map={'A': '#10B981', 'B': '#A3E635', 'C': '#FBBF24', 'D': '#FB923C', 'F': '#EF4444'},
-                                     hover_data={"Distance": ":.1f", "Uptime %": ":.1f", "Average Patients": ":.1f", "Grade": False},
-                                     title="")
-            
-            fig_polar.update_traces(marker_line_color='#0F172A', marker_line_width=1, opacity=0.9)
-            
-            polar_layout = PLOTLY_LAYOUT.copy()
-            polar_layout.update(dict(
-                template="plotly_white",
-                height=700,
-                margin=dict(l=40, r=40, t=40, b=40),
-                polar=dict(
-                    radialaxis=dict(visible=True, range=[0, polar_df['Distance'].max() + 5], gridcolor='#CBD5E1', tickfont=dict(color="#475569")),
-                    angularaxis=dict(gridcolor='#CBD5E1', tickfont=dict(size=10, color="#1E293B", weight="bold")),
-                    bgcolor='rgba(241, 245, 249, 0.5)'
+            if not valid_polar_df.empty:
+                valid_polar_df['Display_Name'] = valid_polar_df[facility_col].apply(lambda x: x if len(x) <= 28 else x[:25] + "...")
+                
+                st.markdown(f"**Hub Center:** {selected_hub_zm}")
+                st.caption("Bar length represents distance from Hub (km). Color represents Facility Grade.")
+                
+                fig_polar = px.bar_polar(valid_polar_df, r="Distance", theta="Display_Name", color="Grade",
+                                         color_discrete_map={'A': '#10B981', 'B': '#A3E635', 'C': '#FBBF24', 'D': '#FB923C', 'F': '#EF4444'},
+                                         hover_data={"Distance": ":.1f", "Uptime %": ":.1f", "Average Patients": ":.1f", facility_col: True, "Display_Name": False, "Grade": False})
+                
+                fig_polar.update_traces(marker_line_color='#0F172A', marker_line_width=1, opacity=0.9)
+                
+                polar_layout = PLOTLY_LAYOUT.copy()
+                polar_layout.update(dict(
+                    template="plotly_white",
+                    height=700,
+                    margin=dict(l=40, r=40, t=60, b=40),
+                    polar=dict(
+                        bargap=0.5, 
+                        radialaxis=dict(
+                            visible=False, 
+                            range=[0, valid_polar_df['Distance'].max() + 5], 
+                            gridcolor='#CBD5E1'
+                        ),
+                        angularaxis=dict(
+                            gridcolor='#CBD5E1', 
+                            tickfont=dict(size=11, color="#1E293B", weight="bold")
+                        ),
+                        bgcolor='rgba(241, 245, 249, 0.3)'
+                    )
+                ))
+                fig_polar.update_layout(**polar_layout)
+                
+                fig_polar.add_annotation(
+                    x=0.5, y=0.5, 
+                    text="<b>HUB</b>", 
+                    showarrow=False, 
+                    font=dict(size=14, color="#FFFFFF"),
+                    bgcolor="#2563EB",
+                    borderpad=8,
+                    bordercolor="#FFFFFF",
+                    borderwidth=2
                 )
-            ))
-            fig_polar.update_layout(**polar_layout)
+                
+                st.plotly_chart(fig_polar, use_container_width=True)
+            else:
+                st.warning("⚠️ No valid distance data available for this district.")
             
-            # Add a central marker for the Hub
-            fig_polar.add_scatterpolar(r=[0], theta=[0], mode='markers+text', marker=dict(size=15, color='#2563EB'), text=["HUB"], textposition="middle right", showlegend=False)
-            
-            st.plotly_chart(fig_polar, use_container_width=True)
+            if not missing_polar_df.empty:
+                st.warning(f"**Note:** Distance data is missing or unreadable for {len(missing_polar_df)} facilities. They have been omitted from the chart above to prevent false data.")
+                with st.expander("View omitted facilities"):
+                    st.write(", ".join(missing_polar_df[facility_col].tolist()))
+                    
         else:
             st.warning("⚠️ The distance column could not be found in this district's sheet. Cannot render the Hub Logistics chart.")
 
