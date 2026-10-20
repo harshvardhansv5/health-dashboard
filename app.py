@@ -903,12 +903,15 @@ elif view_mode == "🌐 State View":
             st.dataframe(lb_df, use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
             st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Top 15 Districts (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
-            top15 = state_df.head(15)
+            
+            # FIXED: Sort ascending to get the top 15, which places the largest at the top of the horizontal chart
+            top15 = state_df.sort_values(state_metric_col, ascending=True).tail(15)
+            
             fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
             
             lb_layout = PLOTLY_LAYOUT.copy()
             lb_layout.update(dict(
-                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), 
+                yaxis=dict(showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), 
                 height=500
             ))
             fig_lb.update_layout(**lb_layout)
