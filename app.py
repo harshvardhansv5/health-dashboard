@@ -199,14 +199,6 @@ def get_facility_mask(df, facility_col):
     mask &= ~df[facility_col].astype(str).str.lower().str.contains('prepared|signature|verified|report', na=False)
     return mask
 
-def categorize_reason(text):
-    if not text or str(text).strip().lower() in ['nan', 'none', '', '0', '0.0']: return 'Unknown'
-    t = str(text).lower()
-    if any(w in t for w in ['leave', 'nahi', 'nhi', 'unavailable', 'absent', 'lt']): return 'Staffing / Leave'
-    if any(w in t for w in ['denied', 'prescribing', 'refuse', 'no test', 'doctor']): return 'Refusal'
-    if any(w in t for w in ['closed', 'machine', 'breakdown', 'flood', 'strike', 'merged', 'operational']): return 'Infrastructure'
-    return 'Other / Unspecified'
-
 def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_date=None):
     if df is None: return None, None, None
     facility_col = find_facility_column(df)
@@ -299,8 +291,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
                     text_records.append({
                         'Facility': df.loc[idx, facility_col],
                         'Date': d,
-                        'Raw_Note': raw_note,
-                        'Category': categorize_reason(raw_note)
+                        'Raw_Note': raw_note
                     })
 
     plot_df = clean_df[[facility_col] + active_dates].copy()
@@ -377,7 +368,7 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v11.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v12.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -404,7 +395,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v11.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v12.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -674,7 +665,7 @@ if view_mode == "📊 District View":
                 m2.markdown(f"<div class='metric-card'><div class='metric-label'>Uptime</div><div class='metric-value'>{fac_row['Uptime %']}%</div></div>", unsafe_allow_html=True)
                 m3.markdown(f"<div class='metric-card'><div class='metric-label'>Zero Days</div><div class='metric-value'>{fac_row['Zero Days']}</div></div>", unsafe_allow_html=True)
                 
-                drill_trend = [{'Date': pd.to_datetime(c, format='%d %b'), 'Patients': fac_row[c]} for c in stats['active_date_cols']]
+                drill_trend = [{'Date': pd.to_datetime(c + " 2026", format='%d %b %Y'), 'Patients': fac_row[c]} for c in stats['active_date_cols']]
                 if drill_trend:
                     dt_df = pd.DataFrame(drill_trend).sort_values('Date')
                     fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True)
@@ -760,7 +751,7 @@ if view_mode == "📊 District View":
     with d_tab3:
         st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>Daily Patient Trend</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
-            trend_data = [{'Date': pd.to_datetime(c, format='%d %b'), 'Patients': pd.to_numeric(plot_df[c], errors='coerce').fillna(0).sum()} for c in stats['active_date_cols']]
+            trend_data = [{'Date': pd.to_datetime(c + " 2026", format='%d %b %Y'), 'Patients': pd.to_numeric(plot_df[c], errors='coerce').fillna(0).sum()} for c in stats['active_date_cols']]
             if trend_data:
                 fig_t = px.area(pd.DataFrame(trend_data).sort_values('Date'), x='Date', y='Patients', markers=True)
                 fig_t.update_traces(line_color='#2563EB', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')), fillcolor='rgba(37, 99, 235, 0.1)')
@@ -800,24 +791,26 @@ if view_mode == "📊 District View":
         else:
             df_texts = pd.DataFrame(text_records)
             
-            top_cat = df_texts['Category'].value_counts().idxmax() if not df_texts.empty else "N/A"
+            inactive_count = len(plot_df[plot_df['Total Patients'] == 0])
             worst_fac = plot_df.nsmallest(1, 'Uptime %')[facility_col].iloc[0] if not plot_df.empty else "N/A"
             
             st.markdown(f'''
-            <div class="metric-grid" style="grid-template-columns: repeat(3, 1fr);">
-                <div class="metric-card"><div class="metric-label">Total Missing Days (Zero Days)</div><div class="metric-value">{stats['zero_days']}</div></div>
-                <div class="metric-card"><div class="metric-label">Top Problem Category</div><div class="metric-value" style="font-size: 20px;">{top_cat}</div></div>
+            <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <div class="metric-card"><div class="metric-label">Inactive Spokes</div><div class="metric-value">{inactive_count} <span class="metric-sub">/ {stats['num_facilities']} Total</span></div></div>
                 <div class="metric-card"><div class="metric-label">Worst Facility (Lowest Uptime)</div><div class="metric-value" style="font-size: 18px;">{worst_fac}</div></div>
             </div>
             ''', unsafe_allow_html=True)
 
-            st.markdown("<h5 style='color:#0F172A; margin-top:20px;'>Root Cause Breakdown</h5>", unsafe_allow_html=True)
-            cat_counts = df_texts['Category'].value_counts().reset_index()
-            cat_counts.columns = ['Category', 'Count']
+            st.markdown("<h5 style='color:#0F172A; margin-top:20px;'>Most Common Data Entry Notes</h5>", unsafe_allow_html=True)
             
-            fig_diag = px.bar(cat_counts, x='Count', y='Category', orientation='h', color='Category', 
-                              color_discrete_sequence=['#EF4444', '#F59E0B', '#10B981', '#64748B'])
-            fig_diag.update_layout(**PLOTLY_LAYOUT, height=300, showlegend=False, xaxis_title="Days Affected", yaxis_title="")
+            df_texts['Clean_Note'] = df_texts['Raw_Note'].str.strip().str.lower()
+            note_counts = df_texts['Clean_Note'].value_counts().head(10).reset_index()
+            note_counts.columns = ['Note', 'Count']
+            
+            fig_diag = px.bar(note_counts, x='Count', y='Note', orientation='h', color='Note', 
+                              color_discrete_sequence=px.colors.qualitative.Pastel)
+            fig_diag.update_layout(**PLOTLY_LAYOUT, height=350, showlegend=False, xaxis_title="Frequency", yaxis_title="")
+            fig_diag.update_traces(texttemplate='%{x}', textposition='outside')
             st.plotly_chart(fig_diag, use_container_width=True)
 
             st.markdown("<h5 style='color:#0F172A; margin-top:20px;'>Facility Offenders</h5>", unsafe_allow_html=True)
@@ -853,7 +846,6 @@ elif view_mode == "🌐 State View":
         total_active = state_df['Active Spokes'].sum()
         total_facilities = TOTAL_SPOKES 
         
-        # NEW: Only average districts that actually reported data
         reporting_districts = state_df[state_df['Days Reported'] > 0]
         if not reporting_districts.empty:
             avg_state_uptime = round(reporting_districts['Uptime %'].mean(), 1)
@@ -889,10 +881,24 @@ elif view_mode == "🌐 State View":
             def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
             lb_df['District'] = lb_df.apply(lambda row: f"{medal(row.name)} {row['District']}".strip(), axis=1)
             
-            st.dataframe(lb_df, use_container_width=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
+            # --- NEW: Append TOTAL row ---
+            total_row = pd.DataFrame([{
+                'Rank': '', 
+                'District': '🏆 TOTAL', 
+                'Total Patients': lb_df['Total Patients'].sum(), 
+                'Weighted Avg': '', 
+                'Uptime %': None, # Keep None so ProgressColumn doesn't crash
+                'Facilities': TOTAL_SPOKES, 
+                'Days Reported': '', 
+                'Active Spokes': lb_df['Active Spokes'].sum()
+            }])
+            
+            lb_df = pd.concat([lb_df, total_row], ignore_index=True)
+            
+            st.dataframe(lb_df, use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
             st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Top 15 Districts (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
-            top15 = lb_df.head(15)
+            top15 = state_df.head(15)
             fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
             
             lb_layout = PLOTLY_LAYOUT.copy()
@@ -923,7 +929,9 @@ elif view_mode == "🌐 State View":
                         d = []
                         for c in cols:
                             t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
-                            d.append({'Date': pd.to_datetime(c, format='%d %b'), 'Patients': t, 'District': name})
+                            # --- FIXED: APPEND 2026 TO FIX 1900 AXIS ---
+                            dt = pd.to_datetime(c + " 2026", format='%d %b %Y')
+                            d.append({'Date': dt, 'Patients': t, 'District': name})
                         return pd.DataFrame(d)
                     combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
                     fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#2563EB', district_b: '#DC2626'})
