@@ -876,24 +876,29 @@ elif view_mode == "🌐 State View":
             if state_metric_col == "Weighted Avg":
                 lb_df = lb_df[lb_df['Days Reported'] >= 7]
                 st.caption("⚠️ Districts with less than 7 days of data are hidden to ensure fair comparison.")
-            lb_df = lb_df.sort_values(state_metric_col, ascending=False).reset_index(drop=True)
-            lb_df.index = lb_df.index + 1; lb_df.index.name = 'Rank'
-            def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
-            lb_df['District'] = lb_df.apply(lambda row: f"{medal(row.name)} {row['District']}".strip(), axis=1)
             
-            # --- NEW: Append TOTAL row ---
+            lb_df = lb_df.sort_values(state_metric_col, ascending=False).reset_index(drop=True)
+            
+            lb_df['Rank'] = lb_df.index + 1
+            
+            def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
+            lb_df['District'] = lb_df.apply(lambda row: f"{medal(row['Rank'])} {row['District']}".strip(), axis=1)
+            
             total_row = pd.DataFrame([{
                 'Rank': '', 
                 'District': '🏆 TOTAL', 
                 'Total Patients': lb_df['Total Patients'].sum(), 
                 'Weighted Avg': '', 
-                'Uptime %': None, # Keep None so ProgressColumn doesn't crash
+                'Uptime %': None, 
                 'Facilities': TOTAL_SPOKES, 
                 'Days Reported': '', 
                 'Active Spokes': lb_df['Active Spokes'].sum()
             }])
             
             lb_df = pd.concat([lb_df, total_row], ignore_index=True)
+            
+            cols = ['Rank'] + [c for c in lb_df.columns if c != 'Rank']
+            lb_df = lb_df[cols]
             
             st.dataframe(lb_df, use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
@@ -929,7 +934,6 @@ elif view_mode == "🌐 State View":
                         d = []
                         for c in cols:
                             t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
-                            # --- FIXED: APPEND 2026 TO FIX 1900 AXIS ---
                             dt = pd.to_datetime(c + " 2026", format='%d %b %Y')
                             d.append({'Date': dt, 'Patients': t, 'District': name})
                         return pd.DataFrame(d)
