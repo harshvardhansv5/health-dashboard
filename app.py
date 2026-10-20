@@ -9,6 +9,15 @@ import math
 # --- CONSTANTS ---
 TOTAL_SPOKES = 701 
 
+# --- DISTANCE FALLBACK DICTIONARY ---
+# If the Excel sheet has missing or unreadable distance data, it will check here.
+# You can add specific facility names here if they are frequently missing from the sheet.
+DISTANCE_FALLBACK = {
+    # "PHC Barh": 16.0,
+    # "SDH Danapur": 12.5
+}
+DEFAULT_DISTANCE = 15.0
+
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
@@ -161,6 +170,13 @@ def find_facility_column(df):
             best_col = c
             
     return best_col
+
+def find_distance_column(df):
+    for c in df.columns:
+        c_str = str(c).lower()
+        if 'distance from hub' in c_str or 'spokes distance' in c_str:
+            return c
+    return None
 
 def extract_date(col_name):
     if isinstance(col_name, pd.Timestamp): return col_name
@@ -368,7 +384,7 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v12.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v13.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -395,7 +411,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v12.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v13.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -599,7 +615,7 @@ if view_mode == "📊 District View":
     if plot_df is None: st.error(f"Could not process data."); st.stop()
     facility_col = stats['facility_col']
 
-    d_tab1, d_tab2, d_tab3, d_tab4 = st.tabs(["Dashboard", "Report Card", "Trends & Analytics", "🩺 Diagnosis"])
+    d_tab1, d_tab2, d_tab3, d_tab4, d_tab5 = st.tabs(["Dashboard", "Report Card", "Trends & Analytics", "🩺 Diagnosis", "📍 Hub Logistics"])
 
     with d_tab1:
         st.markdown(f'''
@@ -833,6 +849,67 @@ if view_mode == "📊 District View":
             else:
                 st.info("No facilities had zero days in this period.")
 
+    # ==============================================================================
+    # NEW TAB: HUB LOGISTICS
+    # ==============================================================================
+    with d_tab5:
+        st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>📍 Hub Logistics & Distance Mapping</h4>", unsafe_allow_html=True)
+        
+        dist_col = find_distance_column(df_raw)
+        
+        if dist_col:
+            dist_data = df_raw[[facility_col, dist_col]].copy()
+            dist_data.columns = ['Facility', 'Raw_Distance']
+            
+            # Clean distance values
+            def clean_distance(val):
+                if pd.isna(val): return DEFAULT_DISTANCE
+                s = str(val).strip().replace(' ', '')
+                # Fix typos like .21.2
+                s = re.sub(r'^\.', '', s)
+                try:
+                    return float(s)
+                except ValueError:
+                    return DISTANCE_FALLBACK.get(val, DEFAULT_DISTANCE)
+                    
+            dist_data['Distance'] = dist_data['Raw_Distance'].apply(clean_distance)
+            
+            # Merge with scorecard to get grades
+            polar_df = pd.merge(scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients']], 
+                                dist_data[['Facility', 'Distance']], 
+                                left_on=facility_col, right_on='Facility')
+            
+            # Create the polar chart
+            st.markdown(f"**Hub Center:** {selected_hub_zm}")
+            st.caption("Bar length represents distance from Hub (km). Color represents Facility Grade.")
+            
+            fig_polar = px.bar_polar(polar_df, r="Distance", theta=facility_col, color="Grade",
+                                     color_discrete_map={'A': '#10B981', 'B': '#A3E635', 'C': '#FBBF24', 'D': '#FB923C', 'F': '#EF4444'},
+                                     hover_data={"Distance": ":.1f", "Uptime %": ":.1f", "Average Patients": ":.1f", "Grade": False},
+                                     title="")
+            
+            fig_polar.update_traces(marker_line_color='#0F172A', marker_line_width=1, opacity=0.9)
+            
+            polar_layout = PLOTLY_LAYOUT.copy()
+            polar_layout.update(dict(
+                template="plotly_white",
+                height=700,
+                margin=dict(l=40, r=40, t=40, b=40),
+                polar=dict(
+                    radialaxis=dict(visible=True, range=[0, polar_df['Distance'].max() + 5], gridcolor='#CBD5E1', tickfont=dict(color="#475569")),
+                    angularaxis=dict(gridcolor='#CBD5E1', tickfont=dict(size=10, color="#1E293B", weight="bold")),
+                    bgcolor='rgba(241, 245, 249, 0.5)'
+                )
+            ))
+            fig_polar.update_layout(**polar_layout)
+            
+            # Add a central marker for the Hub
+            fig_polar.add_scatterpolar(r=[0], theta=[0], mode='markers+text', marker=dict(size=15, color='#2563EB'), text=["HUB"], textposition="middle right", showlegend=False)
+            
+            st.plotly_chart(fig_polar, use_container_width=True)
+        else:
+            st.warning("⚠️ The distance column could not be found in this district's sheet. Cannot render the Hub Logistics chart.")
+
 # ==============================================================================
 # VIEW: STATE VIEW
 # ==============================================================================
@@ -904,7 +981,6 @@ elif view_mode == "🌐 State View":
             
             st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Top 15 Districts (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
             
-            # FIXED: Sort ascending to get the top 15, which places the largest at the top of the horizontal chart
             top15 = state_df.sort_values(state_metric_col, ascending=True).tail(15)
             
             fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
