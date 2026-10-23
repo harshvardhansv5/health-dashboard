@@ -47,7 +47,6 @@ st.markdown("""
         display: flex; flex-direction: column; transition: transform 0.2s ease; border-top: 4px solid #06B6D4;
     }
     .metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-    /* UPDATED: Darker and bolder labels */
     .metric-label { color: #0F172A; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .metric-value { color: #0F172A; font-size: 36px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
     .metric-sub { font-size: 16px; font-weight: 600; color: #64748B; }
@@ -88,9 +87,10 @@ st.markdown("""
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
         background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; border-radius: 8px !important; padding: 4px !important; gap: 2px !important;
+        flex-wrap: nowrap !important; /* Force single line */
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 8px 16px !important; font-size: 14px !important; white-space: nowrap; margin: 0 !important;
+        padding: 8px 12px !important; font-size: 14px !important; margin: 0 !important; white-space: nowrap !important; /* Prevent wrapping */
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
         background-color: #FFFFFF !important; border-radius: 6px !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; color: #0F172A !important; font-weight: 700 !important;
@@ -412,7 +412,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.1"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.2"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -433,13 +433,13 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
                     'Uptime %': calc_uptime(s), 
                     'Facilities': s['total_absolute_facilities'],
                     'Active Spokes': s['active_facilities'],
-                    'Days Reported': s['num_days'] # FIX: Added missing column
+                    'Days Reported': s['num_days']
                 })
         except Exception: pass
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.1"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.2"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -530,7 +530,7 @@ for s in xls.sheet_names:
         available_sheets.append(s)
 
 # --- UNIFIED COMMAND BAR ---
-col_title, col_nav, col_time_ctrl = st.columns([2.5, 3, 1.5])
+col_title, col_nav, col_time_ctrl = st.columns([2.2, 3.5, 1.3])
 
 with col_title:
     st.markdown("""
@@ -1030,6 +1030,7 @@ elif view_mode == "State View":
         with s_tab1:
             state_metric_label = st.radio("Rank & Compare by:", ["Total Patient Count", "Weighted Avg", "Uptime %"], horizontal=True)
             state_metric_col = {"Total Patient Count": "Total Patients", "Weighted Avg": "Weighted Avg", "Uptime %": "Uptime %"}[state_metric_label]
+            
             lb_df = state_df.copy()
             if state_metric_col == "Weighted Avg":
                 lb_df = lb_df[lb_df['Days Reported'] >= 7]
@@ -1055,20 +1056,42 @@ elif view_mode == "State View":
             
             lb_df = pd.concat([lb_df, total_row], ignore_index=True)
             
-            # FIX: Drop Days Reported from visual display to prevent clipping
             display_cols = ['Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
             st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
-            st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Top 15 Districts (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
+            # --- NEW: Top 5 / Bottom 5 Chart ---
+            st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>District Performance Highlights (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
             
-            top15 = state_df.sort_values(state_metric_col, ascending=True).tail(15)
+            col_chart_ctrl, _ = st.columns([1, 2])
+            with col_chart_ctrl:
+                chart_view = st.selectbox("Chart View:", ["Top 5 Districts", "Bottom 5 Districts"], label_visibility="collapsed")
+
+            chart_base = state_df.copy()
+            if state_metric_col == "Weighted Avg":
+                chart_base = chart_base[chart_base['Days Reported'] >= 7]
+
+            if chart_view == "Top 5 Districts":
+                chart_df = chart_base.nlargest(5, state_metric_col)
+                # Sort ascending so highest is at the top (Plotly y-axis logic)
+                chart_df = chart_df.sort_values(by=state_metric_col, ascending=True)
+            else:
+                chart_df = chart_base.nsmallest(5, state_metric_col)
+                # Sort descending so highest of the lowest is at the top
+                chart_df = chart_df.sort_values(by=state_metric_col, ascending=False)
+
+            fig_lb = px.bar(chart_df, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Teal')
             
-            fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Teal')
-            
+            # Add Average Line
+            avg_val = round(chart_base[state_metric_col].mean(), 1)
+            if state_metric_col != 'Uptime %':
+                fig_lb.add_vline(x=avg_val, line_dash="dash", line_color="#64748B", line_width=2, annotation_text=f"Avg: {avg_val}", annotation_position="top right", annotation_font_color="#64748B", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#64748B", annotation_borderwidth=1, annotation_borderpad=4)
+
             lb_layout = PLOTLY_LAYOUT.copy()
             lb_layout.update(dict(
                 yaxis=dict(showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), 
-                height=250 # FIX: Reduced chart height
+                height=300,
+                title=None,
+                margin=dict(l=10, r=60, t=40, b=10)
             ))
             fig_lb.update_layout(**lb_layout)
             st.plotly_chart(fig_lb, use_container_width=True)
