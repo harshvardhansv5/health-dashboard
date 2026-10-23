@@ -97,6 +97,11 @@ st.markdown("""
     .battle-row:last-child { border-bottom: none; }
     .battle-val { font-weight: 600; color: #0F172A; }
 
+    /* Modern Active Spokes Header */
+    .modern-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+    .modern-dot { width: 14px; height: 14px; background-color: #10B981; border-radius: 50%; box-shadow: 0 0 10px rgba(16, 185, 129, 0.6); }
+    .modern-title { color: #0F172A; font-size: 24px; font-weight: 700; margin: 0; }
+
     /* --- DEFINITIVE DROPDOWN STYLING --- */
     div[data-testid="stSelectbox"] { margin-bottom: 12px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
@@ -395,7 +400,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v21.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v22.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -422,7 +427,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v21.0"):
+def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v22.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     tracker_data = []
     
@@ -486,7 +491,7 @@ def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v21
     return tracker_df
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v21.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v22.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -615,7 +620,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "🟢 Active Spokes", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "✅ Active Spokes", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
@@ -1148,8 +1153,13 @@ elif view_mode == "🌐 State View":
 # ==============================================================================
 # VIEW: ACTIVE SPOKES
 # ==============================================================================
-elif view_mode == "🟢 Active Spokes":
-    st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>🟢 Active Spokes Tracker</h3>", unsafe_allow_html=True)
+elif view_mode == "✅ Active Spokes":
+    st.markdown("""
+    <div class="modern-header">
+        <div class="modern-dot"></div>
+        <h3 class="modern-title">Active Spokes Tracker</h3>
+    </div>
+    """, unsafe_allow_html=True)
     st.markdown("This table lists all facilities that are **currently active** (saw at least 1 patient in the selected time range).")
     
     with st.spinner("Loading all active facilities..."):
@@ -1167,7 +1177,6 @@ elif view_mode == "🟢 Active Spokes":
         if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
         if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
         
-        # Color coding logic
         def style_grade(val):
             if val in ['A', 'B']:
                 return 'background-color: #D1FAE5; color: #065F46; font-weight: bold;'
