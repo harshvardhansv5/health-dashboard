@@ -137,6 +137,12 @@ st.markdown("""
     /* Date Picker */
     div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1px solid #CBD5E1 !important; border-radius: 8px !important; background-color: #F8FAFC !important; min-height: 44px !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
+
+    /* Popover Button Styling */
+    div[data-testid="stPopover"] button {
+        background-color: #F8FAFC !important; border: 1px solid #CBD5E1 !important; border-radius: 8px !important; color: #0F172A !important; font-weight: 600 !important; min-height: 40px !important;
+    }
+    div[data-testid="stPopover"] button:hover { border-color: #06B6D4 !important; color: #06B6D4 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -430,7 +436,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.4"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.5"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -457,7 +463,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.4"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.5"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -548,7 +554,7 @@ for s in xls.sheet_names:
         available_sheets.append(s)
 
 # --- UNIFIED COMMAND BAR ---
-col_title, col_nav, col_time_ctrl = st.columns([2.2, 3.5, 1.3])
+col_title, col_nav, col_info, col_time_ctrl = st.columns([2.2, 3.0, 0.8, 1.5])
 
 with col_title:
     st.markdown("""
@@ -570,6 +576,36 @@ with col_title:
 with col_nav:
     view_mode = st.radio("Navigation", ["District View", "State View", "Active Spokes", "Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
+with col_info:
+    with st.popover("ℹ️ Definitions", use_container_width=True):
+        st.markdown("### Metric Definitions & Grading System")
+        st.markdown("""
+        **📊 Weighted Avg / Day** — *The efficiency score.*  
+        Total patients divided by (facilities × days). This accounts for all facility-days equally.
+        
+        **⏱️ Uptime %** — *The reliability score.*  
+        The percentage of days each facility reported more than 0 patients.
+        
+        **📉 Zero Days** — *The failure indicator.*  
+        The total number of days a facility reported exactly 0 patients.
+        """)
+        
+        st.markdown("**🏆 Grading System**")
+        grade_data = pd.DataFrame({
+            "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
+            "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
+            "Avg Patients Requirement": ["> 10", "> 5", "> 2", "> 1", "0"]
+        })
+        
+        st.dataframe(
+            grade_data, hide_index=True, use_container_width=True,
+            column_config={
+                "Grade": st.column_config.TextColumn("Grade", width="medium"),
+                "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
+                "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
+            }
+        )
+
 with col_time_ctrl:
     st.markdown(f"""
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -588,37 +624,6 @@ with col_time_ctrl:
     else:
         date_range_str = time_filter
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-with st.expander("ℹ️ Metric Definitions & Grading System"):
-    st.markdown("""
-    **📊 Weighted Avg / Day** — *The efficiency score.*  
-    Total patients divided by (facilities × days). This accounts for all facility-days equally.
-    
-    **⏱️ Uptime %** — *The reliability score.*  
-    The percentage of days each facility reported more than 0 patients.
-    
-    **📉 Zero Days** — *The failure indicator.*  
-    The total number of days a facility reported exactly 0 patients.
-    
-    **🏆 Grading System**  
-    Grades are assigned based on a combination of Uptime (Reliability) and Average Patients (Volume):
-    """)
-    
-    grade_data = pd.DataFrame({
-        "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
-        "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
-        "Avg Patients Requirement": ["> 10", "> 5", "> 2", "> 1", "0"]
-    })
-    
-    st.dataframe(
-        grade_data, hide_index=True, use_container_width=True,
-        column_config={
-            "Grade": st.column_config.TextColumn("Grade", width="medium"),
-            "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
-            "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
-        }
-    )
 st.markdown("<br>", unsafe_allow_html=True)
 
 PLOTLY_LAYOUT = dict(
