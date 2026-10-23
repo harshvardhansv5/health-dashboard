@@ -400,7 +400,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v22.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v23.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -427,7 +427,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v22.0"):
+def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v23.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     tracker_data = []
     
@@ -442,8 +442,6 @@ def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v22
             max_days = len(active_cols)
             text_records = stats.get('text_records', [])
             
-            if max_days == 0: continue
-            
             original_district_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
             raw_zm = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
             zm_name = raw_zm.split(" (")[0] if " (" in raw_zm else raw_zm
@@ -451,13 +449,18 @@ def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v22
             for idx, row in plot_df.iterrows():
                 streak = 0
                 last_active_date = "Never Reported"
-                for c in reversed(active_cols):
-                    if row[c] == 0:
-                        streak += 1
-                    else:
-                        last_active_date = c
-                        break
-                        
+                
+                if max_days > 0:
+                    for c in reversed(active_cols):
+                        if row[c] == 0:
+                            streak += 1
+                        else:
+                            last_active_date = c
+                            break
+                else:
+                    streak = 999
+                    last_active_date = "Never Reported"
+                    
                 if streak == 0: continue
                 
                 fac_name = row[facility_col]
@@ -491,7 +494,7 @@ def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v22
     return tracker_df
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v22.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v23.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -1225,7 +1228,7 @@ else:
     
     col_filter, _ = st.columns([1, 2])
     with col_filter:
-        streak_threshold = st.selectbox("Show facilities inactive for at least:", [7, 14, 21, 30], format_func=lambda x: f"{x} days")
+        streak_threshold = st.selectbox("Show facilities inactive for at least:", [1, 7, 14, 21, 30], format_func=lambda x: f"{x} day(s)")
     
     with st.spinner("Scanning all districts for inactive facilities..."):
         tracker_df = generate_zero_tracker_data(tuple(available_sheets), file_bytes)
