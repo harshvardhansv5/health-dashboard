@@ -12,7 +12,6 @@ TOTAL_SPOKES = 701
 available_sheets = [] 
 
 # --- GOOGLE SHEETS INTEGRATION ---
-# PASTE YOUR PUBLISHED .XLSX URL HERE (It must end in /pub?output=xlsx)
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwjDNp1zjbEXM-a4HYoAErb4ZWyJm9YmbKyTeEOhKOpKx6DAFLUlVPlQEvRP0ll5SUDXYWKlS5F7Gc/pub?output=xlsx"
 
 # --- DISTANCE FALLBACK DICTIONARY ---
@@ -72,10 +71,21 @@ st.markdown("""
     .grade-D { background-color: #FED7AA; color: #9A3412; border: 1px solid #FDBA74; }
     .grade-F { background-color: #FECDD3; color: #991B1B; border: 1px solid #FDA4AF; }
 
-    /* --- COMMAND BAR & PULSING DOT --- */
-    .app-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 24px; }
+    /* --- UPGRADED HEADER & PULSING DOT --- */
+    .app-header { 
+        display: flex; align-items: center; justify-content: space-between; 
+        padding: 20px 24px; background-color: #FFFFFF; border-radius: 12px; 
+        border: 1px solid #E2E8F0; border-bottom: 3px solid #06B6D4; 
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 24px; 
+    }
     .header-left { display: flex; align-items: center; gap: 16px; }
-    .header-icon { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background-color: #ECFEFF; border-radius: 12px; font-size: 24px; color: #06B6D4; }
+    
+    .header-icon { 
+        display: flex; align-items: center; justify-content: center; 
+        width: 48px; height: 48px; background-color: #0891B2; 
+        border-radius: 12px; color: #FFFFFF; box-shadow: 0 4px 10px rgba(8, 145, 178, 0.3);
+    }
+    .header-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; }
     
     .header-title { font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; }
     .header-subtitle { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 2px; }
@@ -407,7 +417,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v26.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v27.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -434,7 +444,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v26.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v27.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -531,7 +541,11 @@ with col_header:
     st.markdown(f"""
     <div class="app-header" style="margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;">
         <div class="header-left">
-            <div class="header-icon">🏥</div>
+            <div class="header-icon">
+                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            </div>
             <div>
                 <div class="header-title">Bihar Health Dashboard</div>
                 <div class="header-subtitle">Statewide Operations & Pathology Management</div>
@@ -749,6 +763,18 @@ if view_mode == "District View":
         display['Avg / Day'] = scorecard['Average Patients']
         display['Total Patients'] = scorecard['Total Patients'].astype(int)
         display['Zero Days'] = scorecard['Zero Days'].astype(int)
+        
+        # --- NEW: Append TOTAL row to Scorecard ---
+        total_row = pd.DataFrame([{
+            'Facility': '🏆 TOTAL',
+            'Grade': d_grade,
+            'Uptime %': round(calc_uptime(stats), 1),
+            'Avg / Day': stats['weighted_avg'],
+            'Total Patients': stats['total'],
+            'Zero Days': stats['zero_days']
+        }])
+        
+        display = pd.concat([display, total_row], ignore_index=True)
         
         st.dataframe(display, use_container_width=True, hide_index=True, column_config={"Facility": st.column_config.TextColumn("Facility", width="large"), "Grade": st.column_config.TextColumn("Grade", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"), "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"), "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"), "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d")})
         
