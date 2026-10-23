@@ -47,7 +47,8 @@ st.markdown("""
         display: flex; flex-direction: column; transition: transform 0.2s ease; border-top: 4px solid #06B6D4;
     }
     .metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-    .metric-label { color: #64748B; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    /* UPDATED: Darker and bolder labels */
+    .metric-label { color: #0F172A; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .metric-value { color: #0F172A; font-size: 36px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
     .metric-sub { font-size: 16px; font-weight: 600; color: #64748B; }
 
@@ -71,40 +72,44 @@ st.markdown("""
     .grade-D { background-color: #FED7AA; color: #9A3412; border: 1px solid #FDBA74; }
     .grade-F { background-color: #FECDD3; color: #991B1B; border: 1px solid #FDA4AF; }
 
-    /* --- UPGRADED HEADER & PULSING DOT --- */
-    .app-header { 
-        display: flex; align-items: center; justify-content: space-between; 
-        padding: 20px 24px; background-color: #FFFFFF; border-radius: 12px; 
-        border: 1px solid #E2E8F0; border-bottom: 3px solid #06B6D4; 
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 0px; 
+    /* --- UNIFIED COMMAND BAR --- */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) {
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-bottom: 3px solid #06B6D4 !important;
+        border-radius: 12px !important;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
+        padding: 12px 24px !important;
+        margin-bottom: 24px !important;
+        align-items: center !important;
     }
-    .header-left { display: flex; align-items: center; gap: 16px; }
-    
-    .header-icon { 
-        display: flex; align-items: center; justify-content: center; 
-        width: 48px; height: 48px; background-color: #0891B2; 
-        border-radius: 12px; color: #FFFFFF; box-shadow: 0 4px 10px rgba(8, 145, 178, 0.3);
+    div[data-testid="stHorizontalBlock"]:has(.app-header) .app-header {
+        border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important;
     }
-    .header-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; }
-    
-    .header-title { font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; }
-    .header-subtitle { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 2px; }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
+        background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; border-radius: 8px !important; padding: 4px !important; gap: 2px !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
+        padding: 8px 16px !important; font-size: 14px !important; white-space: nowrap; margin: 0 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
+        background-color: #FFFFFF !important; border-radius: 6px !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; color: #0F172A !important; font-weight: 700 !important;
+    }
 
-    .header-right { display: flex; align-items: center; gap: 16px; }
-    .status-badge { background-color: #CCFBF1; color: #0F766E; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; border: 1px solid #5EEAD4; }
+    /* Header Details */
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .header-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background-color: #0891B2; border-radius: 10px; color: #FFFFFF; box-shadow: 0 4px 10px rgba(8, 145, 178, 0.3); }
+    .header-icon svg { width: 20px; height: 20px; stroke: #FFFFFF; }
+    .header-title { font-size: 18px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; }
+    .header-subtitle { font-size: 12px; font-weight: 500; color: #64748B; margin-top: 2px; }
     
     /* Blinking Radar Dot */
-    .status-dot { 
-        width: 8px; height: 8px; background-color: #14B8A6; border-radius: 50%; 
-        animation: pulse-cyan 2s infinite; 
-    }
+    .status-dot { width: 8px; height: 8px; background-color: #14B8A6; border-radius: 50%; animation: pulse-cyan 2s infinite; display: inline-block; }
     @keyframes pulse-cyan {
         0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.7); }
         70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(20, 184, 166, 0); }
         100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
     }
-    
-    .header-date { font-size: 13px; color: #64748B; font-weight: 600; }
 
     /* Compare Battle Cards */
     .battle-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; }
@@ -119,7 +124,7 @@ st.markdown("""
     div[data-testid="stSelectbox"] { margin-bottom: 0px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
         background-color: #F8FAFC !important; border: 1px solid #CBD5E1 !important; border-radius: 8px !important; 
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 44px !important; 
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 40px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
     div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #06B6D4 !important; background-color: #FFFFFF !important; }
@@ -131,12 +136,6 @@ st.markdown("""
     /* Date Picker */
     div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1px solid #CBD5E1 !important; border-radius: 8px !important; background-color: #F8FAFC !important; min-height: 44px !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
-
-    /* Segmented Control (Radio Buttons) for Navigation */
-    div[data-testid="stRadio"] label > div:first-child { display: none !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] { display: flex !important; background-color: #FFFFFF !important; padding: 6px !important; border-radius: 10px !important; gap: 4px !important; border: 1px solid #E2E8F0 !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05); width: 100%; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label { flex: 1; justify-content: center; padding: 10px 20px !important; border-radius: 8px !important; cursor: pointer !important; transition: all 0.2s ease !important; color: #64748B !important; font-weight: 600 !important; font-size: 15px !important; margin: 0 !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) { background-color: #F1F5F9 !important; color: #0F172A !important; font-weight: 700 !important; border: 1px solid #E2E8F0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -413,7 +412,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.1"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -433,13 +432,14 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
                     'Weighted Avg': s['weighted_avg'], 
                     'Uptime %': calc_uptime(s), 
                     'Facilities': s['total_absolute_facilities'],
-                    'Active Spokes': s['active_facilities']
+                    'Active Spokes': s['active_facilities'],
+                    'Days Reported': s['num_days'] # FIX: Added missing column
                 })
         except Exception: pass
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.1"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -529,12 +529,12 @@ for s in xls.sheet_names:
     if any(kw.lower() in s_lower or s_lower in kw.lower() for kw in valid_keywords):
         available_sheets.append(s)
 
-# --- TOP HEADER & CONTROLS ---
-col_head, col_time = st.columns([3, 1])
+# --- UNIFIED COMMAND BAR ---
+col_title, col_nav, col_time_ctrl = st.columns([2.5, 3, 1.5])
 
-with col_head:
-    st.markdown(f"""
-    <div class="app-header" style="margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;">
+with col_title:
+    st.markdown("""
+    <div class="app-header">
         <div class="header-left">
             <div class="header-icon">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -546,14 +546,21 @@ with col_head:
                 <div class="header-subtitle">Statewide Operations & Pathology Management</div>
             </div>
         </div>
-        <div class="header-right">
-            <div class="status-badge"><div class="status-dot"></div> Live Sync Active</div>
-            <div class="header-date">Refreshed: {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}</div>
-        </div>
     </div>
     """, unsafe_allow_html=True)
 
-with col_time:
+with col_nav:
+    view_mode = st.radio("Navigation", ["District View", "State View", "Active Spokes", "Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+
+with col_time_ctrl:
+    st.markdown(f"""
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <div style="font-size: 11px; font-weight: 700; color: #64748B; letter-spacing: 0.5px;">TIME RANGE</div>
+        <div style="font-size: 10px; font-weight: 700; color: #0F766E; display: flex; align-items: center; gap: 4px;">
+            <div class="status-dot"></div> Live
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     time_filter = st.selectbox("Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days", "Custom Range"], label_visibility="collapsed")
     start_date, end_date = None, None
     if time_filter == "Custom Range":
@@ -562,9 +569,6 @@ with col_time:
         date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
     else:
         date_range_str = time_filter
-
-# --- NAVIGATION ---
-view_mode = st.radio("Navigation", ["District View", "State View", "Active Spokes", "Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -1045,15 +1049,15 @@ elif view_mode == "State View":
                 'Weighted Avg': '', 
                 'Uptime %': None, 
                 'Facilities': TOTAL_SPOKES, 
-                'Active Spokes': lb_df['Active Spokes'].sum()
+                'Active Spokes': lb_df['Active Spokes'].sum(),
+                'Days Reported': None
             }])
             
             lb_df = pd.concat([lb_df, total_row], ignore_index=True)
             
-            cols = ['Rank'] + [c for c in lb_df.columns if c != 'Rank']
-            lb_df = lb_df[cols]
-            
-            st.dataframe(lb_df, use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
+            # FIX: Drop Days Reported from visual display to prevent clipping
+            display_cols = ['Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
+            st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
             st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Top 15 Districts (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
             
@@ -1064,7 +1068,7 @@ elif view_mode == "State View":
             lb_layout = PLOTLY_LAYOUT.copy()
             lb_layout.update(dict(
                 yaxis=dict(showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), 
-                height=350
+                height=250 # FIX: Reduced chart height
             ))
             fig_lb.update_layout(**lb_layout)
             st.plotly_chart(fig_lb, use_container_width=True)
