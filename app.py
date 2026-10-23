@@ -9,10 +9,11 @@ import requests
 
 # --- CONSTANTS ---
 TOTAL_SPOKES = 701 
+available_sheets = [] # Initialize globally to prevent NameError
 
 # --- GOOGLE SHEETS INTEGRATION ---
-# PASTE YOUR PUBLISHED .XLSX URL HERE
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwjDNp1zjbEXM-a4HYoAErb4ZWyJm9YmbKyTeEOhKOpKx6DAFLUlVPlQEvRP0ll5SUDXYWKlS5F7Gc/pubhtml"
+# PASTE YOUR PUBLISHED .XLSX URL HERE (It must end in /pub?output=xlsx)
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwjDNp1zjbEXM-a4HYoAErb4ZWyJm9YmbKyTeEOhKOpKx6DAFLUlVPlQEvRP0ll5SUDXYWKlS5F7Gc/pub?output=xlsx"
 
 # --- DISTANCE FALLBACK DICTIONARY ---
 DISTANCE_FALLBACK = {}
@@ -145,7 +146,7 @@ DISTRICT_MAP = {
 }
 REVERSE_DISTRICT_MAP = {v: k for k, v in DISTRICT_MAP.items()}
 
-# --- GOOGLE SHEETS FETCHER ---
+# --- CACHED GOOGLE SHEETS FETCHER ---
 @st.cache_data(ttl=900, show_spinner="Fetching live data from Google Sheets...")
 def fetch_google_sheet(url):
     try:
@@ -156,6 +157,7 @@ def fetch_google_sheet(url):
         st.error(f"Failed to connect to Google Sheets: {e}")
         return None
 
+# --- DATA PROCESSING HELPERS ---
 def read_sheet_robust(xls, sheet_name):
     try:
         df_raw = pd.read_excel(xls, sheet_name=sheet_name, header=None)
@@ -394,7 +396,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v18.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v19.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -421,7 +423,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v18.0"):
+def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v19.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     tracker_data = []
     
@@ -485,7 +487,7 @@ def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v18
     return tracker_df
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v18.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v19.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -574,6 +576,7 @@ with st.sidebar:
 
         except Exception as e:
             st.error(f"Error: {e}")
+            st.stop() # CRITICAL FIX: Stop the app if the file fails to parse
 
 # --- MAIN AREA ---
 if file_bytes is None:
@@ -614,8 +617,6 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "🔍 Master Query", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
-
-# ... (REST OF THE APP LOGIC REMAINS IDENTICAL, EXCEPT PASSING file_bytes) ...
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
@@ -1152,7 +1153,6 @@ elif view_mode == "🔍 Master Query":
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>🔍 Master Query Engine</h3>", unsafe_allow_html=True)
     st.markdown("Build custom queries across all 701 spokes in the state.")
     
-    # Independent Time Filter for Master Query
     col_time, _ = st.columns([1, 2])
     with col_time:
         query_time_filter = st.selectbox("Select Query Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"])
@@ -1163,13 +1163,11 @@ elif view_mode == "🔍 Master Query":
     if not all_fac_df.empty:
         st.markdown("#### Query Rules")
         
-        # Initialize session state for rules
         if 'query_rules' not in st.session_state:
-            st.session_state.query_rules = [0] # Start with one rule (index 0)
+            st.session_state.query_rules = [0]
             
         logic = st.radio("Match:", ["ALL (AND)", "ANY (OR)"], horizontal=True)
         
-        # Render rules
         for i in st.session_state.query_rules:
             c1, c2, c3, c4 = st.columns([2, 2, 3, 1])
             
@@ -1203,7 +1201,6 @@ elif view_mode == "🔍 Master Query":
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Build the filter mask
         if st.button("🚀 Run Query", type="primary"):
             mask = pd.Series(True if logic == "ALL (AND)" else False, index=all_fac_df.index)
             
