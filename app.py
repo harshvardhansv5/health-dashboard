@@ -174,6 +174,12 @@ def style_reason(val):
         return 'background-color: #F1F5F9; color: #475569; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
     return 'background-color: #E0F2FE; color: #0369A1; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
 
+def format_reason(reason):
+    if pd.isna(reason): return reason
+    acronyms = ['OPD', 'LT', 'CHC', 'PHC', 'UPHC', 'RH', 'SDH', 'DH']
+    words = str(reason).split()
+    return ' '.join([w if w.upper() in acronyms else w.capitalize() for w in words])
+
 # --- CACHED GOOGLE SHEETS FETCHER ---
 @st.cache_data(ttl=900, show_spinner="Fetching live data from Google Sheets...")
 def fetch_google_sheet(url):
@@ -424,7 +430,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.3"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.4"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -451,7 +457,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.3"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.4"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -982,7 +988,7 @@ if view_mode == "District View":
                 polar_layout = PLOTLY_LAYOUT.copy()
                 polar_layout.update(dict(
                     template="plotly_white",
-                    height=750, # Increased height to prevent label overlapping
+                    height=750,
                     margin=dict(l=40, r=40, t=80, b=40),
                     polar=dict(
                         bargap=0.5, 
@@ -1185,6 +1191,9 @@ elif view_mode == "Active Spokes":
         if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
         if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
         
+        # Sort by Uptime % descending by default
+        active_df = active_df.sort_values(by='Uptime %', ascending=False)
+        
         def style_grade(val):
             if val in ['A', 'B']:
                 return 'background-color: #CCFBF1; color: #0F766E; font-weight: bold;'
@@ -1197,14 +1206,15 @@ elif view_mode == "Active Spokes":
         display_active = active_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients']]
         styled_active = display_active.style.map(style_grade, subset=['Grade'])
         
-        st.markdown(f'''
-        <div class="metric-grid" style="grid-template-columns: repeat(1, 1fr);">
-            <div class="metric-card" style="border-top: 4px solid #14B8A6; padding: 16px;">
-                <div class="metric-label">Total Active Spokes ({time_filter})</div>
+        # Wrapped metric card in columns to prevent full width
+        col_card, _ = st.columns([1.5, 3])
+        with col_card:
+            st.markdown(f'''
+            <div class="metric-card" style="border-top: 4px solid #14B8A6; padding: 16px; margin-bottom: 20px;">
+                <div class="metric-label">Total Active Spokes</div>
                 <div class="metric-value" style="color:#14B8A6;">{len(active_df)}</div>
             </div>
-        </div>
-        ''', unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
         
         st.dataframe(
             styled_active, 
@@ -1246,16 +1256,15 @@ else:
         
         total_inactive = len(inactive_df)
         
-        col1, col2, _ = st.columns([1, 1, 2])
-        with col1:
+        # Wrapped metric card in columns to prevent full width
+        col_card, _ = st.columns([1.5, 3])
+        with col_card:
             st.markdown(f'''
-            <div class="metric-card" style="border-top: 4px solid #F43F5E; padding: 16px;">
-                <div class="metric-label">Total Inactive Facilities ({time_filter})</div>
+            <div class="metric-card" style="border-top: 4px solid #F43F5E; padding: 16px; margin-bottom: 20px;">
+                <div class="metric-label">Total Inactive Facilities</div>
                 <div class="metric-value" style="color:#F43F5E;">{total_inactive}</div>
             </div>
             ''', unsafe_allow_html=True)
-        
-        st.markdown("<br>", unsafe_allow_html=True)
         
         if not inactive_df.empty:
             display_tracker = inactive_df[['District', 'Facility', 'Primary Reason']].copy()
@@ -1263,6 +1272,9 @@ else:
             display_tracker.index = display_tracker.index + 1
             display_tracker.index.name = 'S.No.'
             display_tracker = display_tracker.reset_index()
+            
+            # Format reasons to Title Case
+            display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
             
             styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
             
