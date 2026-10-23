@@ -20,6 +20,9 @@ DISTANCE_FALLBACK = {}
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
+# Define view_mode early so the sidebar can react to it
+view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "✅ Active Spokes", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+
 # --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme) ---
 st.markdown("""
 <style>
@@ -400,7 +403,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v22.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v23.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -427,7 +430,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v22.0"):
+def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v23.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     tracker_data = []
     
@@ -491,7 +494,7 @@ def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v22
     return tracker_df
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v22.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v23.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -564,17 +567,23 @@ with st.sidebar:
             
             st.markdown("<hr style='margin: 20px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
             
-            st.markdown("<p style='font-size:13px; font-weight:600; color:#64748B; text-transform:uppercase; margin-bottom:5px;'>Time Range</p>", unsafe_allow_html=True)
-            time_filter = st.selectbox("Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days", "Custom Range"], label_visibility="collapsed")
-            
-            start_date, end_date = None, None
-            if time_filter == "Custom Range":
-                col1, col2 = st.columns(2)
-                start_date = col1.date_input("Start Date", value=pd.Timestamp.now() - timedelta(days=30))
-                end_date = col2.date_input("End Date", value=pd.Timestamp.now())
-                date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
+            # --- FIX: ONLY SHOW TIME FILTER IF NOT ON TRACKER PAGE ---
+            if view_mode != "⚠️ Zero-Sample Tracker":
+                st.markdown("<p style='font-size:13px; font-weight:600; color:#64748B; text-transform:uppercase; margin-bottom:5px;'>Time Range</p>", unsafe_allow_html=True)
+                time_filter = st.selectbox("Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days", "Custom Range"], label_visibility="collapsed")
+                
+                start_date, end_date = None, None
+                if time_filter == "Custom Range":
+                    col1, col2 = st.columns(2)
+                    start_date = col1.date_input("Start Date", value=pd.Timestamp.now() - timedelta(days=30))
+                    end_date = col2.date_input("End Date", value=pd.Timestamp.now())
+                    date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
+                else:
+                    date_range_str = time_filter
             else:
-                date_range_str = time_filter
+                time_filter = "All Available Data"
+                start_date, end_date = None, None
+                date_range_str = "All Available Data"
                 
             st.success("✅ Connected to Live Google Sheet")
 
@@ -620,7 +629,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "✅ Active Spokes", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+# Note: view_mode is already defined at the top of the script
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
@@ -1223,9 +1232,10 @@ else:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>⚠️ Statewide Zero-Sample Tracker</h3>", unsafe_allow_html=True)
     st.markdown("This table lists all facilities that are **currently inactive** (a streak of 0 patients ending on the latest date).")
     
+    # FIX: Changed label to 'Minimum Inactive Streak'
     col_filter, _ = st.columns([1, 2])
     with col_filter:
-        streak_threshold = st.selectbox("Show facilities inactive for at least:", [7, 14, 21, 30], format_func=lambda x: f"{x} days")
+        streak_threshold = st.selectbox("Minimum Inactive Streak:", [7, 14, 21, 30], format_func=lambda x: f"{x} days")
     
     with st.spinner("Scanning all districts for inactive facilities..."):
         tracker_df = generate_zero_tracker_data(tuple(available_sheets), file_bytes)
