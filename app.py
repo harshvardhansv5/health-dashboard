@@ -12,6 +12,7 @@ TOTAL_SPOKES = 701
 available_sheets = [] 
 
 # --- GOOGLE SHEETS INTEGRATION ---
+# PASTE YOUR PUBLISHED .XLSX URL HERE (It must end in /pub?output=xlsx)
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwjDNp1zjbEXM-a4HYoAErb4ZWyJm9YmbKyTeEOhKOpKx6DAFLUlVPlQEvRP0ll5SUDXYWKlS5F7Gc/pub?output=xlsx"
 
 # --- DISTANCE FALLBACK DICTIONARY ---
@@ -20,7 +21,7 @@ DISTANCE_FALLBACK = {}
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
-# --- BRIGHT & AQUA UI CSS ---
+# --- CLINICAL PEARL UI CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -30,9 +31,9 @@ st.markdown("""
     }
     .material-symbols-rounded, [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
     
-    /* --- THE AQUA CANVAS --- */
+    /* --- THE SOFT SLATE CANVAS --- */
     .stApp { 
-        background: linear-gradient(135deg, #F0FDFA 0%, #E0F2FE 100%) !important; 
+        background-color: #F1F5F9 !important; 
     } 
     
     /* Remove Sidebar entirely */
@@ -40,26 +41,26 @@ st.markdown("""
     [data-testid="collapsedControl"] { display: none !important; }
 
     /* Metric Cards (Floating Glass) */
-    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
     .metric-card {
-        background-color: #FFFFFF; border: 1px solid #CCFBF1; border-radius: 16px;
-        padding: 24px; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1), 0 8px 10px -6px rgba(6, 182, 212, 0.1); 
-        display: flex; flex-direction: column; transition: transform 0.2s ease;
+        background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
+        padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); 
+        display: flex; flex-direction: column; transition: transform 0.2s ease; border-top: 4px solid #06B6D4;
     }
-    .metric-card:hover { transform: translateY(-2px); }
-    .metric-label { color: #0D9488; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    .metric-label { color: #64748B; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .metric-value { color: #0F172A; font-size: 36px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
     .metric-sub { font-size: 16px; font-weight: 600; color: #64748B; }
 
     /* Tables & Cards */
-    [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 16px; border: 1px solid #CCFBF1; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1); padding: 4px; }
-    .zm-card { background-color: #FFFFFF; border: 1px solid #CCFBF1; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 15px -3px rgba(6, 182, 212, 0.1); }
-    .zm-card-header { color: #0D9488; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;}
+    [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 8px; }
+    .zm-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 4px solid #06B6D4; }
+    .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;}
     .zm-card-name { color: #0F172A; font-size: 18px; font-weight: 700; margin-bottom: 2px;}
     .zm-card-zone { color: #06B6D4; font-size: 14px; font-weight: 600;}
 
     /* Report Header */
-    .report-header { background-color: #FFFFFF; border: 1px solid #CCFBF1; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1); }
+    .report-header { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
     .report-title { color: #0F172A; font-size: 24px; font-weight: 800; margin-bottom: 8px; }
     .report-meta { color: #475569; font-size: 14px; line-height: 1.6; font-weight: 500; }
     
@@ -71,8 +72,8 @@ st.markdown("""
     .grade-D { background-color: #FED7AA; color: #9A3412; border: 1px solid #FDBA74; }
     .grade-F { background-color: #FECDD3; color: #991B1B; border: 1px solid #FDA4AF; }
 
-    /* --- UPGRADED HEADER & PULSING DOT --- */
-    .app-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #CCFBF1; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1); margin-bottom: 24px; }
+    /* --- COMMAND BAR & PULSING DOT --- */
+    .app-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 24px; }
     .header-left { display: flex; align-items: center; gap: 16px; }
     .header-icon { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background-color: #ECFEFF; border-radius: 12px; font-size: 24px; color: #06B6D4; }
     
@@ -96,7 +97,7 @@ st.markdown("""
     .header-date { font-size: 13px; color: #64748B; font-weight: 600; }
 
     /* Compare Battle Cards */
-    .battle-card { background-color: #FFFFFF; border: 1px solid #CCFBF1; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1); margin-bottom: 16px; }
+    .battle-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; }
     .battle-card-blue { border-top: 4px solid #06B6D4; }
     .battle-card-red { border-top: 4px solid #F43F5E; }
     .battle-title { font-size: 20px; font-weight: 800; margin-bottom: 16px; }
@@ -104,33 +105,32 @@ st.markdown("""
     .battle-row:last-child { border-bottom: none; }
     .battle-val { font-weight: 700; color: #0F172A; }
 
-    /* Modern Active Spokes Header */
+    /* Modern Page Header */
     .modern-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-    .modern-dot { width: 16px; height: 16px; background-color: #14B8A6; border-radius: 50%; box-shadow: 0 0 12px rgba(20, 184, 166, 0.6); }
     .modern-title { color: #0F172A; font-size: 26px; font-weight: 800; margin: 0; }
 
-    /* --- DEFINITIVE DROPDOWN STYLING (Cyan) --- */
-    div[data-testid="stSelectbox"] { margin-bottom: 12px; }
+    /* --- DEFINITIVE DROPDOWN STYLING --- */
+    div[data-testid="stSelectbox"] { margin-bottom: 0px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
-        background-color: #FFFFFF !important; border: 2px solid #CCFBF1 !important; border-radius: 12px !important; 
-        box-shadow: 0 2px 5px rgba(6, 182, 212, 0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 48px !important; 
+        background-color: #F8FAFC !important; border: 1px solid #CBD5E1 !important; border-radius: 8px !important; 
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 44px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #06B6D4 !important; background-color: #F0FDFA !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2) !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 700 !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #06B6D4 !important; }
-    label[data-testid="stWidgetLabel"] p { color: #0F172A !important; font-weight: 700 !important; font-size: 15px !important; margin-bottom: 4px !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #06B6D4 !important; background-color: #FFFFFF !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #64748B !important; }
+    label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 700 !important; font-size: 13px !important; text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* Date Picker */
-    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #CCFBF1 !important; border-radius: 12px !important; background-color: #FFFFFF !important; min-height: 48px !important; }
-    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2) !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1px solid #CBD5E1 !important; border-radius: 8px !important; background-color: #F8FAFC !important; min-height: 44px !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
 
-    /* Segmented Control (Radio Buttons) */
+    /* Segmented Control (Radio Buttons) for Navigation */
     div[data-testid="stRadio"] label > div:first-child { display: none !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] { display: inline-flex !important; background-color: #FFFFFF !important; padding: 6px !important; border-radius: 14px !important; gap: 4px !important; border: 2px solid #CCFBF1 !important; box-shadow: 0 4px 6px -1px rgba(6, 182, 212, 0.05); }
-    div[data-testid="stRadio"] div[role="radiogroup"] label { padding: 10px 20px !important; border-radius: 10px !important; cursor: pointer !important; transition: all 0.2s ease !important; color: #64748B !important; font-weight: 700 !important; font-size: 15px !important; margin: 0 !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) { background-color: #06B6D4 !important; color: #FFFFFF !important; box-shadow: 0 2px 4px rgba(6, 182, 212, 0.4) !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] { display: flex !important; background-color: #FFFFFF !important; padding: 6px !important; border-radius: 10px !important; gap: 4px !important; border: 1px solid #E2E8F0 !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05); width: 100%; }
+    div[data-testid="stRadio"] div[role="radiogroup"] label { flex: 1; justify-content: center; padding: 10px 20px !important; border-radius: 8px !important; cursor: pointer !important; transition: all 0.2s ease !important; color: #64748B !important; font-weight: 600 !important; font-size: 15px !important; margin: 0 !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) { background-color: #F1F5F9 !important; color: #0F172A !important; font-weight: 700 !important; border: 1px solid #E2E8F0; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -407,7 +407,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v25.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v26.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -434,7 +434,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v25.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v26.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -457,12 +457,11 @@ def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_bus
             })
             d_df['Grade'] = d_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Avg / Day']), axis=1)
             
-            # Add Primary Reason for inactive ones
             def get_reason(row):
                 if row['Total Patients'] > 0: return ""
                 fac_texts = [t for t in text_records if t['Facility'] == row['Facility']]
                 if fac_texts:
-                    return fac_texts[-1]['Raw_Note'] # Last note
+                    return fac_texts[-1]['Raw_Note']
                 return "Never Reported"
 
             d_df['Primary Reason'] = d_df.apply(get_reason, axis=1)
@@ -525,12 +524,12 @@ for s in xls.sheet_names:
     if any(kw.lower() in s_lower or s_lower in kw.lower() for kw in valid_keywords):
         available_sheets.append(s)
 
-# --- TOP HEADER & CONTROLS ---
-col_head, col_time = st.columns([3, 1])
+# --- COMMAND BAR (Header + Time Filter + Nav) ---
+col_header, col_time = st.columns([3, 1])
 
-with col_head:
+with col_header:
     st.markdown(f"""
-    <div class="app-header" style="margin-bottom: 0;">
+    <div class="app-header" style="margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;">
         <div class="header-left">
             <div class="header-icon">🏥</div>
             <div>
@@ -555,10 +554,8 @@ with col_time:
     else:
         date_range_str = time_filter
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-# Navigation
-view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "✅ Active Spokes", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+# --- NAVIGATION ---
+view_mode = st.radio("Navigation", ["District View", "State View", "Active Spokes", "Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -606,7 +603,7 @@ PLOTLY_LAYOUT = dict(
 # ==============================================================================
 # VIEW: DISTRICT VIEW
 # ==============================================================================
-if view_mode == "📊 District View":
+if view_mode == "District View":
     col_d, col_h = st.columns(2)
     with col_d: selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
     with col_h:
@@ -941,7 +938,7 @@ if view_mode == "📊 District View":
                             gridcolor='#CBD5E1', 
                             tickfont=dict(size=11, color="#1E293B", weight="bold")
                         ),
-                        bgcolor='rgba(240, 253, 250, 0.5)'
+                        bgcolor='rgba(241, 245, 249, 0.5)'
                     )
                 ))
                 fig_polar.update_layout(**polar_layout)
@@ -972,7 +969,7 @@ if view_mode == "📊 District View":
 # ==============================================================================
 # VIEW: STATE VIEW
 # ==============================================================================
-elif view_mode == "🌐 State View":
+elif view_mode == "State View":
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Bihar State Master View</h3>", unsafe_allow_html=True)
     
     with st.spinner("Loading State Data..."):
@@ -1093,13 +1090,8 @@ elif view_mode == "🌐 State View":
 # ==============================================================================
 # VIEW: ACTIVE SPOKES
 # ==============================================================================
-elif view_mode == "✅ Active Spokes":
-    st.markdown("""
-    <div class="modern-header">
-        <div class="modern-dot"></div>
-        <h3 class="modern-title">Active Spokes Tracker</h3>
-    </div>
-    """, unsafe_allow_html=True)
+elif view_mode == "Active Spokes":
+    st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>✅ Active Spokes Tracker</h3>", unsafe_allow_html=True)
     st.markdown("This table lists all facilities that are **currently active** (saw at least 1 patient in the selected time range).")
     
     with st.spinner("Loading all active facilities..."):
@@ -1171,14 +1163,16 @@ else:
         
         total_inactive = len(inactive_df)
         
-        st.markdown(f'''
-        <div class="metric-grid" style="grid-template-columns: repeat(1, 1fr);">
-            <div class="metric-card" style="border-left: 4px solid #F43F5E;">
+        col1, col2, _ = st.columns([1, 1, 2])
+        with col1:
+            st.markdown(f'''
+            <div class="metric-card" style="border-top: 4px solid #F43F5E; padding: 16px;">
                 <div class="metric-label">Total Inactive Facilities</div>
                 <div class="metric-value" style="color:#F43F5E;">{total_inactive}</div>
             </div>
-        </div>
-        ''', unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
+        
+        st.markdown("<br>", unsafe_allow_html=True)
         
         if not inactive_df.empty:
             display_tracker = inactive_df[['District', 'Facility', 'Primary Reason']].copy()
@@ -1187,10 +1181,21 @@ else:
             display_tracker.index.name = 'S.No.'
             display_tracker = display_tracker.reset_index()
             
-            # Optional ZM mapping could be added here, but the user just wants strict inactive logic
+            def style_reason(val):
+                if pd.isna(val): return ''
+                val_str = str(val).lower()
+                if any(w in val_str for w in ['operational', 'no lt', 'no runner', 'strike', 'breakdown', 'not available']):
+                    return 'background-color: #FEE2E2; color: #991B1B; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
+                elif any(w in val_str for w in ['low opd', 'low footfall']):
+                    return 'background-color: #FEF08A; color: #854D0E; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
+                elif 'never reported' in val_str:
+                    return 'background-color: #F1F5F9; color: #475569; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
+                return 'background-color: #E0F2FE; color: #0369A1; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
+
+            styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
             
             st.dataframe(
-                display_tracker, 
+                styled_tracker, 
                 use_container_width=True, 
                 hide_index=True,
                 column_config={
