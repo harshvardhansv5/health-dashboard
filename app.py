@@ -6,6 +6,7 @@ import re
 import io
 import math
 import requests
+import unicodedata
 
 # --- CONSTANTS ---
 TOTAL_SPOKES = 701 
@@ -87,10 +88,10 @@ st.markdown("""
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
         background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; border-radius: 8px !important; padding: 4px !important; gap: 2px !important;
-        flex-wrap: nowrap !important; /* Force single line */
+        flex-wrap: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 8px 12px !important; font-size: 14px !important; margin: 0 !important; white-space: nowrap !important; /* Prevent wrapping */
+        padding: 8px 12px !important; font-size: 14px !important; margin: 0 !important; white-space: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
         background-color: #FFFFFF !important; border-radius: 6px !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; color: #0F172A !important; font-weight: 700 !important;
@@ -161,6 +162,17 @@ DISTRICT_MAP = {
     "West Champaran": "Narkatiaganj"
 }
 REVERSE_DISTRICT_MAP = {v: k for k, v in DISTRICT_MAP.items()}
+
+def style_reason(val):
+    if pd.isna(val): return ''
+    val_str = str(val).lower()
+    if any(w in val_str for w in ['operational', 'no lt', 'no runner', 'strike', 'breakdown', 'not available']):
+        return 'background-color: #FEE2E2; color: #991B1B; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
+    elif any(w in val_str for w in ['low opd', 'low footfall']):
+        return 'background-color: #FEF08A; color: #854D0E; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
+    elif 'never reported' in val_str or 'unknown' in val_str:
+        return 'background-color: #F1F5F9; color: #475569; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
+    return 'background-color: #E0F2FE; color: #0369A1; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
 
 # --- CACHED GOOGLE SHEETS FETCHER ---
 @st.cache_data(ttl=900, show_spinner="Fetching live data from Google Sheets...")
@@ -412,7 +424,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.2"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.3"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -439,7 +451,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.2"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.3"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -714,7 +726,11 @@ if view_mode == "District View":
                     dt_layout = PLOTLY_LAYOUT.copy()
                     dt_layout.update(dict(
                         height=300,
-                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'),
+                        xaxis=dict(
+                            showgrid=True, gridwidth=1, gridcolor='#CBD5E1',
+                            tickformat="%d %b",
+                            range=[dt_df['Date'].min(), dt_df['Date'].max()]
+                        ),
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'),
                         margin=dict(l=10, r=10, t=20, b=10)
                     ))
@@ -763,7 +779,7 @@ if view_mode == "District View":
         display['Total Patients'] = scorecard['Total Patients'].astype(int)
         display['Zero Days'] = scorecard['Zero Days'].astype(int)
         
-        # --- NEW: Append TOTAL row to Scorecard ---
+        # Prepend TOTAL row to Scorecard
         total_row = pd.DataFrame([{
             'Facility': '🏆 TOTAL',
             'Grade': d_grade,
@@ -773,12 +789,11 @@ if view_mode == "District View":
             'Zero Days': stats['zero_days']
         }])
         
-        display = pd.concat([display, total_row], ignore_index=True)
+        display = pd.concat([total_row, display], ignore_index=True)
         
         st.dataframe(display, use_container_width=True, hide_index=True, column_config={"Facility": st.column_config.TextColumn("Facility", width="large"), "Grade": st.column_config.TextColumn("Grade", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"), "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"), "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"), "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d")})
         
         st.markdown("<br>", unsafe_allow_html=True)
-        col_dl1, col_dl2 = st.columns([1, 2])
         
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
@@ -789,41 +804,49 @@ if view_mode == "District View":
             summary_df.to_excel(writer, index=False, sheet_name='Summary')
             display.to_excel(writer, index=False, sheet_name='Scorecard')
             
-        with col_dl1:
-            st.download_button(
-                label="📥 Download Excel Report",
-                data=buffer.getvalue(),
-                file_name=f"{selected_district_zm}_Report_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-        with col_dl2:
-            st.info("The Excel file contains two sheets: one for the District Summary and one for the full Spoke Scorecard.")
+        st.download_button(
+            label="📥 Download Excel Report",
+            data=buffer.getvalue(),
+            file_name=f"{selected_district_zm}_Report_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+        st.caption("The Excel file contains two sheets: one for the District Summary and one for the full Spoke Scorecard.")
 
     with d_tab3:
         st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>Daily Patient Trend</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
             trend_data = [{'Date': pd.to_datetime(c + " 2026", format='%d %b %Y'), 'Patients': pd.to_numeric(plot_df[c], errors='coerce').fillna(0).sum()} for c in stats['active_date_cols']]
             if trend_data:
-                fig_t = px.area(pd.DataFrame(trend_data).sort_values('Date'), x='Date', y='Patients', markers=True)
+                trend_df = pd.DataFrame(trend_data).sort_values('Date')
+                fig_t = px.area(trend_df, x='Date', y='Patients', markers=True)
                 fig_t.update_traces(line_color='#06B6D4', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#06B6D4')), fillcolor='rgba(6, 182, 212, 0.1)')
-                fig_t.update_layout(**PLOTLY_LAYOUT)
+                
+                # Update X-axis to remove year and empty tick
+                t_layout = PLOTLY_LAYOUT.copy()
+                t_layout.update(dict(
+                    xaxis=dict(
+                        showgrid=True, gridwidth=1, gridcolor='#CBD5E1',
+                        tickformat="%d %b",
+                        range=[trend_df['Date'].min(), trend_df['Date'].max()]
+                    )
+                ))
+                fig_t.update_layout(**t_layout)
                 st.plotly_chart(fig_t, use_container_width=True)
         
-        # --- NEW: Monthly Volume ---
-        st.markdown("<h4 style='color:#0F172A; margin-top:30px; margin-bottom:10px;'>Monthly Patient Volume (Full Calendar Months)</h4>", unsafe_allow_html=True)
+        # --- Monthly Volume ---
+        st.markdown("<h4 style='color:#0F172A; margin-top:30px; margin-bottom:10px;'>Monthly Patient Volume</h4>", unsafe_allow_html=True)
         monthly_df = get_district_monthly_trend(df_raw, facility_col)
         
         if not monthly_df.empty:
-            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients', color='Total Patients', color_continuous_scale='Teal')
-            fig_m.update_traces(texttemplate='%{text:,}', textposition='outside')
+            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
+            fig_m.update_traces(marker_color='#06B6D4', texttemplate='%{text:,}', textposition='outside')
             
             m_layout = PLOTLY_LAYOUT.copy()
             m_layout.update(dict(
                 height=350,
                 xaxis=dict(showgrid=False, type='category'),
-                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients"),
-                coloraxis_showscale=False
+                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients")
             ))
             fig_m.update_layout(**m_layout)
             st.plotly_chart(fig_m, use_container_width=True)
@@ -843,7 +866,7 @@ if view_mode == "District View":
             hm_layout.update(dict(
                 height=max(400, len(heatmap_df) * 35),
                 yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")),
-                xaxis=dict(tickfont=dict(size=11, color="#475569")),
+                xaxis=dict(tickfont=dict(size=11, color="#475569"), tickangle=-45),
                 coloraxis_colorbar=dict(title="Patients", thickness=15)
             ))
             fig_h.update_layout(**hm_layout)
@@ -868,21 +891,29 @@ if view_mode == "District View":
             
             st.markdown(f'''
             <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="metric-card"><div class="metric-label">Inactive Spokes</div><div class="metric-value">{inactive_count} <span class="metric-sub">/ {stats['num_facilities']} Total</span></div></div>
+                <div class="metric-card"><div class="metric-label">Zero-Sample Spokes</div><div class="metric-value">{inactive_count} <span class="metric-sub">/ {stats['num_facilities']} Total</span></div></div>
                 <div class="metric-card"><div class="metric-label">Worst Facility (Lowest Uptime)</div><div class="metric-value" style="font-size: 18px;">{worst_fac}</div></div>
             </div>
             ''', unsafe_allow_html=True)
 
             st.markdown("<h5 style='color:#0F172A; margin-top:20px;'>Most Common Data Entry Notes</h5>", unsafe_allow_html=True)
             
-            df_texts['Clean_Note'] = df_texts['Raw_Note'].str.strip().str.lower()
+            # Aggressive text cleaning
+            def clean_text(text):
+                text = unicodedata.normalize('NFKD', str(text)).encode('ascii', 'ignore').decode('utf-8')
+                text = re.sub(r'\s+', ' ', text).strip().lower()
+                return text if text else "Unknown"
+
+            df_texts['Clean_Note'] = df_texts['Raw_Note'].apply(clean_text)
             note_counts = df_texts['Clean_Note'].value_counts().head(10).reset_index()
             note_counts.columns = ['Note', 'Count']
             
-            fig_diag = px.bar(note_counts, x='Count', y='Note', orientation='h', color='Note', 
-                              color_discrete_sequence=px.colors.qualitative.Pastel)
-            fig_diag.update_layout(**PLOTLY_LAYOUT, height=350, showlegend=False, xaxis_title="Frequency", yaxis_title="")
-            fig_diag.update_traces(texttemplate='%{x}', textposition='outside')
+            fig_diag = px.bar(note_counts, x='Count', y='Note', orientation='h')
+            fig_diag.update_traces(marker_color='#06B6D4', texttemplate='%{x}', textposition='outside')
+            
+            d_layout = PLOTLY_LAYOUT.copy()
+            d_layout.update(dict(height=350, showlegend=False, xaxis_title="Frequency", yaxis_title=""))
+            fig_diag.update_layout(**d_layout)
             st.plotly_chart(fig_diag, use_container_width=True)
 
             st.markdown("<h5 style='color:#0F172A; margin-top:20px;'>Facility Offenders</h5>", unsafe_allow_html=True)
@@ -901,7 +932,8 @@ if view_mode == "District View":
                     })
             if offense_data:
                 offense_df = pd.DataFrame(offense_data).sort_values('Zero Days', ascending=False)
-                st.dataframe(offense_df, use_container_width=True, hide_index=True)
+                styled_offense = offense_df.style.map(style_reason, subset=['Primary Reason'])
+                st.dataframe(styled_offense, use_container_width=True, hide_index=True)
             else:
                 st.info("No facilities had zero days in this period.")
 
@@ -950,8 +982,8 @@ if view_mode == "District View":
                 polar_layout = PLOTLY_LAYOUT.copy()
                 polar_layout.update(dict(
                     template="plotly_white",
-                    height=700,
-                    margin=dict(l=40, r=40, t=60, b=40),
+                    height=750, # Increased height to prevent label overlapping
+                    margin=dict(l=40, r=40, t=80, b=40),
                     polar=dict(
                         bargap=0.5, 
                         radialaxis=dict(
@@ -1059,7 +1091,7 @@ elif view_mode == "State View":
             display_cols = ['Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
             st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
-            # --- NEW: Top 5 / Bottom 5 Chart ---
+            # --- Top 5 / Bottom 5 Chart ---
             st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>District Performance Highlights (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
             
             col_chart_ctrl, _ = st.columns([1, 2])
@@ -1072,16 +1104,13 @@ elif view_mode == "State View":
 
             if chart_view == "Top 5 Districts":
                 chart_df = chart_base.nlargest(5, state_metric_col)
-                # Sort ascending so highest is at the top (Plotly y-axis logic)
                 chart_df = chart_df.sort_values(by=state_metric_col, ascending=True)
             else:
                 chart_df = chart_base.nsmallest(5, state_metric_col)
-                # Sort descending so highest of the lowest is at the top
                 chart_df = chart_df.sort_values(by=state_metric_col, ascending=False)
 
             fig_lb = px.bar(chart_df, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Teal')
             
-            # Add Average Line
             avg_val = round(chart_base[state_metric_col].mean(), 1)
             if state_metric_col != 'Uptime %':
                 fig_lb.add_vline(x=avg_val, line_dash="dash", line_color="#64748B", line_width=2, annotation_text=f"Avg: {avg_val}", annotation_position="top right", annotation_font_color="#64748B", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#64748B", annotation_borderwidth=1, annotation_borderpad=4)
@@ -1235,17 +1264,6 @@ else:
             display_tracker.index.name = 'S.No.'
             display_tracker = display_tracker.reset_index()
             
-            def style_reason(val):
-                if pd.isna(val): return ''
-                val_str = str(val).lower()
-                if any(w in val_str for w in ['operational', 'no lt', 'no runner', 'strike', 'breakdown', 'not available']):
-                    return 'background-color: #FEE2E2; color: #991B1B; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
-                elif any(w in val_str for w in ['low opd', 'low footfall']):
-                    return 'background-color: #FEF08A; color: #854D0E; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
-                elif 'never reported' in val_str:
-                    return 'background-color: #F1F5F9; color: #475569; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
-                return 'background-color: #E0F2FE; color: #0369A1; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
-
             styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
             
             st.dataframe(
