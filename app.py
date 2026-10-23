@@ -9,10 +9,9 @@ import requests
 
 # --- CONSTANTS ---
 TOTAL_SPOKES = 701 
-available_sheets = [] # Initialize globally to prevent NameError
+available_sheets = [] 
 
 # --- GOOGLE SHEETS INTEGRATION ---
-# PASTE YOUR PUBLISHED .XLSX URL HERE (It must end in /pub?output=xlsx)
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwjDNp1zjbEXM-a4HYoAErb4ZWyJm9YmbKyTeEOhKOpKx6DAFLUlVPlQEvRP0ll5SUDXYWKlS5F7Gc/pub?output=xlsx"
 
 # --- DISTANCE FALLBACK DICTIONARY ---
@@ -396,7 +395,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v20.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v21.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -423,7 +422,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v20.0"):
+def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v21.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     tracker_data = []
     
@@ -486,6 +485,35 @@ def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v20
         tracker_df = tracker_df.sort_values(by=['Inactive Days', 'District', 'Facility Name'], ascending=[False, True, True]).reset_index(drop=True)
     return tracker_df
 
+@st.cache_data(show_spinner=False)
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v21.0"):
+    xls = pd.ExcelFile(io.BytesIO(file_bytes))
+    all_data = []
+    
+    for sheet in sheet_names_tuple:
+        try:
+            sdf = read_sheet_robust(xls, sheet)
+            plot_df, _, stats = process_district_df(sdf, time_filter)
+            if plot_df is None: continue
+            
+            fac_col = stats['facility_col']
+            d_df = pd.DataFrame({
+                'District': REVERSE_DISTRICT_MAP.get(sheet, sheet),
+                'Facility': plot_df[fac_col],
+                'Total Patients': plot_df['Total Patients'],
+                'Avg / Day': plot_df['Average Patients'],
+                'Uptime %': plot_df['Uptime %'],
+                'Zero Days': plot_df['Zero Days']
+            })
+            d_df['Grade'] = d_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Avg / Day']), axis=1)
+            all_data.append(d_df)
+        except Exception:
+            pass
+            
+    if all_data:
+        return pd.concat(all_data, ignore_index=True)
+    return pd.DataFrame()
+
 def get_district_monthly_trend(df_raw, facility_col):
     monthly_totals = {}
     df_filtered = df_raw[get_facility_mask(df_raw, facility_col)]
@@ -547,7 +575,7 @@ with st.sidebar:
 
         except Exception as e:
             st.error(f"Error: {e}")
-            st.stop() # CRITICAL FIX: Stop the app if the file fails to parse
+            st.stop()
 
 # --- MAIN AREA ---
 if file_bytes is None:
@@ -587,7 +615,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "🟢 Active Spokes", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
@@ -1116,6 +1144,68 @@ elif view_mode == "🌐 State View":
                     st.plotly_chart(fig_c, use_container_width=True)
     else:
         st.warning("No district data available for the selected time range.")
+
+# ==============================================================================
+# VIEW: ACTIVE SPOKES
+# ==============================================================================
+elif view_mode == "🟢 Active Spokes":
+    st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>🟢 Active Spokes Tracker</h3>", unsafe_allow_html=True)
+    st.markdown("This table lists all facilities that are **currently active** (saw at least 1 patient in the selected time range).")
+    
+    with st.spinner("Loading all active facilities..."):
+        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter)
+        
+    if not all_fac_df.empty:
+        active_df = all_fac_df[all_fac_df['Total Patients'] > 0].copy()
+        
+        col1, col2, _ = st.columns([1, 1, 2])
+        with col1:
+            dist_filter = st.multiselect("Filter by District", sorted(active_df['District'].unique()), default=[])
+        with col2:
+            grade_filter = st.multiselect("Filter by Grade", ["A", "B", "C", "D", "F"], default=[])
+            
+        if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
+        if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
+        
+        # Color coding logic
+        def style_grade(val):
+            if val in ['A', 'B']:
+                return 'background-color: #D1FAE5; color: #065F46; font-weight: bold;'
+            elif val in ['C', 'D']:
+                return 'background-color: #FEF3C7; color: #92400E; font-weight: bold;'
+            elif val == 'F':
+                return 'background-color: #FEE2E2; color: #991B1B; font-weight: bold;'
+            return ''
+            
+        display_active = active_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients']]
+        styled_active = display_active.style.map(style_grade, subset=['Grade'])
+        
+        st.markdown(f"**Total Active Spokes:** {len(active_df)}")
+        
+        st.dataframe(
+            styled_active, 
+            use_container_width=True, 
+            hide_index=True,
+            column_config={
+                "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
+                "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
+                "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d")
+            }
+        )
+        
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            display_active.to_excel(writer, index=False, sheet_name='Active Spokes')
+            
+        st.download_button(
+            label=f"📥 Download Active Spokes ({len(active_df)})",
+            data=buffer.getvalue(),
+            file_name=f"Statewide_Active_Spokes_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            use_container_width=True
+        )
+    else:
+        st.warning("Could not load facility data.")
 
 # ==============================================================================
 # VIEW: ZERO-SAMPLE TRACKER
