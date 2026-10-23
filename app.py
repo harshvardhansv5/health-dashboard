@@ -436,7 +436,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.6"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.7"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -447,7 +447,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     for sheet in sheet_names_tuple:
         try:
             sdf = read_sheet_robust(xls, sheet)
-            _, _, s = process_district_df(sdf, time_filter, anchor_date=anchor_date)
+            _, _, s = process_district_df(sdf, time_filter, start_date, end_date, anchor_date=anchor_date)
             if s:
                 display_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
                 data.append({
@@ -463,14 +463,14 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.6"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.7"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
     for sheet in sheet_names_tuple:
         try:
             sdf = read_sheet_robust(xls, sheet)
-            plot_df, _, stats = process_district_df(sdf, time_filter)
+            plot_df, _, stats = process_district_df(sdf, time_filter, start_date, end_date)
             if plot_df is None: continue
             
             fac_col = stats['facility_col']
@@ -692,7 +692,6 @@ if view_mode == "District View":
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
-            # FIX: Added category_orders to force Plotly to respect the dataframe sort order
             fig = px.bar(
                 sorted_df, 
                 y=facility_col, 
@@ -728,7 +727,6 @@ if view_mode == "District View":
             st.markdown("<hr style='margin: 30px 0 20px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
             st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>🔍 Facility Drill-Down</h4>", unsafe_allow_html=True)
             
-            # FIX: Shortened dropdown placeholder
             drill_options = ["-- Select a facility --"] + sorted_df[facility_col].tolist()
             selected_drill_facility = st.selectbox("Facility", drill_options, label_visibility="collapsed")
             
@@ -1053,7 +1051,8 @@ elif view_mode == "State View":
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Bihar State Master View</h3>", unsafe_allow_html=True)
     
     with st.spinner("Loading State Data..."):
-        state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter)
+        # FIX: Pass start_date and end_date
+        state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not state_df.empty:
         total_active = state_df['Active Spokes'].sum()
@@ -1156,7 +1155,7 @@ elif view_mode == "State View":
             
             if district_a and district_b:
                 df_a = read_sheet_robust(xls, district_a); df_b = read_sheet_robust(xls, district_b)
-                pa, ra, sa = process_district_df(df_a, time_filter, anchor_date=anchor_date); pb, rb, sb = process_district_df(df_b, time_filter, anchor_date=anchor_date)
+                pa, ra, sa = process_district_df(df_a, time_filter, start_date, end_date, anchor_date=anchor_date); pb, rb, sb = process_district_df(df_b, time_filter, start_date, end_date, anchor_date=anchor_date)
                 if pa is None or pb is None: st.error("Could not process one of the selected districts.")
                 else:
                     col1, col2 = st.columns(2)
@@ -1194,7 +1193,8 @@ elif view_mode == "Active Spokes":
     st.markdown("This table lists all facilities that are **currently active** (saw at least 1 patient in the selected time range).")
     
     with st.spinner("Loading all active facilities..."):
-        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter)
+        # FIX: Pass start_date and end_date
+        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not all_fac_df.empty:
         active_df = all_fac_df[all_fac_df['Total Patients'] > 0].copy()
@@ -1266,7 +1266,8 @@ else:
     st.markdown("This table lists all facilities that are **currently inactive** (reported 0 patients in the selected time range).")
     
     with st.spinner("Scanning all districts for inactive facilities..."):
-        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter)
+        # FIX: Pass start_date and end_date
+        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not all_fac_df.empty:
         inactive_df = all_fac_df[all_fac_df['Total Patients'] == 0].copy()
