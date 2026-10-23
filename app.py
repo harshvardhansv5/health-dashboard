@@ -396,7 +396,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v19.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v20.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -423,7 +423,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v19.0"):
+def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v20.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     tracker_data = []
     
@@ -485,35 +485,6 @@ def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v19
     if not tracker_df.empty:
         tracker_df = tracker_df.sort_values(by=['Inactive Days', 'District', 'Facility Name'], ascending=[False, True, True]).reset_index(drop=True)
     return tracker_df
-
-@st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v19.0"):
-    xls = pd.ExcelFile(io.BytesIO(file_bytes))
-    all_data = []
-    
-    for sheet in sheet_names_tuple:
-        try:
-            sdf = read_sheet_robust(xls, sheet)
-            plot_df, _, stats = process_district_df(sdf, time_filter)
-            if plot_df is None: continue
-            
-            fac_col = stats['facility_col']
-            d_df = pd.DataFrame({
-                'District': REVERSE_DISTRICT_MAP.get(sheet, sheet),
-                'Facility': plot_df[fac_col],
-                'Total Patients': plot_df['Total Patients'],
-                'Avg / Day': plot_df['Average Patients'],
-                'Uptime %': plot_df['Uptime %'],
-                'Zero Days': plot_df['Zero Days']
-            })
-            d_df['Grade'] = d_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Avg / Day']), axis=1)
-            all_data.append(d_df)
-        except Exception:
-            pass
-            
-    if all_data:
-        return pd.concat(all_data, ignore_index=True)
-    return pd.DataFrame()
 
 def get_district_monthly_trend(df_raw, facility_col):
     monthly_totals = {}
@@ -616,7 +587,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "🔍 Master Query", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
@@ -1145,123 +1116,6 @@ elif view_mode == "🌐 State View":
                     st.plotly_chart(fig_c, use_container_width=True)
     else:
         st.warning("No district data available for the selected time range.")
-
-# ==============================================================================
-# VIEW: MASTER QUERY
-# ==============================================================================
-elif view_mode == "🔍 Master Query":
-    st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>🔍 Master Query Engine</h3>", unsafe_allow_html=True)
-    st.markdown("Build custom queries across all 701 spokes in the state.")
-    
-    col_time, _ = st.columns([1, 2])
-    with col_time:
-        query_time_filter = st.selectbox("Select Query Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"])
-        
-    with st.spinner("Loading all facility data..."):
-        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, query_time_filter)
-        
-    if not all_fac_df.empty:
-        st.markdown("#### Query Rules")
-        
-        if 'query_rules' not in st.session_state:
-            st.session_state.query_rules = [0]
-            
-        logic = st.radio("Match:", ["ALL (AND)", "ANY (OR)"], horizontal=True)
-        
-        for i in st.session_state.query_rules:
-            c1, c2, c3, c4 = st.columns([2, 2, 3, 1])
-            
-            with c1:
-                prop = st.selectbox("Property", ["District", "Facility Name", "Grade", "Total Patients", "Uptime %", "Zero Days"], key=f"prop_{i}")
-            with c2:
-                if prop == "Facility Name":
-                    op = st.selectbox("Operator", ["contains", "does not contain"], key=f"op_{i}")
-                elif prop in ["District", "Grade"]:
-                    op = st.selectbox("Operator", ["is", "is not"], key=f"op_{i}")
-                else:
-                    op = st.selectbox("Operator", ["<", ">", "=="], key=f"op_{i}")
-            with c3:
-                if prop == "District":
-                    val = st.selectbox("Value", sorted(all_fac_df['District'].unique()), key=f"val_{i}")
-                elif prop == "Grade":
-                    val = st.selectbox("Value", ["A", "B", "C", "D", "F"], key=f"val_{i}")
-                elif prop == "Facility Name":
-                    val = st.text_input("Value", key=f"val_{i}")
-                else:
-                    val = st.number_input("Value", key=f"val_{i}")
-            with c4:
-                st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
-                if st.button("❌", key=f"del_{i}"):
-                    st.session_state.query_rules.remove(i)
-                    st.rerun()
-                    
-        if st.button("+ Add Rule"):
-            st.session_state.query_rules.append(max(st.session_state.query_rules) + 1)
-            st.rerun()
-            
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        if st.button("🚀 Run Query", type="primary"):
-            mask = pd.Series(True if logic == "ALL (AND)" else False, index=all_fac_df.index)
-            
-            for i in st.session_state.query_rules:
-                prop = st.session_state[f"prop_{i}"]
-                op = st.session_state[f"op_{i}"]
-                val = st.session_state[f"val_{i}"]
-                
-                if prop == "District":
-                    cond = all_fac_df['District'] == val if op == "is" else all_fac_df['District'] != val
-                elif prop == "Grade":
-                    cond = all_fac_df['Grade'] == val if op == "is" else all_fac_df['Grade'] != val
-                elif prop == "Facility Name":
-                    if op == "contains":
-                        cond = all_fac_df['Facility'].str.contains(val, case=False, na=False)
-                    else:
-                        cond = ~all_fac_df['Facility'].str.contains(val, case=False, na=False)
-                elif prop == "Total Patients":
-                    if op == "<": cond = all_fac_df['Total Patients'] < val
-                    elif op == ">": cond = all_fac_df['Total Patients'] > val
-                    else: cond = all_fac_df['Total Patients'] == val
-                elif prop == "Uptime %":
-                    if op == "<": cond = all_fac_df['Uptime %'] < val
-                    elif op == ">": cond = all_fac_df['Uptime %'] > val
-                    else: cond = all_fac_df['Uptime %'] == val
-                elif prop == "Zero Days":
-                    if op == "<": cond = all_fac_df['Zero Days'] < val
-                    elif op == ">": cond = all_fac_df['Zero Days'] > val
-                    else: cond = all_fac_df['Zero Days'] == val
-                    
-                if logic == "ALL (AND)":
-                    mask &= cond
-                else:
-                    mask |= cond
-                    
-            filtered_df = all_fac_df[mask]
-            
-            st.markdown(f"**Results Found:** {len(filtered_df)} facilities")
-            
-            if not filtered_df.empty:
-                display_query = filtered_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients', 'Zero Days']]
-                st.dataframe(display_query, use_container_width=True, hide_index=True, column_config={
-                    "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
-                    "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f")
-                })
-                
-                buffer = io.BytesIO()
-                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                    display_query.to_excel(writer, index=False, sheet_name='Query Results')
-                    
-                st.download_button(
-                    label="📥 Download Query Results",
-                    data=buffer.getvalue(),
-                    file_name=f"Master_Query_Results_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
-            else:
-                st.info("No facilities match your current filters.")
-    else:
-        st.warning("Could not load facility data.")
 
 # ==============================================================================
 # VIEW: ZERO-SAMPLE TRACKER
