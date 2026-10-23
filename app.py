@@ -5,9 +5,14 @@ from datetime import timedelta, datetime
 import re
 import io
 import math
+import requests
 
 # --- CONSTANTS ---
 TOTAL_SPOKES = 701 
+
+# --- GOOGLE SHEETS INTEGRATION ---
+# PASTE YOUR PUBLISHED .XLSX URL HERE
+SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwjDNp1zjbEXM-a4HYoAErb4ZWyJm9YmbKyTeEOhKOpKx6DAFLUlVPlQEvRP0ll5SUDXYWKlS5F7Gc/pubhtml"
 
 # --- DISTANCE FALLBACK DICTIONARY ---
 DISTANCE_FALLBACK = {}
@@ -139,6 +144,17 @@ DISTRICT_MAP = {
     "West Champaran": "Narkatiaganj"
 }
 REVERSE_DISTRICT_MAP = {v: k for k, v in DISTRICT_MAP.items()}
+
+# --- GOOGLE SHEETS FETCHER ---
+@st.cache_data(ttl=900, show_spinner="Fetching live data from Google Sheets...")
+def fetch_google_sheet(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        return response.content
+    except Exception as e:
+        st.error(f"Failed to connect to Google Sheets: {e}")
+        return None
 
 def read_sheet_robust(xls, sheet_name):
     try:
@@ -350,8 +366,8 @@ def district_grade(plot_df):
 
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
-def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
-    xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
+def find_global_latest_date(sheet_names_tuple, file_bytes):
+    xls = pd.ExcelFile(io.BytesIO(file_bytes))
     latest_dates = []
     for sheet in sheet_names_tuple:
         try:
@@ -378,12 +394,12 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v17.0"):
-    xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v18.0"):
+    xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
     if time_filter == "All Available Data":
-        anchor_date = find_global_latest_date(sheet_names_tuple, uploaded_file_bytes)
+        anchor_date = find_global_latest_date(sheet_names_tuple, file_bytes)
         
     data = []
     for sheet in sheet_names_tuple:
@@ -405,8 +421,8 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v17.0"):
-    xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
+def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v18.0"):
+    xls = pd.ExcelFile(io.BytesIO(file_bytes))
     tracker_data = []
     
     for sheet in sheet_names_tuple:
@@ -469,8 +485,8 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_bu
     return tracker_df
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v17.0"):
-    xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v18.0"):
+    xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
     for sheet in sheet_names_tuple:
@@ -498,13 +514,8 @@ def get_all_facility_data(sheet_names_tuple, uploaded_file_bytes, time_filter, _
     return pd.DataFrame()
 
 def get_district_monthly_trend(df_raw, facility_col):
-    """Calculates the full calendar month patient totals for a specific district."""
     monthly_totals = {}
-    
-    # Filter out TOTAL/JAIL rows
     df_filtered = df_raw[get_facility_mask(df_raw, facility_col)]
-    
-    # Find all date columns in the raw dataframe
     date_cols = find_date_columns(df_filtered)
     
     for c in date_cols:
@@ -512,10 +523,8 @@ def get_district_monthly_trend(df_raw, facility_col):
         if pd.isna(dt): continue
         
         month_key = dt.strftime('%b %Y')
-        # Sum the column to get total patients for this day across all facilities in the district
         total_patients = pd.to_numeric(df_filtered[c], errors='coerce').fillna(0).sum()
         
-        # We only add it if there's data (ignoring completely empty future dates)
         if total_patients > 0 or month_key in monthly_totals:
             monthly_totals[month_key] = monthly_totals.get(month_key, 0) + total_patients
             
@@ -529,12 +538,16 @@ def get_district_monthly_trend(df_raw, facility_col):
 # --- SIDEBAR ---
 with st.sidebar:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Control Panel</h3>", unsafe_allow_html=True)
-    uploaded_data_file = st.file_uploader("Upload Data File", type=["xlsx", "csv"])
     
-    if uploaded_data_file is not None:
+    if SPREADSHEET_URL == "YOUR_PUBLISHED_XLSX_URL_HERE":
+        st.error("Please insert your Published Google Sheets URL in the code.")
+        st.stop()
+        
+    file_bytes = fetch_google_sheet(SPREADSHEET_URL)
+    
+    if file_bytes is not None:
         try:
-            file_bytes = uploaded_data_file.getvalue()
-            xls = pd.ExcelFile(uploaded_data_file)
+            xls = pd.ExcelFile(io.BytesIO(file_bytes))
             
             valid_keywords = set(DISTRICT_TO_ZM.keys()).union(set(DISTRICT_MAP.values())).union(set(DISTRICT_MAP.keys()))
             available_sheets = []
@@ -556,12 +569,14 @@ with st.sidebar:
                 date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
             else:
                 date_range_str = time_filter
+                
+            st.success("✅ Connected to Live Google Sheet")
 
         except Exception as e:
             st.error(f"Error: {e}")
 
 # --- MAIN AREA ---
-if uploaded_data_file is None:
+if file_bytes is None:
     st.markdown("""
     <div class="app-header">
         <div class="header-left">
@@ -572,12 +587,12 @@ if uploaded_data_file is None:
             </div>
         </div>
         <div class="header-right">
-            <div class="status-badge"><div class="status-dot"></div> System Active</div>
+            <div class="status-badge" style="background-color:#FEE2E2; color:#991B1B; border-color:#F87171;"><div class="status-dot" style="background-color:#EF4444;"></div> System Offline</div>
             <div class="header-date">Refreshed: --</div>
         </div>
     </div>
-    <div class="info-banner" style="background-color:#EFF6FF; border:1px solid #BFDBFE; border-radius:8px; padding:16px; color:#1E3A8A; display:flex; align-items:center; gap:12px; margin-top:20px;">
-        <span style="font-size: 20px;">👈</span><span style="font-weight: 500;">Please upload the Main Data File from the sidebar to begin.</span>
+    <div class="info-banner" style="background-color:#FEE2E2; border:1px solid #FECACA; border-radius:8px; padding:16px; color:#991B1B; display:flex; align-items:center; gap:12px; margin-top:20px;">
+        <span style="font-size: 20px;">⚠️</span><span style="font-weight: 500;">Could not connect to the Google Sheet. Please check the URL and try again.</span>
     </div>
     """, unsafe_allow_html=True)
     st.stop()
@@ -592,13 +607,15 @@ st.markdown(f"""
         </div>
     </div>
     <div class="header-right">
-        <div class="status-badge"><div class="status-dot"></div> System Active</div>
+        <div class="status-badge"><div class="status-dot"></div> Live Sync Active</div>
         <div class="header-date">Refreshed: {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}</div>
     </div>
 </div>
 """, unsafe_allow_html=True)
 
 view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "🔍 Master Query", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+
+# ... (REST OF THE APP LOGIC REMAINS IDENTICAL, EXCEPT PASSING file_bytes) ...
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
@@ -1133,53 +1150,119 @@ elif view_mode == "🌐 State View":
 # ==============================================================================
 elif view_mode == "🔍 Master Query":
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>🔍 Master Query Engine</h3>", unsafe_allow_html=True)
-    st.markdown("Filter across all 701 spokes in the state to find exactly what you need.")
+    st.markdown("Build custom queries across all 701 spokes in the state.")
     
+    # Independent Time Filter for Master Query
+    col_time, _ = st.columns([1, 2])
+    with col_time:
+        query_time_filter = st.selectbox("Select Query Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days"])
+        
     with st.spinner("Loading all facility data..."):
-        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter)
+        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, query_time_filter)
         
     if not all_fac_df.empty:
-        with st.container():
-            st.markdown("#### Build Your Query")
-            col1, col2, col3, col4 = st.columns(4)
-            
-            with col1:
-                dist_filter = st.multiselect("District", sorted(all_fac_df['District'].unique()), default=[])
-            with col2:
-                grade_filter = st.multiselect("Grade", ["A", "B", "C", "D", "F"], default=[])
-            with col3:
-                max_patients = st.number_input("Max Total Patients (Leave 0 for no limit)", min_value=0, value=0, step=10)
-            with col4:
-                max_uptime = st.number_input("Max Uptime % (Leave 100 for no limit)", min_value=0, max_value=100, value=100, step=5)
-                
-            filtered_df = all_fac_df.copy()
-            if dist_filter: filtered_df = filtered_df[filtered_df['District'].isin(dist_filter)]
-            if grade_filter: filtered_df = filtered_df[filtered_df['Grade'].isin(grade_filter)]
-            if max_patients > 0: filtered_df = filtered_df[filtered_df['Total Patients'] <= max_patients]
-            if max_uptime < 100: filtered_df = filtered_df[filtered_df['Uptime %'] <= max_uptime]
-            
-        st.markdown(f"**Results Found:** {len(filtered_df)} facilities")
+        st.markdown("#### Query Rules")
         
-        if not filtered_df.empty:
-            display_query = filtered_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients', 'Zero Days']]
-            st.dataframe(display_query, use_container_width=True, hide_index=True, column_config={
-                "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
-                "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f")
-            })
+        # Initialize session state for rules
+        if 'query_rules' not in st.session_state:
+            st.session_state.query_rules = [0] # Start with one rule (index 0)
             
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                display_query.to_excel(writer, index=False, sheet_name='Query Results')
+        logic = st.radio("Match:", ["ALL (AND)", "ANY (OR)"], horizontal=True)
+        
+        # Render rules
+        for i in st.session_state.query_rules:
+            c1, c2, c3, c4 = st.columns([2, 2, 3, 1])
+            
+            with c1:
+                prop = st.selectbox("Property", ["District", "Facility Name", "Grade", "Total Patients", "Uptime %", "Zero Days"], key=f"prop_{i}")
+            with c2:
+                if prop == "Facility Name":
+                    op = st.selectbox("Operator", ["contains", "does not contain"], key=f"op_{i}")
+                elif prop in ["District", "Grade"]:
+                    op = st.selectbox("Operator", ["is", "is not"], key=f"op_{i}")
+                else:
+                    op = st.selectbox("Operator", ["<", ">", "=="], key=f"op_{i}")
+            with c3:
+                if prop == "District":
+                    val = st.selectbox("Value", sorted(all_fac_df['District'].unique()), key=f"val_{i}")
+                elif prop == "Grade":
+                    val = st.selectbox("Value", ["A", "B", "C", "D", "F"], key=f"val_{i}")
+                elif prop == "Facility Name":
+                    val = st.text_input("Value", key=f"val_{i}")
+                else:
+                    val = st.number_input("Value", key=f"val_{i}")
+            with c4:
+                st.markdown("<div style='margin-top: 28px;'></div>", unsafe_allow_html=True)
+                if st.button("❌", key=f"del_{i}"):
+                    st.session_state.query_rules.remove(i)
+                    st.rerun()
+                    
+        if st.button("+ Add Rule"):
+            st.session_state.query_rules.append(max(st.session_state.query_rules) + 1)
+            st.rerun()
+            
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        # Build the filter mask
+        if st.button("🚀 Run Query", type="primary"):
+            mask = pd.Series(True if logic == "ALL (AND)" else False, index=all_fac_df.index)
+            
+            for i in st.session_state.query_rules:
+                prop = st.session_state[f"prop_{i}"]
+                op = st.session_state[f"op_{i}"]
+                val = st.session_state[f"val_{i}"]
                 
-            st.download_button(
-                label="📥 Download Query Results",
-                data=buffer.getvalue(),
-                file_name=f"Master_Query_Results_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-        else:
-            st.info("No facilities match your current filters.")
+                if prop == "District":
+                    cond = all_fac_df['District'] == val if op == "is" else all_fac_df['District'] != val
+                elif prop == "Grade":
+                    cond = all_fac_df['Grade'] == val if op == "is" else all_fac_df['Grade'] != val
+                elif prop == "Facility Name":
+                    if op == "contains":
+                        cond = all_fac_df['Facility'].str.contains(val, case=False, na=False)
+                    else:
+                        cond = ~all_fac_df['Facility'].str.contains(val, case=False, na=False)
+                elif prop == "Total Patients":
+                    if op == "<": cond = all_fac_df['Total Patients'] < val
+                    elif op == ">": cond = all_fac_df['Total Patients'] > val
+                    else: cond = all_fac_df['Total Patients'] == val
+                elif prop == "Uptime %":
+                    if op == "<": cond = all_fac_df['Uptime %'] < val
+                    elif op == ">": cond = all_fac_df['Uptime %'] > val
+                    else: cond = all_fac_df['Uptime %'] == val
+                elif prop == "Zero Days":
+                    if op == "<": cond = all_fac_df['Zero Days'] < val
+                    elif op == ">": cond = all_fac_df['Zero Days'] > val
+                    else: cond = all_fac_df['Zero Days'] == val
+                    
+                if logic == "ALL (AND)":
+                    mask &= cond
+                else:
+                    mask |= cond
+                    
+            filtered_df = all_fac_df[mask]
+            
+            st.markdown(f"**Results Found:** {len(filtered_df)} facilities")
+            
+            if not filtered_df.empty:
+                display_query = filtered_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients', 'Zero Days']]
+                st.dataframe(display_query, use_container_width=True, hide_index=True, column_config={
+                    "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
+                    "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f")
+                })
+                
+                buffer = io.BytesIO()
+                with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                    display_query.to_excel(writer, index=False, sheet_name='Query Results')
+                    
+                st.download_button(
+                    label="📥 Download Query Results",
+                    data=buffer.getvalue(),
+                    file_name=f"Master_Query_Results_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            else:
+                st.info("No facilities match your current filters.")
     else:
         st.warning("Could not load facility data.")
 
