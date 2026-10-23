@@ -140,7 +140,7 @@ st.markdown("""
 
     /* Popover Button Styling */
     div[data-testid="stPopover"] button {
-        background-color: #F8FAFC !important; border: 1px solid #CBD5E1 !important; border-radius: 8px !important; color: #0F172A !important; font-weight: 600 !important; min-height: 40px !important;
+        background-color: #F8FAFC !important; border: 1px solid #CBD5E1 !important; border-radius: 8px !important; color: #0F172A !important; font-weight: 600 !important; min-height: 44px !important; margin-top: 4px !important;
     }
     div[data-testid="stPopover"] button:hover { border-color: #06B6D4 !important; color: #06B6D4 !important; }
 </style>
@@ -436,7 +436,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.5"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.6"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -463,7 +463,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.5"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.6"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -554,7 +554,7 @@ for s in xls.sheet_names:
         available_sheets.append(s)
 
 # --- UNIFIED COMMAND BAR ---
-col_title, col_nav, col_info, col_time_ctrl = st.columns([2.2, 3.0, 0.8, 1.5])
+col_title, col_nav, col_info, col_time_ctrl = st.columns([2.2, 3.2, 0.8, 1.4])
 
 with col_title:
     st.markdown("""
@@ -692,7 +692,18 @@ if view_mode == "District View":
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
-            fig = px.bar(sorted_df, y=facility_col, x=metric_col, orientation='h', color='Highlight', color_discrete_map={'Top 5': '#14B8A6', 'Bottom 5': '#F43F5E', 'Others': '#94A3B8'}, text=text_labels, title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>")
+            # FIX: Added category_orders to force Plotly to respect the dataframe sort order
+            fig = px.bar(
+                sorted_df, 
+                y=facility_col, 
+                x=metric_col, 
+                orientation='h', 
+                color='Highlight', 
+                color_discrete_map={'Top 5': '#14B8A6', 'Bottom 5': '#F43F5E', 'Others': '#94A3B8'}, 
+                text=text_labels, 
+                category_orders={facility_col: sorted_df[facility_col].tolist()},
+                title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
+            )
             
             current_avg = round(filtered[metric_col].mean(), 1) if metric_col in ['Uptime %', 'Total Patients'] else round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
                 
@@ -717,10 +728,11 @@ if view_mode == "District View":
             st.markdown("<hr style='margin: 30px 0 20px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
             st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>🔍 Facility Drill-Down</h4>", unsafe_allow_html=True)
             
-            drill_options = ["-- Select a facility to investigate --"] + sorted_df[facility_col].tolist()
+            # FIX: Shortened dropdown placeholder
+            drill_options = ["-- Select a facility --"] + sorted_df[facility_col].tolist()
             selected_drill_facility = st.selectbox("Facility", drill_options, label_visibility="collapsed")
             
-            if selected_drill_facility != "-- Select a facility to investigate --":
+            if selected_drill_facility != "-- Select a facility --":
                 fac_row = plot_df[plot_df[facility_col] == selected_drill_facility].iloc[0]
                 
                 m1, m2, m3 = st.columns(3)
