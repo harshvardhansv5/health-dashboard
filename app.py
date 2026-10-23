@@ -76,7 +76,7 @@ st.markdown("""
         display: flex; align-items: center; justify-content: space-between; 
         padding: 20px 24px; background-color: #FFFFFF; border-radius: 12px; 
         border: 1px solid #E2E8F0; border-bottom: 3px solid #06B6D4; 
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 24px; 
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 0px; 
     }
     .header-left { display: flex; align-items: center; gap: 16px; }
     
@@ -114,10 +114,6 @@ st.markdown("""
     .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding: 12px 0; font-size: 15px; color: #475569; font-weight: 500;}
     .battle-row:last-child { border-bottom: none; }
     .battle-val { font-weight: 700; color: #0F172A; }
-
-    /* Modern Page Header */
-    .modern-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-    .modern-title { color: #0F172A; font-size: 26px; font-weight: 800; margin: 0; }
 
     /* --- DEFINITIVE DROPDOWN STYLING --- */
     div[data-testid="stSelectbox"] { margin-bottom: 0px; }
@@ -417,7 +413,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v27.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -437,14 +433,13 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
                     'Weighted Avg': s['weighted_avg'], 
                     'Uptime %': calc_uptime(s), 
                     'Facilities': s['total_absolute_facilities'],
-                    'Days Reported': s['num_days'],
                     'Active Spokes': s['active_facilities']
                 })
         except Exception: pass
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v27.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v28.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -534,10 +529,10 @@ for s in xls.sheet_names:
     if any(kw.lower() in s_lower or s_lower in kw.lower() for kw in valid_keywords):
         available_sheets.append(s)
 
-# --- COMMAND BAR (Header + Time Filter + Nav) ---
-col_header, col_time = st.columns([3, 1])
+# --- TOP HEADER & CONTROLS ---
+col_head, col_time = st.columns([3, 1])
 
-with col_header:
+with col_head:
     st.markdown(f"""
     <div class="app-header" style="margin-bottom: 0; border-bottom-left-radius: 0; border-bottom-right-radius: 0; border-bottom: none;">
         <div class="header-left">
@@ -1017,7 +1012,7 @@ elif view_mode == "State View":
         st.markdown(f'''
         <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
             <div class="metric-card">
-                <div class="metric-label">Active Spokes (Period Total)</div>
+                <div class="metric-label">Active Spokes ({time_filter})</div>
                 <div class="metric-value">{total_active} <span class="metric-sub">/ {total_facilities} Total</span></div>
             </div>
             <div class="metric-card">
@@ -1050,7 +1045,6 @@ elif view_mode == "State View":
                 'Weighted Avg': '', 
                 'Uptime %': None, 
                 'Facilities': TOTAL_SPOKES, 
-                'Days Reported': '', 
                 'Active Spokes': lb_df['Active Spokes'].sum()
             }])
             
@@ -1070,7 +1064,7 @@ elif view_mode == "State View":
             lb_layout = PLOTLY_LAYOUT.copy()
             lb_layout.update(dict(
                 yaxis=dict(showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), 
-                height=500
+                height=350
             ))
             fig_lb.update_layout(**lb_layout)
             st.plotly_chart(fig_lb, use_container_width=True)
@@ -1147,7 +1141,14 @@ elif view_mode == "Active Spokes":
         display_active = active_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients']]
         styled_active = display_active.style.map(style_grade, subset=['Grade'])
         
-        st.markdown(f"**Total Active Spokes:** {len(active_df)}")
+        st.markdown(f'''
+        <div class="metric-grid" style="grid-template-columns: repeat(1, 1fr);">
+            <div class="metric-card" style="border-top: 4px solid #14B8A6; padding: 16px;">
+                <div class="metric-label">Total Active Spokes ({time_filter})</div>
+                <div class="metric-value" style="color:#14B8A6;">{len(active_df)}</div>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
         
         st.dataframe(
             styled_active, 
@@ -1193,7 +1194,7 @@ else:
         with col1:
             st.markdown(f'''
             <div class="metric-card" style="border-top: 4px solid #F43F5E; padding: 16px;">
-                <div class="metric-label">Total Inactive Facilities</div>
+                <div class="metric-label">Total Inactive Facilities ({time_filter})</div>
                 <div class="metric-value" style="color:#F43F5E;">{total_inactive}</div>
             </div>
             ''', unsafe_allow_html=True)
