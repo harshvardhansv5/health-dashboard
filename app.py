@@ -12,6 +12,7 @@ TOTAL_SPOKES = 701
 available_sheets = [] 
 
 # --- GOOGLE SHEETS INTEGRATION ---
+# PASTE YOUR PUBLISHED .XLSX URL HERE (It must end in /pub?output=xlsx)
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwjDNp1zjbEXM-a4HYoAErb4ZWyJm9YmbKyTeEOhKOpKx6DAFLUlVPlQEvRP0ll5SUDXYWKlS5F7Gc/pub?output=xlsx"
 
 # --- DISTANCE FALLBACK DICTIONARY ---
@@ -20,113 +21,117 @@ DISTANCE_FALLBACK = {}
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
 
-# Define view_mode early so the sidebar can react to it
-view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "✅ Active Spokes", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
-
-# --- CLEAN ENTERPRISE UI CSS (Cool Steel Theme) ---
+# --- BRIGHT & AQUA UI CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stSidebar"] {
+    html, body, [data-testid="stAppViewContainer"] {
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     }
     .material-symbols-rounded, [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
     
-    /* --- THE SLATE CANVAS --- */
-    .stApp { background-color: #E2E8F0 !important; } 
-    section[data-testid="stSidebar"] { background-color: #F8FAFC !important; border-right: 1px solid #CBD5E1; }
+    /* --- THE AQUA CANVAS --- */
+    .stApp { 
+        background: linear-gradient(135deg, #F0FDFA 0%, #E0F2FE 100%) !important; 
+    } 
     
-    /* Metric Cards */
-    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    /* Remove Sidebar entirely */
+    [data-testid="stSidebar"] { display: none !important; }
+    [data-testid="collapsedControl"] { display: none !important; }
+
+    /* Metric Cards (Floating Glass) */
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
     .metric-card {
-        background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px;
-        padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); display: flex; flex-direction: column;
+        background-color: #FFFFFF; border: 1px solid #CCFBF1; border-radius: 16px;
+        padding: 24px; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1), 0 8px 10px -6px rgba(6, 182, 212, 0.1); 
+        display: flex; flex-direction: column; transition: transform 0.2s ease;
     }
-    .metric-label { color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-    .metric-value { color: #0F172A; font-size: 28px; font-weight: 700; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
-    .metric-sub { font-size: 16px; font-weight: 500; color: #64748B; }
+    .metric-card:hover { transform: translateY(-2px); }
+    .metric-label { color: #0D9488; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .metric-value { color: #0F172A; font-size: 36px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
+    .metric-sub { font-size: 16px; font-weight: 600; color: #64748B; }
 
     /* Tables & Cards */
-    [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 10px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 4px; }
-    .zm-card { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 8px; padding: 16px; margin-bottom: 24px; box-shadow: 0 2px 4px 0 rgba(0,0,0,0.05); }
-    .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;}
-    .zm-card-name { color: #0F172A; font-size: 15px; font-weight: 600; margin-bottom: 2px;}
-    .zm-card-zone { color: #2563EB; font-size: 13px; font-weight: 500;}
+    [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 16px; border: 1px solid #CCFBF1; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1); padding: 4px; }
+    .zm-card { background-color: #FFFFFF; border: 1px solid #CCFBF1; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 15px -3px rgba(6, 182, 212, 0.1); }
+    .zm-card-header { color: #0D9488; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 4px;}
+    .zm-card-name { color: #0F172A; font-size: 18px; font-weight: 700; margin-bottom: 2px;}
+    .zm-card-zone { color: #06B6D4; font-size: 14px; font-weight: 600;}
 
     /* Report Header */
-    .report-header { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .report-title { color: #0F172A; font-size: 22px; font-weight: 700; margin-bottom: 8px; }
-    .report-meta { color: #64748B; font-size: 14px; line-height: 1.6; }
+    .report-header { background-color: #FFFFFF; border: 1px solid #CCFBF1; border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1); }
+    .report-title { color: #0F172A; font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+    .report-meta { color: #475569; font-size: 14px; line-height: 1.6; font-weight: 500; }
     
     /* Grades */
-    .grade-badge { display: inline-block; padding: 6px 16px; border-radius: 6px; font-size: 20px; font-weight: 700; }
-    .grade-A { background-color: #D1FAE5; color: #065F46; border: 1px solid #34D399; }
-    .grade-B { background-color: #ECFCCB; color: #3F6212; border: 1px solid #A3E635; }
-    .grade-C { background-color: #FEF3C7; color: #92400E; border: 1px solid #FBBF24; }
-    .grade-D { background-color: #FFEDD5; color: #9A3412; border: 1px solid #FB923C; }
-    .grade-F { background-color: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
+    .grade-badge { display: inline-block; padding: 6px 16px; border-radius: 8px; font-size: 24px; font-weight: 800; }
+    .grade-A { background-color: #CCFBF1; color: #0F766E; border: 1px solid #5EEAD4; }
+    .grade-B { background-color: #D9F99D; color: #4D7C0F; border: 1px solid #BEF264; }
+    .grade-C { background-color: #FEF08A; color: #854D0E; border: 1px solid #FDE047; }
+    .grade-D { background-color: #FED7AA; color: #9A3412; border: 1px solid #FDBA74; }
+    .grade-F { background-color: #FECDD3; color: #991B1B; border: 1px solid #FDA4AF; }
 
     /* --- UPGRADED HEADER & PULSING DOT --- */
-    .app-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; background-color: #FFFFFF; border-radius: 12px; border: 1px solid #CBD5E1; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .app-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; background-color: #FFFFFF; border-radius: 16px; border: 1px solid #CCFBF1; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1); margin-bottom: 24px; }
     .header-left { display: flex; align-items: center; gap: 16px; }
-    .header-icon { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; background-color: #EFF6FF; border-radius: 10px; font-size: 22px; }
+    .header-icon { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background-color: #ECFEFF; border-radius: 12px; font-size: 24px; color: #06B6D4; }
     
-    .header-title { font-size: 22px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; }
-    .header-subtitle { font-size: 13px; font-weight: 500; color: #64748B; margin-top: 2px; }
+    .header-title { font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; }
+    .header-subtitle { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 2px; }
 
     .header-right { display: flex; align-items: center; gap: 16px; }
-    .status-badge { background-color: #D1FAE5; color: #065F46; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 8px; border: 1px solid #A7F3D0; }
+    .status-badge { background-color: #CCFBF1; color: #0F766E; padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; border: 1px solid #5EEAD4; }
     
     /* Blinking Radar Dot */
     .status-dot { 
-        width: 8px; height: 8px; background-color: #10B981; border-radius: 50%; 
-        animation: pulse-green 2s infinite; 
+        width: 8px; height: 8px; background-color: #14B8A6; border-radius: 50%; 
+        animation: pulse-cyan 2s infinite; 
     }
-    @keyframes pulse-green {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    @keyframes pulse-cyan {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(20, 184, 166, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
     }
     
-    .header-date { font-size: 13px; color: #64748B; font-weight: 500; }
+    .header-date { font-size: 13px; color: #64748B; font-weight: 600; }
 
     /* Compare Battle Cards */
-    .battle-card { background-color: #FFFFFF; border: 1px solid #CBD5E1; border-radius: 10px; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; }
-    .battle-card-blue { border-top: 4px solid #2563EB; }
-    .battle-card-red { border-top: 4px solid #DC2626; }
-    .battle-title { font-size: 18px; font-weight: 700; margin-bottom: 16px; }
-    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding: 10px 0; font-size: 14px; color: #475569; }
+    .battle-card { background-color: #FFFFFF; border: 1px solid #CCFBF1; border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px -5px rgba(6, 182, 212, 0.1); margin-bottom: 16px; }
+    .battle-card-blue { border-top: 4px solid #06B6D4; }
+    .battle-card-red { border-top: 4px solid #F43F5E; }
+    .battle-title { font-size: 20px; font-weight: 800; margin-bottom: 16px; }
+    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding: 12px 0; font-size: 15px; color: #475569; font-weight: 500;}
     .battle-row:last-child { border-bottom: none; }
-    .battle-val { font-weight: 600; color: #0F172A; }
+    .battle-val { font-weight: 700; color: #0F172A; }
 
     /* Modern Active Spokes Header */
     .modern-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
-    .modern-dot { width: 14px; height: 14px; background-color: #10B981; border-radius: 50%; box-shadow: 0 0 10px rgba(16, 185, 129, 0.6); }
-    .modern-title { color: #0F172A; font-size: 24px; font-weight: 700; margin: 0; }
+    .modern-dot { width: 16px; height: 16px; background-color: #14B8A6; border-radius: 50%; box-shadow: 0 0 12px rgba(20, 184, 166, 0.6); }
+    .modern-title { color: #0F172A; font-size: 26px; font-weight: 800; margin: 0; }
 
-    /* --- DEFINITIVE DROPDOWN STYLING --- */
+    /* --- DEFINITIVE DROPDOWN STYLING (Cyan) --- */
     div[data-testid="stSelectbox"] { margin-bottom: 12px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
-        background-color: #F8FAFC !important; border: 1px solid #94A3B8 !important; border-radius: 8px !important; 
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 44px !important; 
+        background-color: #FFFFFF !important; border: 2px solid #CCFBF1 !important; border-radius: 12px !important; 
+        box-shadow: 0 2px 5px rgba(6, 182, 212, 0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 48px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #2563EB !important; background-color: #FFFFFF !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #2563EB !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #64748B !important; }
-    label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 600 !important; font-size: 14px !important; margin-bottom: 4px !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #06B6D4 !important; background-color: #F0FDFA !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2) !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 700 !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #06B6D4 !important; }
+    label[data-testid="stWidgetLabel"] p { color: #0F172A !important; font-weight: 700 !important; font-size: 15px !important; margin-bottom: 4px !important; }
 
     /* Date Picker */
-    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1px solid #94A3B8 !important; border-radius: 8px !important; background-color: #F8FAFC !important; min-height: 44px !important; }
-    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #2563EB !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #CCFBF1 !important; border-radius: 12px !important; background-color: #FFFFFF !important; min-height: 48px !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2) !important; }
 
     /* Segmented Control (Radio Buttons) */
     div[data-testid="stRadio"] label > div:first-child { display: none !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] { display: inline-flex !important; background-color: #E2E8F0 !important; padding: 4px !important; border-radius: 10px !important; gap: 4px !important; border: 1px solid #CBD5E1 !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label { padding: 8px 16px !important; border-radius: 6px !important; cursor: pointer !important; transition: all 0.2s ease !important; color: #475569 !important; font-weight: 600 !important; font-size: 14px !important; margin: 0 !important; }
-    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) { background-color: #FFFFFF !important; color: #2563EB !important; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] { display: inline-flex !important; background-color: #FFFFFF !important; padding: 6px !important; border-radius: 14px !important; gap: 4px !important; border: 2px solid #CCFBF1 !important; box-shadow: 0 4px 6px -1px rgba(6, 182, 212, 0.05); }
+    div[data-testid="stRadio"] div[role="radiogroup"] label { padding: 10px 20px !important; border-radius: 10px !important; cursor: pointer !important; transition: all 0.2s ease !important; color: #64748B !important; font-weight: 700 !important; font-size: 15px !important; margin: 0 !important; }
+    div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) { background-color: #06B6D4 !important; color: #FFFFFF !important; box-shadow: 0 2px 4px rgba(6, 182, 212, 0.4) !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -403,7 +408,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v23.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v24.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -430,7 +435,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v23.0"):
+def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v24.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     tracker_data = []
     
@@ -445,11 +450,23 @@ def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v23
             max_days = len(active_cols)
             text_records = stats.get('text_records', [])
             
-            if max_days == 0: continue
-            
             original_district_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
             raw_zm = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
             zm_name = raw_zm.split(" (")[0] if " (" in raw_zm else raw_zm
+            
+            # --- FIX: INCLUDE "NEVER REPORTED" SPOKES ---
+            if max_days == 0:
+                for idx, row in plot_df.iterrows():
+                    tracker_data.append({
+                        'ZM': zm_name,
+                        'District': original_district_name,
+                        'Facility Name': row[facility_col],
+                        'Last Active Date': "Never Reported",
+                        'Inactive Days': 999, # Sort to the top
+                        'Severity': "🔴 Critical",
+                        'Primary Reason': "Never Reported"
+                    })
+                continue
             
             for idx, row in plot_df.iterrows():
                 streak = 0
@@ -494,7 +511,7 @@ def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v23
     return tracker_df
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v23.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v24.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -544,57 +561,41 @@ def get_district_monthly_trend(df_raw, facility_col):
     trend_df = trend_df.dropna(subset=['Sort_Date']).sort_values('Sort_Date')
     return trend_df
 
-# --- SIDEBAR ---
-with st.sidebar:
-    st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Control Panel</h3>", unsafe_allow_html=True)
-    
-    if SPREADSHEET_URL == "YOUR_PUBLISHED_XLSX_URL_HERE":
-        st.error("Please insert your Published Google Sheets URL in the code.")
-        st.stop()
-        
-    file_bytes = fetch_google_sheet(SPREADSHEET_URL)
-    
-    if file_bytes is not None:
-        try:
-            xls = pd.ExcelFile(io.BytesIO(file_bytes))
-            
-            valid_keywords = set(DISTRICT_TO_ZM.keys()).union(set(DISTRICT_MAP.values())).union(set(DISTRICT_MAP.keys()))
-            available_sheets = []
-            for s in xls.sheet_names:
-                s_lower = s.lower()
-                if any(kw.lower() in s_lower or s_lower in kw.lower() for kw in valid_keywords):
-                    available_sheets.append(s)
-            
-            st.markdown("<hr style='margin: 20px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
-            
-            # --- FIX: ONLY SHOW TIME FILTER IF NOT ON TRACKER PAGE ---
-            if view_mode != "⚠️ Zero-Sample Tracker":
-                st.markdown("<p style='font-size:13px; font-weight:600; color:#64748B; text-transform:uppercase; margin-bottom:5px;'>Time Range</p>", unsafe_allow_html=True)
-                time_filter = st.selectbox("Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days", "Custom Range"], label_visibility="collapsed")
-                
-                start_date, end_date = None, None
-                if time_filter == "Custom Range":
-                    col1, col2 = st.columns(2)
-                    start_date = col1.date_input("Start Date", value=pd.Timestamp.now() - timedelta(days=30))
-                    end_date = col2.date_input("End Date", value=pd.Timestamp.now())
-                    date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
-                else:
-                    date_range_str = time_filter
-            else:
-                time_filter = "All Available Data"
-                start_date, end_date = None, None
-                date_range_str = "All Available Data"
-                
-            st.success("✅ Connected to Live Google Sheet")
-
-        except Exception as e:
-            st.error(f"Error: {e}")
-            st.stop()
-
 # --- MAIN AREA ---
+if SPREADSHEET_URL == "YOUR_PUBLISHED_XLSX_URL_HERE":
+    st.error("Please insert your Published Google Sheets URL in the code.")
+    st.stop()
+    
+file_bytes = fetch_google_sheet(SPREADSHEET_URL)
+
 if file_bytes is None:
     st.markdown("""
-    <div class="app-header">
+    <div class="app-header" style="border-color:#FECACA; box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.1);">
+        <div class="header-left">
+            <div class="header-icon" style="background-color:#FEE2E2; color:#EF4444;">⚠️</div>
+            <div>
+                <div class="header-title">Bihar Health Dashboard</div>
+                <div class="header-subtitle">Could not connect to the Google Sheet.</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    st.stop()
+
+xls = pd.ExcelFile(io.BytesIO(file_bytes))
+valid_keywords = set(DISTRICT_TO_ZM.keys()).union(set(DISTRICT_MAP.values())).union(set(DISTRICT_MAP.keys()))
+available_sheets = []
+for s in xls.sheet_names:
+    s_lower = s.lower()
+    if any(kw.lower() in s_lower or s_lower in kw.lower() for kw in valid_keywords):
+        available_sheets.append(s)
+
+# --- TOP HEADER & CONTROLS ---
+col_head, col_time = st.columns([3, 1])
+
+with col_head:
+    st.markdown(f"""
+    <div class="app-header" style="margin-bottom: 0;">
         <div class="header-left">
             <div class="header-icon">🏥</div>
             <div>
@@ -603,33 +604,28 @@ if file_bytes is None:
             </div>
         </div>
         <div class="header-right">
-            <div class="status-badge" style="background-color:#FEE2E2; color:#991B1B; border-color:#F87171;"><div class="status-dot" style="background-color:#EF4444;"></div> System Offline</div>
-            <div class="header-date">Refreshed: --</div>
+            <div class="status-badge"><div class="status-dot"></div> Live Sync Active</div>
+            <div class="header-date">Refreshed: {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}</div>
         </div>
-    </div>
-    <div class="info-banner" style="background-color:#FEE2E2; border:1px solid #FECACA; border-radius:8px; padding:16px; color:#991B1B; display:flex; align-items:center; gap:12px; margin-top:20px;">
-        <span style="font-size: 20px;">⚠️</span><span style="font-weight: 500;">Could not connect to the Google Sheet. Please check the URL and try again.</span>
     </div>
     """, unsafe_allow_html=True)
-    st.stop()
 
-st.markdown(f"""
-<div class="app-header">
-    <div class="header-left">
-        <div class="header-icon">🏥</div>
-        <div>
-            <div class="header-title">Bihar Health Dashboard</div>
-            <div class="header-subtitle">Statewide Operations & Pathology Management</div>
-        </div>
-    </div>
-    <div class="header-right">
-        <div class="status-badge"><div class="status-dot"></div> Live Sync Active</div>
-        <div class="header-date">Refreshed: {pd.Timestamp.now().strftime('%d %b %Y, %H:%M')}</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+with col_time:
+    time_filter = st.selectbox("Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days", "Custom Range"], label_visibility="collapsed")
+    start_date, end_date = None, None
+    if time_filter == "Custom Range":
+        start_date = st.date_input("Start Date", value=pd.Timestamp.now() - timedelta(days=30))
+        end_date = st.date_input("End Date", value=pd.Timestamp.now())
+        date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
+    else:
+        date_range_str = time_filter
 
-# Note: view_mode is already defined at the top of the script
+st.markdown("<br>", unsafe_allow_html=True)
+
+# Navigation
+view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "✅ Active Spokes", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
@@ -728,11 +724,11 @@ if view_mode == "📊 District View":
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
-            fig = px.bar(sorted_df, y=facility_col, x=metric_col, orientation='h', color='Highlight', color_discrete_map={'Top 5': '#10B981', 'Bottom 5': '#EF4444', 'Others': '#94A3B8'}, text=text_labels, title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>")
+            fig = px.bar(sorted_df, y=facility_col, x=metric_col, orientation='h', color='Highlight', color_discrete_map={'Top 5': '#14B8A6', 'Bottom 5': '#F43F5E', 'Others': '#94A3B8'}, text=text_labels, title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>")
             
             current_avg = round(filtered[metric_col].mean(), 1) if metric_col in ['Uptime %', 'Total Patients'] else round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
                 
-            fig.add_vline(x=current_avg, line_dash="dash", line_color="#2563EB", line_width=2, annotation_text=f"Avg: {current_avg}", annotation_position="top right", annotation_font_color="#2563EB", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#2563EB", annotation_borderwidth=1, annotation_borderpad=4)
+            fig.add_vline(x=current_avg, line_dash="dash", line_color="#06B6D4", line_width=2, annotation_text=f"Avg: {current_avg}", annotation_position="top right", annotation_font_color="#06B6D4", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#06B6D4", annotation_borderwidth=1, annotation_borderpad=4)
             
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
@@ -768,7 +764,7 @@ if view_mode == "📊 District View":
                 if drill_trend:
                     dt_df = pd.DataFrame(drill_trend).sort_values('Date')
                     fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True)
-                    fig_dt.update_traces(line_color='#2563EB', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')), fillcolor='rgba(37, 99, 235, 0.1)')
+                    fig_dt.update_traces(line_color='#06B6D4', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#06B6D4')), fillcolor='rgba(6, 182, 212, 0.1)')
                     
                     dt_layout = PLOTLY_LAYOUT.copy()
                     dt_layout.update(dict(
@@ -796,7 +792,7 @@ if view_mode == "📊 District View":
         <div class="report-header">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <div class="report-title" style="margin-bottom: 0;">District Report Card — {selected_district_zm}</div>
-                <div style="background-color: #EFF6FF; color: #1D4ED8; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; border: 1px solid #BFDBFE; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <div style="background-color: #ECFEFF; color: #0E7490; padding: 6px 16px; border-radius: 20px; font-weight: 700; font-size: 14px; border: 1px solid #A5F3FC; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
                     🏥 <span>Total Spokes: {stats['num_facilities']}</span>
                 </div>
             </div>
@@ -853,7 +849,7 @@ if view_mode == "📊 District View":
             trend_data = [{'Date': pd.to_datetime(c + " 2026", format='%d %b %Y'), 'Patients': pd.to_numeric(plot_df[c], errors='coerce').fillna(0).sum()} for c in stats['active_date_cols']]
             if trend_data:
                 fig_t = px.area(pd.DataFrame(trend_data).sort_values('Date'), x='Date', y='Patients', markers=True)
-                fig_t.update_traces(line_color='#2563EB', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')), fillcolor='rgba(37, 99, 235, 0.1)')
+                fig_t.update_traces(line_color='#06B6D4', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#06B6D4')), fillcolor='rgba(6, 182, 212, 0.1)')
                 fig_t.update_layout(**PLOTLY_LAYOUT)
                 st.plotly_chart(fig_t, use_container_width=True)
         
@@ -862,7 +858,7 @@ if view_mode == "📊 District View":
         monthly_df = get_district_monthly_trend(df_raw, facility_col)
         
         if not monthly_df.empty:
-            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients', color='Total Patients', color_continuous_scale='Blues')
+            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients', color='Total Patients', color_continuous_scale='Teal')
             fig_m.update_traces(texttemplate='%{text:,}', textposition='outside')
             
             m_layout = PLOTLY_LAYOUT.copy()
@@ -883,7 +879,7 @@ if view_mode == "📊 District View":
             heatmap_df['Total'] = heatmap_df.sum(axis=1)
             heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
             
-            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#DBEAFE'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
+            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F0FDFA'], [0.1, '#99F6E4'], [1, '#0F766E']], labels=dict(x="Date", y="", color="Patients"))
             fig_h.update_traces(xgap=2, ygap=2)
             
             hm_layout = PLOTLY_LAYOUT.copy()
@@ -989,7 +985,7 @@ if view_mode == "📊 District View":
                 st.caption("Bar length represents distance from Hub (km). Color represents Facility Grade.")
                 
                 fig_polar = px.bar_polar(valid_polar_df, r="Distance", theta="Display_Name", color="Grade",
-                                         color_discrete_map={'A': '#10B981', 'B': '#A3E635', 'C': '#FBBF24', 'D': '#FB923C', 'F': '#EF4444'},
+                                         color_discrete_map={'A': '#14B8A6', 'B': '#84CC16', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'},
                                          hover_data={"Distance": ":.1f", "Uptime %": ":.1f", "Average Patients": ":.1f", facility_col: True, "Display_Name": False, "Grade": False})
                 
                 fig_polar.update_traces(marker_line_color='#0F172A', marker_line_width=1, opacity=0.9)
@@ -1010,7 +1006,7 @@ if view_mode == "📊 District View":
                             gridcolor='#CBD5E1', 
                             tickfont=dict(size=11, color="#1E293B", weight="bold")
                         ),
-                        bgcolor='rgba(241, 245, 249, 0.3)'
+                        bgcolor='rgba(240, 253, 250, 0.5)'
                     )
                 ))
                 fig_polar.update_layout(**polar_layout)
@@ -1020,7 +1016,7 @@ if view_mode == "📊 District View":
                     text="<b>HUB</b>", 
                     showarrow=False, 
                     font=dict(size=14, color="#FFFFFF"),
-                    bgcolor="#2563EB",
+                    bgcolor="#06B6D4",
                     borderpad=8,
                     bordercolor="#FFFFFF",
                     borderwidth=2
@@ -1111,7 +1107,7 @@ elif view_mode == "🌐 State View":
             
             top15 = state_df.sort_values(state_metric_col, ascending=True).tail(15)
             
-            fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Blues')
+            fig_lb = px.bar(top15, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Teal')
             
             lb_layout = PLOTLY_LAYOUT.copy()
             lb_layout.update(dict(
@@ -1133,8 +1129,8 @@ elif view_mode == "🌐 State View":
                 if pa is None or pb is None: st.error("Could not process one of the selected districts.")
                 else:
                     col1, col2 = st.columns(2)
-                    with col1: st.markdown(f'<div class="battle-card battle-card-blue"><div class="battle-title" style="color: #2563EB;">{district_a}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sa["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sa["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sa)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sa["total_absolute_facilities"]}</span></div></div>', unsafe_allow_html=True)
-                    with col2: st.markdown(f'<div class="battle-card battle-card-red"><div class="battle-title" style="color: #DC2626;">{district_b}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sb["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sb["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sb)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sb["total_absolute_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    with col1: st.markdown(f'<div class="battle-card battle-card-blue"><div class="battle-title" style="color: #06B6D4;">{district_a}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sa["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sa["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sa)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sa["total_absolute_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    with col2: st.markdown(f'<div class="battle-card battle-card-red"><div class="battle-title" style="color: #F43F5E;">{district_b}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sb["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sb["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sb)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sb["total_absolute_facilities"]}</span></div></div>', unsafe_allow_html=True)
                     
                     st.markdown("#### Daily Patient Trend — Overlaid")
                     def get_trend(p, cols, name):
@@ -1145,7 +1141,7 @@ elif view_mode == "🌐 State View":
                             d.append({'Date': dt, 'Patients': t, 'District': name})
                         return pd.DataFrame(d)
                     combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
-                    fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#2563EB', district_b: '#DC2626'})
+                    fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#06B6D4', district_b: '#F43F5E'})
                     
                     cmp_layout = PLOTLY_LAYOUT.copy()
                     cmp_layout.update(dict(
@@ -1188,11 +1184,11 @@ elif view_mode == "✅ Active Spokes":
         
         def style_grade(val):
             if val in ['A', 'B']:
-                return 'background-color: #D1FAE5; color: #065F46; font-weight: bold;'
+                return 'background-color: #CCFBF1; color: #0F766E; font-weight: bold;'
             elif val in ['C', 'D']:
-                return 'background-color: #FEF3C7; color: #92400E; font-weight: bold;'
+                return 'background-color: #FEF08A; color: #854D0E; font-weight: bold;'
             elif val == 'F':
-                return 'background-color: #FEE2E2; color: #991B1B; font-weight: bold;'
+                return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
             return ''
             
         display_active = active_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients']]
@@ -1254,9 +1250,9 @@ else:
                     <div class="metric-label">Total Inactive Facilities</div>
                     <div class="metric-value">{total_inactive}</div>
                 </div>
-                <div class="metric-card" style="border-left: 4px solid #DC2626;">
+                <div class="metric-card" style="border-left: 4px solid #F43F5E;">
                     <div class="metric-label">Critical (30+ Days)</div>
-                    <div class="metric-value" style="color:#DC2626;">{critical_count}</div>
+                    <div class="metric-value" style="color:#F43F5E;">{critical_count}</div>
                 </div>
                 <div class="metric-card" style="border-left: 4px solid #F97316;">
                     <div class="metric-label">High Risk (15-29 Days)</div>
