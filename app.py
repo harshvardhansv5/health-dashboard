@@ -10,12 +10,7 @@ import math
 TOTAL_SPOKES = 701 
 
 # --- DISTANCE FALLBACK DICTIONARY ---
-# If the Excel sheet has missing or unreadable distance data, it will check here.
-# You can add specific facility names here if they are frequently missing from the sheet.
-DISTANCE_FALLBACK = {
-    # "PHC Barh": 16.0,
-    # "SDH Danapur": 12.5
-}
+DISTANCE_FALLBACK = {}
 
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
@@ -383,7 +378,7 @@ def find_global_latest_date(sheet_names_tuple, uploaded_file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v14.0"):
+def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v17.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     
     anchor_date = None
@@ -410,7 +405,7 @@ def calculate_all_districts(sheet_names_tuple, uploaded_file_bytes, time_filter,
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v14.0"):
+def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_buster="v17.0"):
     xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
     tracker_data = []
     
@@ -472,6 +467,64 @@ def generate_zero_tracker_data(sheet_names_tuple, uploaded_file_bytes, _cache_bu
     if not tracker_df.empty:
         tracker_df = tracker_df.sort_values(by=['Inactive Days', 'District', 'Facility Name'], ascending=[False, True, True]).reset_index(drop=True)
     return tracker_df
+
+@st.cache_data(show_spinner=False)
+def get_all_facility_data(sheet_names_tuple, uploaded_file_bytes, time_filter, _cache_buster="v17.0"):
+    xls = pd.ExcelFile(io.BytesIO(uploaded_file_bytes))
+    all_data = []
+    
+    for sheet in sheet_names_tuple:
+        try:
+            sdf = read_sheet_robust(xls, sheet)
+            plot_df, _, stats = process_district_df(sdf, time_filter)
+            if plot_df is None: continue
+            
+            fac_col = stats['facility_col']
+            d_df = pd.DataFrame({
+                'District': REVERSE_DISTRICT_MAP.get(sheet, sheet),
+                'Facility': plot_df[fac_col],
+                'Total Patients': plot_df['Total Patients'],
+                'Avg / Day': plot_df['Average Patients'],
+                'Uptime %': plot_df['Uptime %'],
+                'Zero Days': plot_df['Zero Days']
+            })
+            d_df['Grade'] = d_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Avg / Day']), axis=1)
+            all_data.append(d_df)
+        except Exception:
+            pass
+            
+    if all_data:
+        return pd.concat(all_data, ignore_index=True)
+    return pd.DataFrame()
+
+def get_district_monthly_trend(df_raw, facility_col):
+    """Calculates the full calendar month patient totals for a specific district."""
+    monthly_totals = {}
+    
+    # Filter out TOTAL/JAIL rows
+    df_filtered = df_raw[get_facility_mask(df_raw, facility_col)]
+    
+    # Find all date columns in the raw dataframe
+    date_cols = find_date_columns(df_filtered)
+    
+    for c in date_cols:
+        dt = extract_date(c)
+        if pd.isna(dt): continue
+        
+        month_key = dt.strftime('%b %Y')
+        # Sum the column to get total patients for this day across all facilities in the district
+        total_patients = pd.to_numeric(df_filtered[c], errors='coerce').fillna(0).sum()
+        
+        # We only add it if there's data (ignoring completely empty future dates)
+        if total_patients > 0 or month_key in monthly_totals:
+            monthly_totals[month_key] = monthly_totals.get(month_key, 0) + total_patients
+            
+    if not monthly_totals: return pd.DataFrame()
+    
+    trend_df = pd.DataFrame(list(monthly_totals.items()), columns=['Month', 'Total Patients'])
+    trend_df['Sort_Date'] = pd.to_datetime(trend_df['Month'], format='%b %Y', errors='coerce')
+    trend_df = trend_df.dropna(subset=['Sort_Date']).sort_values('Sort_Date')
+    return trend_df
 
 # --- SIDEBAR ---
 with st.sidebar:
@@ -545,7 +598,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+view_mode = st.radio("Navigation", ["📊 District View", "🌐 State View", "🔍 Master Query", "⚠️ Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
@@ -772,7 +825,27 @@ if view_mode == "📊 District View":
                 fig_t.update_traces(line_color='#2563EB', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#2563EB')), fillcolor='rgba(37, 99, 235, 0.1)')
                 fig_t.update_layout(**PLOTLY_LAYOUT)
                 st.plotly_chart(fig_t, use_container_width=True)
-                
+        
+        # --- NEW: Monthly Volume ---
+        st.markdown("<h4 style='color:#0F172A; margin-top:30px; margin-bottom:10px;'>Monthly Patient Volume (Full Calendar Months)</h4>", unsafe_allow_html=True)
+        monthly_df = get_district_monthly_trend(df_raw, facility_col)
+        
+        if not monthly_df.empty:
+            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients', color='Total Patients', color_continuous_scale='Blues')
+            fig_m.update_traces(texttemplate='%{text:,}', textposition='outside')
+            
+            m_layout = PLOTLY_LAYOUT.copy()
+            m_layout.update(dict(
+                height=350,
+                xaxis=dict(showgrid=False, type='category'),
+                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients"),
+                coloraxis_showscale=False
+            ))
+            fig_m.update_layout(**m_layout)
+            st.plotly_chart(fig_m, use_container_width=True)
+        else:
+            st.info("No monthly data available for this district.")
+            
         st.markdown("<h4 style='color:#0F172A; margin-top:30px; margin-bottom:10px;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
             heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
@@ -1054,6 +1127,61 @@ elif view_mode == "🌐 State View":
                     st.plotly_chart(fig_c, use_container_width=True)
     else:
         st.warning("No district data available for the selected time range.")
+
+# ==============================================================================
+# VIEW: MASTER QUERY
+# ==============================================================================
+elif view_mode == "🔍 Master Query":
+    st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>🔍 Master Query Engine</h3>", unsafe_allow_html=True)
+    st.markdown("Filter across all 701 spokes in the state to find exactly what you need.")
+    
+    with st.spinner("Loading all facility data..."):
+        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter)
+        
+    if not all_fac_df.empty:
+        with st.container():
+            st.markdown("#### Build Your Query")
+            col1, col2, col3, col4 = st.columns(4)
+            
+            with col1:
+                dist_filter = st.multiselect("District", sorted(all_fac_df['District'].unique()), default=[])
+            with col2:
+                grade_filter = st.multiselect("Grade", ["A", "B", "C", "D", "F"], default=[])
+            with col3:
+                max_patients = st.number_input("Max Total Patients (Leave 0 for no limit)", min_value=0, value=0, step=10)
+            with col4:
+                max_uptime = st.number_input("Max Uptime % (Leave 100 for no limit)", min_value=0, max_value=100, value=100, step=5)
+                
+            filtered_df = all_fac_df.copy()
+            if dist_filter: filtered_df = filtered_df[filtered_df['District'].isin(dist_filter)]
+            if grade_filter: filtered_df = filtered_df[filtered_df['Grade'].isin(grade_filter)]
+            if max_patients > 0: filtered_df = filtered_df[filtered_df['Total Patients'] <= max_patients]
+            if max_uptime < 100: filtered_df = filtered_df[filtered_df['Uptime %'] <= max_uptime]
+            
+        st.markdown(f"**Results Found:** {len(filtered_df)} facilities")
+        
+        if not filtered_df.empty:
+            display_query = filtered_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients', 'Zero Days']]
+            st.dataframe(display_query, use_container_width=True, hide_index=True, column_config={
+                "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
+                "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f")
+            })
+            
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                display_query.to_excel(writer, index=False, sheet_name='Query Results')
+                
+            st.download_button(
+                label="📥 Download Query Results",
+                data=buffer.getvalue(),
+                file_name=f"Master_Query_Results_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
+        else:
+            st.info("No facilities match your current filters.")
+    else:
+        st.warning("Could not load facility data.")
 
 # ==============================================================================
 # VIEW: ZERO-SAMPLE TRACKER
