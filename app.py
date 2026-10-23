@@ -12,8 +12,7 @@ TOTAL_SPOKES = 701
 available_sheets = [] 
 
 # --- GOOGLE SHEETS INTEGRATION ---
-# PASTE YOUR PUBLISHED .XLSX URL HERE (It must end in /pub?output=xlsx)
-SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwjDNp1zjbEXM-a4HYoAErb4ZWyJm9YmbKyTeEOhKOpKx6DAFLUlVPlQEvRP0ll5SUDXYWKlS5F7Gc/pub?output=xlsx"
+SPREADSHEET_URL = "YOUR_PUBLISHED_XLSX_URL_HERE"
 
 # --- DISTANCE FALLBACK DICTIONARY ---
 DISTANCE_FALLBACK = {}
@@ -408,7 +407,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v24.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v25.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -435,83 +434,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, _cache_b
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def generate_zero_tracker_data(sheet_names_tuple, file_bytes, _cache_buster="v24.0"):
-    xls = pd.ExcelFile(io.BytesIO(file_bytes))
-    tracker_data = []
-    
-    for sheet in sheet_names_tuple:
-        try:
-            sdf = read_sheet_robust(xls, sheet)
-            plot_df, _, stats = process_district_df(sdf, "All Available Data")
-            if plot_df is None: continue
-            
-            facility_col = stats['facility_col']
-            active_cols = stats['active_date_cols']
-            max_days = len(active_cols)
-            text_records = stats.get('text_records', [])
-            
-            original_district_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
-            raw_zm = DISTRICT_TO_ZM.get(original_district_name, "Unknown")
-            zm_name = raw_zm.split(" (")[0] if " (" in raw_zm else raw_zm
-            
-            # --- FIX: INCLUDE "NEVER REPORTED" SPOKES ---
-            if max_days == 0:
-                for idx, row in plot_df.iterrows():
-                    tracker_data.append({
-                        'ZM': zm_name,
-                        'District': original_district_name,
-                        'Facility Name': row[facility_col],
-                        'Last Active Date': "Never Reported",
-                        'Inactive Days': 999, # Sort to the top
-                        'Severity': "🔴 Critical",
-                        'Primary Reason': "Never Reported"
-                    })
-                continue
-            
-            for idx, row in plot_df.iterrows():
-                streak = 0
-                last_active_date = "Never Reported"
-                for c in reversed(active_cols):
-                    if row[c] == 0:
-                        streak += 1
-                    else:
-                        last_active_date = c
-                        break
-                        
-                if streak == 0: continue
-                
-                fac_name = row[facility_col]
-                
-                primary_reason = "No Note"
-                fac_texts = [t for t in text_records if t['Facility'] == fac_name]
-                if fac_texts:
-                    fac_texts.sort(key=lambda x: x['Date'] if pd.notna(x['Date']) else pd.Timestamp.min, reverse=True)
-                    primary_reason = fac_texts[0]['Raw_Note']
-                    
-                if streak >= 30: severity = "🔴 Critical"
-                elif streak >= 15: severity = "🟠 High Risk"
-                elif streak >= 7: severity = "🟡 Warning"
-                else: severity = "⚪ Monitor"
-                
-                tracker_data.append({
-                    'ZM': zm_name,
-                    'District': original_district_name,
-                    'Facility Name': fac_name,
-                    'Last Active Date': last_active_date,
-                    'Inactive Days': streak,
-                    'Severity': severity,
-                    'Primary Reason': primary_reason
-                })
-        except Exception:
-            pass
-            
-    tracker_df = pd.DataFrame(tracker_data)
-    if not tracker_df.empty:
-        tracker_df = tracker_df.sort_values(by=['Inactive Days', 'District', 'Facility Name'], ascending=[False, True, True]).reset_index(drop=True)
-    return tracker_df
-
-@st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v24.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_buster="v25.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -522,6 +445,8 @@ def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_bus
             if plot_df is None: continue
             
             fac_col = stats['facility_col']
+            text_records = stats.get('text_records', [])
+            
             d_df = pd.DataFrame({
                 'District': REVERSE_DISTRICT_MAP.get(sheet, sheet),
                 'Facility': plot_df[fac_col],
@@ -531,6 +456,16 @@ def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, _cache_bus
                 'Zero Days': plot_df['Zero Days']
             })
             d_df['Grade'] = d_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Avg / Day']), axis=1)
+            
+            # Add Primary Reason for inactive ones
+            def get_reason(row):
+                if row['Total Patients'] > 0: return ""
+                fac_texts = [t for t in text_records if t['Facility'] == row['Facility']]
+                if fac_texts:
+                    return fac_texts[-1]['Raw_Note'] # Last note
+                return "Never Reported"
+
+            d_df['Primary Reason'] = d_df.apply(get_reason, axis=1)
             all_data.append(d_df)
         except Exception:
             pass
@@ -1226,48 +1161,33 @@ elif view_mode == "✅ Active Spokes":
 # ==============================================================================
 else:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>⚠️ Statewide Zero-Sample Tracker</h3>", unsafe_allow_html=True)
-    st.markdown("This table lists all facilities that are **currently inactive** (a streak of 0 patients ending on the latest date).")
-    
-    # FIX: Changed label to 'Minimum Inactive Streak'
-    col_filter, _ = st.columns([1, 2])
-    with col_filter:
-        streak_threshold = st.selectbox("Minimum Inactive Streak:", [7, 14, 21, 30], format_func=lambda x: f"{x} days")
+    st.markdown("This table lists all facilities that are **currently inactive** (reported 0 patients in the selected time range).")
     
     with st.spinner("Scanning all districts for inactive facilities..."):
-        tracker_df = generate_zero_tracker_data(tuple(available_sheets), file_bytes)
+        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter)
         
-    if not tracker_df.empty:
-        filtered_tracker = tracker_df[tracker_df['Inactive Days'] >= streak_threshold].copy()
+    if not all_fac_df.empty:
+        inactive_df = all_fac_df[all_fac_df['Total Patients'] == 0].copy()
         
-        if not filtered_tracker.empty:
-            total_inactive = len(filtered_tracker)
-            critical_count = len(filtered_tracker[filtered_tracker['Severity'] == "🔴 Critical"])
-            high_risk_count = len(filtered_tracker[filtered_tracker['Severity'] == "🟠 High Risk"])
-            
-            st.markdown(f'''
-            <div class="metric-grid" style="grid-template-columns: repeat(3, 1fr);">
-                <div class="metric-card">
-                    <div class="metric-label">Total Inactive Facilities</div>
-                    <div class="metric-value">{total_inactive}</div>
-                </div>
-                <div class="metric-card" style="border-left: 4px solid #F43F5E;">
-                    <div class="metric-label">Critical (30+ Days)</div>
-                    <div class="metric-value" style="color:#F43F5E;">{critical_count}</div>
-                </div>
-                <div class="metric-card" style="border-left: 4px solid #F97316;">
-                    <div class="metric-label">High Risk (15-29 Days)</div>
-                    <div class="metric-value" style="color:#F97316;">{high_risk_count}</div>
-                </div>
+        total_inactive = len(inactive_df)
+        
+        st.markdown(f'''
+        <div class="metric-grid" style="grid-template-columns: repeat(1, 1fr);">
+            <div class="metric-card" style="border-left: 4px solid #F43F5E;">
+                <div class="metric-label">Total Inactive Facilities</div>
+                <div class="metric-value" style="color:#F43F5E;">{total_inactive}</div>
             </div>
-            ''', unsafe_allow_html=True)
-            
-            display_tracker = filtered_tracker.copy()
+        </div>
+        ''', unsafe_allow_html=True)
+        
+        if not inactive_df.empty:
+            display_tracker = inactive_df[['District', 'Facility', 'Primary Reason']].copy()
             display_tracker = display_tracker.reset_index(drop=True)
             display_tracker.index = display_tracker.index + 1
             display_tracker.index.name = 'S.No.'
             display_tracker = display_tracker.reset_index()
             
-            display_tracker = display_tracker[['S.No.', 'Severity', 'ZM', 'District', 'Facility Name', 'Last Active Date', 'Inactive Days', 'Primary Reason']]
+            # Optional ZM mapping could be added here, but the user just wants strict inactive logic
             
             st.dataframe(
                 display_tracker, 
@@ -1275,12 +1195,8 @@ else:
                 hide_index=True,
                 column_config={
                     "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
-                    "Severity": st.column_config.TextColumn("Severity", width="small"),
-                    "ZM": st.column_config.TextColumn("Zone Manager", width="medium"),
                     "District": st.column_config.TextColumn("District", width="medium"),
-                    "Facility Name": st.column_config.TextColumn("Facility Name", width="large"),
-                    "Last Active Date": st.column_config.TextColumn("Last Active Date", width="medium"),
-                    "Inactive Days": st.column_config.NumberColumn("Inactive Days", format="%d days"),
+                    "Facility": st.column_config.TextColumn("Facility Name", width="large"),
                     "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                 }
             )
@@ -1290,13 +1206,13 @@ else:
                 display_tracker.to_excel(writer, index=False, sheet_name='Inactive Facilities')
                 
             st.download_button(
-                label=f"📥 Download List ({streak_threshold}+ Days)",
+                label=f"📥 Download List ({total_inactive} facilities)",
                 data=buffer.getvalue(),
-                file_name=f"Statewide_Inactive_Tracker_{streak_threshold}Days_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                file_name=f"Statewide_Inactive_Tracker_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
         else:
-            st.success(f"✅ Excellent! No facilities found with an inactive streak of {streak_threshold}+ days.")
+            st.success("✅ Excellent! No facilities found with 0 patients in this time range.")
     else:
-        st.success("✅ Excellent! No facilities found with any inactive streaks in the state.")
+        st.warning("Could not load facility data.")
