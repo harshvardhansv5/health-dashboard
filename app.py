@@ -42,7 +42,6 @@ st.markdown("""
 
     /* --- HIDE UGLY DATAFRAME COLUMN MENUS (WITHOUT BREAKING SORTING) --- */
     [data-testid="stDataFrameColumnMenu"] { display: none !important; }
-    /* Ensure headers remain clickable */
     [data-testid="stDataFrame"] div[role="columnheader"] { cursor: pointer !important; }
 
     /* Metric Cards (Floating Glass) */
@@ -456,7 +455,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.3"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.4"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -483,7 +482,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.3"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.4"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -844,7 +843,7 @@ if view_mode == "District View":
         display.insert(0, 'S.No.', range(1, len(display) + 1))
         
         total_row = pd.DataFrame([{
-            'S.No.': '',
+            'S.No.': None,
             'Facility': '🏆 TOTAL',
             'Grade': d_grade,
             'Uptime %': round(calc_uptime(stats), 1),
@@ -1136,7 +1135,7 @@ elif view_mode == "State View":
             lb_df['District'] = lb_df.apply(lambda row: f"{medal(row['Rank'])} {row['District']}".strip(), axis=1)
             
             total_row = pd.DataFrame([{
-                'S.No.': '',
+                'S.No.': None,
                 'Rank': '', 
                 'District': '🏆 TOTAL', 
                 'Total Patients': lb_df['Total Patients'].sum(), 
