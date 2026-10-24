@@ -436,7 +436,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.8"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.9"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -463,7 +463,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.8"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.9"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -665,7 +665,7 @@ if view_mode == "District View":
     d_tab1, d_tab2, d_tab3, d_tab4, d_tab5 = st.tabs(["Dashboard", "Report Card", "Trends & Analytics", "🩺 Diagnosis", "📍 Hub Logistics"])
 
     with d_tab1:
-        # --- NEW: 5-Card Layout ---
+        # --- 5-Card Layout ---
         best_idx = plot_df['Average Patients'].idxmax()
         best_row = plot_df.loc[best_idx]
         best_name = best_row[facility_col]
@@ -713,7 +713,7 @@ if view_mode == "District View":
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
-            # --- NEW: Grade Legend ---
+            # --- Grade Legend ---
             st.markdown("""
             <div style="display: flex; gap: 16px; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px; margin-top: 10px; justify-content: center; background-color: #FFFFFF; padding: 10px; border-radius: 8px; border: 1px solid #E2E8F0;">
                 <span style="color: #64748B;">Grade Legend:</span>
@@ -737,7 +737,7 @@ if view_mode == "District View":
                 title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
             )
             
-            # --- NEW: Fixed Average Labels ---
+            # --- Fixed Average Labels ---
             if metric_col == 'Average Patients':
                 current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
                 avg_label = f"Weighted Avg: {current_avg}"
@@ -989,14 +989,22 @@ if view_mode == "District View":
                     primary_reason = fac_texts['Raw_Note'].value_counts().idxmax() if not fac_texts.empty else "Unknown / No Note"
                     offense_data.append({
                         'Facility': fac_name,
-                        'Zero Days': z_days,
+                        # 'Zero Days': z_days,  <-- REMOVED AS REQUESTED
                         'Uptime %': row['Uptime %'],
                         'Primary Reason': primary_reason
                     })
             if offense_data:
-                offense_df = pd.DataFrame(offense_data).sort_values('Zero Days', ascending=False)
+                # Sort by lowest Uptime %
+                offense_df = pd.DataFrame(offense_data).sort_values('Uptime %', ascending=True)
                 styled_offense = offense_df.style.map(style_reason, subset=['Primary Reason'])
-                st.dataframe(styled_offense, use_container_width=True, hide_index=True)
+                st.dataframe(
+                    styled_offense, 
+                    use_container_width=True, 
+                    hide_index=True,
+                    column_config={
+                        "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%")
+                    }
+                )
             else:
                 st.info("No facilities had zero days in this period.")
 
