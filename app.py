@@ -176,7 +176,7 @@ def style_reason(val):
         return 'background-color: #FEE2E2; color: #991B1B; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
     elif any(w in val_str for w in ['low opd', 'low footfall']):
         return 'background-color: #FEF08A; color: #854D0E; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
-    elif 'never reported' in val_str or 'unknown' in val_str:
+    elif 'never reported' in val_str or 'unknown' in val_str or 'awaiting launch' in val_str:
         return 'background-color: #F1F5F9; color: #475569; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
     return 'background-color: #E0F2FE; color: #0369A1; font-weight: 600; border-radius: 4px; padding: 4px 8px; display: inline-block;'
 
@@ -436,7 +436,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.9"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -463,13 +463,20 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.9"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
     for sheet in sheet_names_tuple:
         try:
             sdf = read_sheet_robust(xls, sheet)
+            fac_col_raw = find_facility_column(sdf)
+            if not fac_col_raw: continue
+            
+            # Determine if sheet is Pending Launch (no date columns at all)
+            date_cols_raw = find_date_columns(sdf)
+            is_pending = len(date_cols_raw) == 0
+
             plot_df, _, stats = process_district_df(sdf, time_filter, start_date, end_date)
             if plot_df is None: continue
             
@@ -482,7 +489,8 @@ def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date
                 'Total Patients': plot_df['Total Patients'],
                 'Avg / Day': plot_df['Average Patients'],
                 'Uptime %': plot_df['Uptime %'],
-                'Zero Days': plot_df['Zero Days']
+                'Zero Days': plot_df['Zero Days'],
+                'Status': 'Pending Launch' if is_pending else 'Operational'
             })
             d_df['Grade'] = d_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Avg / Day']), axis=1)
             
@@ -491,7 +499,7 @@ def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date
                 fac_texts = [t for t in text_records if t['Facility'] == row['Facility']]
                 if fac_texts:
                     return fac_texts[-1]['Raw_Note']
-                return "Never Reported"
+                return "Awaiting Launch" if is_pending else "Unknown / No Note"
 
             d_df['Primary Reason'] = d_df.apply(get_reason, axis=1)
             all_data.append(d_df)
@@ -1313,7 +1321,7 @@ elif view_mode == "Active Spokes":
 # ==============================================================================
 else:
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>⚠️ Statewide Zero-Sample Tracker</h3>", unsafe_allow_html=True)
-    st.markdown("This table lists all facilities that are **currently inactive** (reported 0 patients in the selected time range).")
+    st.markdown("This page separates **Operational Failures** (facilities that are supposed to be reporting but aren't) from **Pending Launch** (facilities waiting for infrastructure).")
     
     with st.spinner("Scanning all districts for inactive facilities..."):
         # FIX: Pass start_date and end_date
@@ -1322,54 +1330,96 @@ else:
     if not all_fac_df.empty:
         inactive_df = all_fac_df[all_fac_df['Total Patients'] == 0].copy()
         
-        total_inactive = len(inactive_df)
+        op_failures = inactive_df[inactive_df['Status'] == 'Operational']
+        pending_launch = inactive_df[inactive_df['Status'] == 'Pending Launch']
         
-        # Wrapped metric card in columns to prevent full width
-        col_card, _ = st.columns([1.5, 3])
-        with col_card:
+        col_card1, col_card2, _ = st.columns([1.5, 1.5, 2])
+        with col_card1:
             st.markdown(f'''
             <div class="metric-card" style="border-top: 4px solid #F43F5E; padding: 16px; margin-bottom: 20px;">
-                <div class="metric-label">Total Inactive Facilities</div>
-                <div class="metric-value" style="color:#F43F5E;">{total_inactive}</div>
+                <div class="metric-label">Operational Failures</div>
+                <div class="metric-value" style="color:#F43F5E;">{len(op_failures)}</div>
             </div>
             ''', unsafe_allow_html=True)
+        with col_card2:
+            st.markdown(f'''
+            <div class="metric-card" style="border-top: 4px solid #94A3B8; padding: 16px; margin-bottom: 20px;">
+                <div class="metric-label">Pending Launch</div>
+                <div class="metric-value" style="color:#64748B;">{len(pending_launch)}</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        z_tab1, z_tab2 = st.tabs([f"🔴 True Operational Failures ({len(op_failures)})", f"🚧 Pending Launch ({len(pending_launch)})"])
         
-        if not inactive_df.empty:
-            display_tracker = inactive_df[['District', 'Facility', 'Primary Reason']].copy()
-            display_tracker = display_tracker.reset_index(drop=True)
-            display_tracker.index = display_tracker.index + 1
-            display_tracker.index.name = 'S.No.'
-            display_tracker = display_tracker.reset_index()
-            
-            # Format reasons to Title Case
-            display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
-            
-            styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
-            
-            st.dataframe(
-                styled_tracker, 
-                use_container_width=True, 
-                hide_index=True,
-                column_config={
-                    "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
-                    "District": st.column_config.TextColumn("District", width="medium"),
-                    "Facility": st.column_config.TextColumn("Facility Name", width="large"),
-                    "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
-                }
-            )
-            
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                display_tracker.to_excel(writer, index=False, sheet_name='Inactive Facilities')
+        with z_tab1:
+            if not op_failures.empty:
+                display_tracker = op_failures[['District', 'Facility', 'Primary Reason']].copy()
+                display_tracker = display_tracker.reset_index(drop=True)
+                display_tracker.index = display_tracker.index + 1
+                display_tracker.index.name = 'S.No.'
+                display_tracker = display_tracker.reset_index()
                 
-            st.download_button(
-                label=f"📥 Download List ({total_inactive} facilities)",
-                data=buffer.getvalue(),
-                file_name=f"Statewide_Inactive_Tracker_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                use_container_width=True
-            )
-        else:
-            st.success("✅ Excellent! No facilities found with 0 patients in this time range.")
+                display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
+                styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
+                
+                st.dataframe(
+                    styled_tracker, use_container_width=True, hide_index=True,
+                    column_config={
+                        "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
+                        "District": st.column_config.TextColumn("District", width="medium"),
+                        "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                        "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                    }
+                )
+                
+                buffer1 = io.BytesIO()
+                with pd.ExcelWriter(buffer1, engine='openpyxl') as writer:
+                    display_tracker.to_excel(writer, index=False, sheet_name='Operational Failures')
+                    
+                st.download_button(
+                    label=f"📥 Download Operational Failures ({len(op_failures)})",
+                    data=buffer1.getvalue(),
+                    file_name=f"Statewide_OpFailures_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            else:
+                st.success("✅ Excellent! No operational facilities found with 0 patients.")
+
+        with z_tab2:
+            if not pending_launch.empty:
+                display_pending = pending_launch[['District', 'Facility', 'Primary Reason']].copy()
+                display_pending = display_pending.reset_index(drop=True)
+                display_pending.index = display_pending.index + 1
+                display_pending.index.name = 'S.No.'
+                display_pending = display_pending.reset_index()
+                
+                display_pending['Primary Reason'] = display_pending['Primary Reason'].apply(format_reason)
+                styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
+                
+                st.dataframe(
+                    styled_pending, use_container_width=True, hide_index=True,
+                    column_config={
+                        "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
+                        "District": st.column_config.TextColumn("District", width="medium"),
+                        "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                        "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                    }
+                )
+                st.info("These facilities will automatically move to 'Operational' as soon as their first data column is added.")
+                
+                buffer2 = io.BytesIO()
+                with pd.ExcelWriter(buffer2, engine='openpyxl') as writer:
+                    display_pending.to_excel(writer, index=False, sheet_name='Pending Launch')
+                    
+                st.download_button(
+                    label=f"📥 Download Pending Launch ({len(pending_launch)})",
+                    data=buffer2.getvalue(),
+                    file_name=f"Statewide_PendingLaunch_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            else:
+                st.success("✅ All facilities have launched!")
     else:
         st.warning("Could not load facility data.")
