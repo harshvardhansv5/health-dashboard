@@ -41,7 +41,7 @@ st.markdown("""
     [data-testid="collapsedControl"] { display: none !important; }
 
     /* Metric Cards (Floating Glass) */
-    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
     .metric-card {
         background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
         padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); 
@@ -436,7 +436,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.7"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.8"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -463,7 +463,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.7"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v28.8"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -665,11 +665,32 @@ if view_mode == "District View":
     d_tab1, d_tab2, d_tab3, d_tab4, d_tab5 = st.tabs(["Dashboard", "Report Card", "Trends & Analytics", "🩺 Diagnosis", "📍 Hub Logistics"])
 
     with d_tab1:
+        # --- NEW: 5-Card Layout ---
+        best_idx = plot_df['Average Patients'].idxmax()
+        best_row = plot_df.loc[best_idx]
+        best_name = best_row[facility_col]
+        best_grade = calculate_grade(best_row['Uptime %'], best_row['Average Patients'])
+        best_avg = best_row['Average Patients']
+        uptime_val = calc_uptime(stats)
+        uptime_color = "#14B8A6" if uptime_val >= 50 else "#F43F5E"
+
         st.markdown(f'''
         <div class="metric-grid">
+            <div class="metric-card"><div class="metric-label">Total Spokes</div><div class="metric-value">{stats['total_absolute_facilities']}</div></div>
+            <div class="metric-card">
+                <div class="metric-label">Best Performing Spoke</div>
+                <div class="metric-value" style="font-size: 18px; margin-bottom: 4px;">{best_name}</div>
+                <div class="metric-sub">🏆 {best_grade} | {best_avg}/day</div>
+            </div>
             <div class="metric-card"><div class="metric-label">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
             <div class="metric-card"><div class="metric-label">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
-            <div class="metric-card"><div class="metric-label">Facility Uptime</div><div class="metric-value">{calc_uptime(stats)}%</div></div>
+            <div class="metric-card">
+                <div class="metric-label">Facility Uptime</div>
+                <div class="metric-value">{uptime_val}%</div>
+                <div style="height: 6px; background-color: #E2E8F0; border-radius: 3px; margin-top: 12px; overflow: hidden;">
+                    <div style="height: 100%; width: {uptime_val}%; background-color: {uptime_color};"></div>
+                </div>
+            </div>
         </div>
         ''', unsafe_allow_html=True)
         
@@ -692,6 +713,18 @@ if view_mode == "District View":
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
+            # --- NEW: Grade Legend ---
+            st.markdown("""
+            <div style="display: flex; gap: 16px; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px; margin-top: 10px; justify-content: center; background-color: #FFFFFF; padding: 10px; border-radius: 8px; border: 1px solid #E2E8F0;">
+                <span style="color: #64748B;">Grade Legend:</span>
+                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#14B8A6; border-radius:2px;"></span> A</div>
+                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#84CC16; border-radius:2px;"></span> B</div>
+                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#FBBF24; border-radius:2px;"></span> C</div>
+                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#F97316; border-radius:2px;"></span> D</div>
+                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#F43F5E; border-radius:2px;"></span> F</div>
+            </div>
+            """, unsafe_allow_html=True)
+
             fig = px.bar(
                 sorted_df, 
                 y=facility_col, 
@@ -704,9 +737,18 @@ if view_mode == "District View":
                 title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
             )
             
-            current_avg = round(filtered[metric_col].mean(), 1) if metric_col in ['Uptime %', 'Total Patients'] else round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
+            # --- NEW: Fixed Average Labels ---
+            if metric_col == 'Average Patients':
+                current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
+                avg_label = f"Weighted Avg: {current_avg}"
+            elif metric_col == 'Total Patients':
+                current_avg = round(filtered['Total Patients'].mean(), 1)
+                avg_label = f"Normal Avg: {current_avg}"
+            else: # Uptime %
+                current_avg = round(filtered['Uptime %'].mean(), 1)
+                avg_label = f"Avg Uptime: {current_avg}%"
                 
-            fig.add_vline(x=current_avg, line_dash="dash", line_color="#06B6D4", line_width=2, annotation_text=f"Avg: {current_avg}", annotation_position="top right", annotation_font_color="#06B6D4", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#06B6D4", annotation_borderwidth=1, annotation_borderpad=4)
+            fig.add_vline(x=current_avg, line_dash="dash", line_color="#06B6D4", line_width=2, annotation_text=avg_label, annotation_position="top right", annotation_font_color="#06B6D4", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#06B6D4", annotation_borderwidth=1, annotation_borderpad=4)
             
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
