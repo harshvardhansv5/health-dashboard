@@ -448,7 +448,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.5"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.6"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -475,7 +475,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.5"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.6"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -1435,32 +1435,3 @@ else:
                 st.success("✅ All facilities have launched!")
     else:
         st.warning("Could not load facility data.")
-
-    # --- DEBUG: DATE PARSING CHECK ---
-    with st.expander("🛠️ Debug: Date Parsing Check for Buxar"):
-        st.markdown("If PHC Chakki Buxar is in the failure list, it means the app is **not** seeing the 12/10 or 16/10 dates. This debug panel shows exactly which date columns the app successfully parsed and which ones it failed to read.")
-        
-        buxar_sheet = next((s for s in available_sheets if "buxar" in s.lower()), None)
-        if buxar_sheet:
-            df_buxar = read_sheet_robust(xls, buxar_sheet)
-            date_cols = find_date_columns(df_buxar)
-            st.write(f"**Date columns found in Buxar sheet:** {len(date_cols)}")
-            for c in date_cols:
-                parsed = extract_date(c)
-                st.write(f"- `{repr(c)}` ➔ Parsed as: `{parsed.strftime('%d %b %Y') if pd.notna(parsed) else 'FAILED'}`")
-            
-            # Find columns that look like dates but failed
-            st.markdown("---")
-            st.write("**Columns containing numbers that failed to parse:**")
-            failed_count = 0
-            for c in df_buxar.columns:
-                c_str = str(c)
-                # If it has a number and a slash/dash/dot, but not parsed
-                if re.search(r'\d', c_str) and ('/' in c_str or '-' in c_str or '.' in c_str or '∕' in c_str or '⁄' in c_str):
-                    if pd.isna(extract_date(c)):
-                        st.write(f"- `{repr(c)}` ➔ **FAILED TO PARSE**")
-                        failed_count += 1
-            if failed_count == 0:
-                st.success("All numeric columns with slashes/dashes were parsed successfully.")
-        else:
-            st.write("Buxar sheet not found.")
