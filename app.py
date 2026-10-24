@@ -234,11 +234,13 @@ def extract_date(col_name):
     if isinstance(col_name, pd.Timestamp): return col_name
     s = str(col_name).lower()
     
+    # FIX: Remove all invisible spaces and non-breaking spaces
+    s = s.replace('\xa0', ' ').replace('\u200b', '').replace('\u200e', '')
     s = s.replace('<br>', ' ').replace('<br/>', ' ').replace('\n', ' ')
     s = re.sub(r'total number of patients( on)?', '', s)
     s = re.sub(r'\(.*?\)', '', s) 
     
-    # NEW FIX: Remove ordinal suffixes (1st, 2nd, 3rd, 4th, 12th, 16th, etc.)
+    # FIX: Remove ordinal suffixes (1st, 2nd, 3rd, 4th, 12th, 16th, etc.)
     s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
     s = s.strip()
     
@@ -438,7 +440,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.1"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.2"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -465,7 +467,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.1"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.2"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
