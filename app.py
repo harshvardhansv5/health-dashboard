@@ -244,6 +244,9 @@ def extract_date(col_name):
     s = s.replace('∕', '/').replace('⁄', '/')
     s = s.replace('‐', '-').replace('–', '-').replace('—', '-')
     
+    # FIX: Remove spaces around separators (e.g., "12 / 10 / 2026")
+    s = re.sub(r'\s*([-/.∕⁄‐–—])\s*', r'\1', s)
+    
     # Remove ordinal suffixes (1st, 2nd, 3rd, 4th, 12th, 16th, etc.)
     s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
     s = s.strip()
@@ -445,7 +448,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.4"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.5"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -472,7 +475,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.4"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.5"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
