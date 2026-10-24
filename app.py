@@ -131,19 +131,23 @@ st.markdown("""
     /* --- DEFINITIVE DROPDOWN & INPUT STYLING --- */
     div[data-testid="stSelectbox"] { margin-bottom: 0px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
-        background-color: #F1F5F9 !important; border: 1px solid #94A3B8 !important; border-radius: 8px !important; 
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 44px !important; 
+        background-color: #FFFFFF !important; 
+        border: 1.5px solid #06B6D4 !important; 
+        border-radius: 8px !important; 
+        box-shadow: 0 2px 4px rgba(6, 182, 212, 0.1) !important; 
+        transition: all 0.2s ease-in-out !important; 
+        min-height: 44px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #06B6D4 !important; background-color: #FFFFFF !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #0891B2 !important; background-color: #F8FAFC !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #475569 !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #06B6D4 !important; }
     label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 700 !important; font-size: 13px !important; text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* Date Picker */
-    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1px solid #94A3B8 !important; border-radius: 8px !important; background-color: #F1F5F9 !important; min-height: 44px !important; }
-    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1.5px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 44px !important; box-shadow: 0 2px 4px rgba(6, 182, 212, 0.1) !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
 
     /* Popover Button Styling (Definitions) */
     div[data-testid="stPopover"] button {
@@ -455,7 +459,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.8"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.9"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -482,7 +486,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.8"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.9"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
