@@ -86,7 +86,7 @@ st.markdown("""
         border-bottom: 3px solid #06B6D4 !important;
         border-radius: 12px !important;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
-        padding: 12px 24px !important;
+        padding: 12px 20px !important;
         margin-bottom: 24px !important;
         align-items: center !important;
     }
@@ -94,11 +94,11 @@ st.markdown("""
         border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
-        background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; border-radius: 8px !important; padding: 4px !important; gap: 2px !important;
+        background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; border-radius: 8px !important; padding: 3px !important; gap: 2px !important;
         flex-wrap: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 8px 12px !important; font-size: 14px !important; margin: 0 !important; white-space: nowrap !important;
+        padding: 6px 10px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
         background-color: #FFFFFF !important; border-radius: 6px !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; color: #0F172A !important; font-weight: 700 !important;
@@ -108,8 +108,8 @@ st.markdown("""
     .header-left { display: flex; align-items: center; gap: 12px; }
     .header-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background-color: #06B6D4; border-radius: 10px; color: #FFFFFF; box-shadow: 0 4px 10px rgba(6, 182, 212, 0.3); }
     .header-icon svg { width: 22px; height: 22px; stroke: #FFFFFF; }
-    .header-title { font-size: 18px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; margin-bottom: 3px; }
-    .header-subtitle { font-size: 13px; font-weight: 500; color: #64748B; margin-top: 0; }
+    .header-title { font-size: 17px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; margin-bottom: 3px; }
+    .header-subtitle { font-size: 12px; font-weight: 500; color: #64748B; margin-top: 0; }
     
     /* Blinking Radar Dot */
     .status-dot { width: 8px; height: 8px; background-color: #14B8A6; border-radius: 50%; animation: pulse-cyan 2s infinite; display: inline-block; }
@@ -136,24 +136,24 @@ st.markdown("""
         border-radius: 8px !important; 
         box-shadow: 0 2px 4px rgba(6, 182, 212, 0.1) !important; 
         transition: all 0.2s ease-in-out !important; 
-        min-height: 44px !important; 
+        min-height: 40px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
     div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #0891B2 !important; background-color: #F8FAFC !important; }
     div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; font-size: 13px !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #06B6D4 !important; }
     label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 700 !important; font-size: 13px !important; text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* Date Picker */
-    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1.5px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 44px !important; box-shadow: 0 2px 4px rgba(6, 182, 212, 0.1) !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1.5px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; box-shadow: 0 2px 4px rgba(6, 182, 212, 0.1) !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
 
-    /* Popover Button Styling (Definitions) */
-    div[data-testid="stPopover"] button {
-        background-color: transparent !important; border: 1px solid transparent !important; color: #475569 !important; font-weight: 600 !important; font-size: 14px !important; transition: all 0.2s ease !important;
+    /* Popover Button Styling (Definitions) inside Command Bar */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stPopover"] button {
+        background-color: #F8FAFC !important; border: 1px solid #CBD5E1 !important; color: #0F172A !important; font-weight: 700 !important; font-size: 13px !important; border-radius: 8px !important; min-height: 40px !important; transition: all 0.2s ease !important; width: 100% !important;
     }
-    div[data-testid="stPopover"] button:hover { color: #06B6D4 !important; background-color: #E2E8F0 !important; border-radius: 6px !important; }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stPopover"] button:hover { color: #06B6D4 !important; border-color: #06B6D4 !important; background-color: #F1F5F9 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -353,7 +353,6 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
         }
 
     active_dates = sorted_dates
-    # FIX: Removed the anchor_date logic for "All Available Data". We want the blunt reality of all columns.
     if time_filter == "Custom Range" and start_date and end_date:
         active_dates = [d for d in sorted_dates if start_date <= d.date() <= end_date]
     else:
@@ -496,7 +495,6 @@ def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date
             fac_col_raw = find_facility_column(sdf)
             if not fac_col_raw: continue
             
-            # Determine if sheet is Pending Launch (no date columns at all)
             date_cols_raw = find_date_columns(sdf)
             is_pending = len(date_cols_raw) == 0
 
@@ -584,8 +582,8 @@ for s in xls.sheet_names:
     if any(kw.lower() in s_lower or s_lower in kw.lower() for kw in valid_keywords):
         available_sheets.append(s)
 
-# --- UNIFIED COMMAND BAR ---
-col_title, col_nav, col_time_ctrl = st.columns([2.5, 4.5, 1.5])
+# --- UNIFIED COMMAND BAR (4-Column Layout) ---
+col_title, col_nav, col_time_ctrl, col_defs = st.columns([2.2, 4.4, 1.8, 1.2])
 
 with col_title:
     st.markdown("""
@@ -598,7 +596,7 @@ with col_title:
             </div>
             <div>
                 <div class="header-title">Bihar Health Dashboard</div>
-                <div class="header-subtitle">Statewide Operations & Pathology Management</div>
+                <div class="header-subtitle">Statewide Operations & Pathology</div>
             </div>
         </div>
     </div>
@@ -609,9 +607,9 @@ with col_nav:
 
 with col_time_ctrl:
     st.markdown(f"""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <div style="font-size: 11px; font-weight: 700; color: #64748B; letter-spacing: 0.5px;">TIME RANGE</div>
-        <div style="font-size: 10px; font-weight: 700; color: #0F766E; display: flex; align-items: center; gap: 4px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+        <div style="font-size: 10px; font-weight: 700; color: #64748B; letter-spacing: 0.5px;">TIME RANGE</div>
+        <div style="font-size: 10px; font-weight: 700; color: #0F766E; display: flex; align-items: center; gap: 3px;">
             <div class="status-dot"></div> Live
         </div>
     </div>
@@ -625,11 +623,10 @@ with col_time_ctrl:
     else:
         date_range_str = time_filter
 
-st.markdown("<br>", unsafe_allow_html=True)
-
-# --- DEFINITIONS POPOVER (Moved here) ---
-col_empty, col_defs = st.columns([8.5, 1.5])
 with col_defs:
+    st.markdown("""
+    <div style="font-size: 10px; font-weight: 700; color: #64748B; letter-spacing: 0.5px; margin-bottom: 4px;">INFO</div>
+    """, unsafe_allow_html=True)
     with st.popover("ℹ️ Definitions", use_container_width=True):
         st.markdown("### Metric Definitions & Grading System")
         st.markdown("""
@@ -658,6 +655,8 @@ with col_defs:
                 "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
             }
         )
+
+st.markdown("<br>", unsafe_allow_html=True)
 
 PLOTLY_LAYOUT = dict(
     template="plotly_white", 
@@ -698,7 +697,6 @@ if view_mode == "District View":
     d_tab1, d_tab2, d_tab3, d_tab4, d_tab5 = st.tabs(["Dashboard", "Report Card", "Trends & Analytics", "🩺 Diagnosis", "📍 Hub Logistics"])
 
     with d_tab1:
-        # --- 5-Card Layout ---
         best_idx = plot_df['Average Patients'].idxmax()
         best_row = plot_df.loc[best_idx]
         best_name = best_row[facility_col]
@@ -749,7 +747,6 @@ if view_mode == "District View":
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
-            # --- Grade Legend ---
             st.markdown("""
             <div style="display: flex; gap: 16px; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px; margin-top: 10px; justify-content: center; background-color: #FFFFFF; padding: 10px; border-radius: 8px; border: 1px solid #E2E8F0;">
                 <span style="color: #64748B;">Grade Legend:</span>
@@ -773,14 +770,13 @@ if view_mode == "District View":
                 title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
             )
             
-            # --- Fixed Average Labels ---
             if metric_col == 'Average Patients':
                 current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
                 avg_label = f"Weighted Avg: {current_avg}"
             elif metric_col == 'Total Patients':
                 current_avg = round(filtered['Total Patients'].mean(), 1)
                 avg_label = f"Normal Avg: {current_avg}"
-            else: # Uptime %
+            else:
                 current_avg = round(filtered['Uptime %'].mean(), 1)
                 avg_label = f"Avg Uptime: {current_avg}%"
                 
@@ -801,7 +797,6 @@ if view_mode == "District View":
             fig.update_traces(textposition='outside', textfont=dict(color="#1E293B", size=12, weight="bold"), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
 
-            # --- FEATURE: FACILITY DRILL-DOWN ---
             st.markdown("<hr style='margin: 30px 0 20px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
             st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>🔍 Facility Drill-Down</h4>", unsafe_allow_html=True)
             
@@ -878,7 +873,6 @@ if view_mode == "District View":
         display['Total Patients'] = scorecard['Total Patients'].astype(int)
         display['Zero Days'] = scorecard['Zero Days'].astype(int)
         
-        # Prepend TOTAL row to Scorecard
         total_row = pd.DataFrame([{
             'Facility': '🏆 TOTAL',
             'Grade': d_grade,
@@ -921,7 +915,6 @@ if view_mode == "District View":
                 fig_t = px.area(trend_df, x='Date', y='Patients', markers=True)
                 fig_t.update_traces(line_color='#06B6D4', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#06B6D4')), fillcolor='rgba(6, 182, 212, 0.1)')
                 
-                # Update X-axis to remove year and empty tick
                 t_layout = PLOTLY_LAYOUT.copy()
                 t_layout.update(dict(
                     xaxis=dict(
@@ -933,7 +926,6 @@ if view_mode == "District View":
                 fig_t.update_layout(**t_layout)
                 st.plotly_chart(fig_t, use_container_width=True)
         
-        # --- Monthly Volume ---
         st.markdown("<h4 style='color:#0F172A; margin-top:30px; margin-bottom:10px;'>Monthly Patient Volume</h4>", unsafe_allow_html=True)
         monthly_df = get_district_monthly_trend(df_raw, facility_col)
         
@@ -973,9 +965,6 @@ if view_mode == "District View":
         else:
             st.info("No date data available to display heatmap.")
 
-    # ==============================================================================
-    # NEW TAB: DIAGNOSIS
-    # ==============================================================================
     with d_tab4:
         st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>🩺 Diagnosis & Root Cause Analysis</h4>", unsafe_allow_html=True)
         text_records = stats.get('text_records', [])
@@ -997,7 +986,6 @@ if view_mode == "District View":
 
             st.markdown("<h5 style='color:#0F172A; margin-top:20px;'>Most Common Data Entry Notes</h5>", unsafe_allow_html=True)
             
-            # Aggressive text cleaning
             def clean_text(text):
                 text = unicodedata.normalize('NFKD', str(text)).encode('ascii', 'ignore').decode('utf-8')
                 text = re.sub(r'\s+', ' ', text).strip().lower()
@@ -1025,12 +1013,10 @@ if view_mode == "District View":
                     primary_reason = fac_texts['Raw_Note'].value_counts().idxmax() if not fac_texts.empty else "Unknown / No Note"
                     offense_data.append({
                         'Facility': fac_name,
-                        # 'Zero Days': z_days,  <-- REMOVED AS REQUESTED
                         'Uptime %': row['Uptime %'],
                         'Primary Reason': primary_reason
                     })
             if offense_data:
-                # Sort by lowest Uptime %
                 offense_df = pd.DataFrame(offense_data).sort_values('Uptime %', ascending=True)
                 styled_offense = offense_df.style.map(style_reason, subset=['Primary Reason'])
                 st.dataframe(
@@ -1044,9 +1030,6 @@ if view_mode == "District View":
             else:
                 st.info("No facilities had zero days in this period.")
 
-    # ==============================================================================
-    # NEW TAB: HUB LOGISTICS
-    # ==============================================================================
     with d_tab5:
         st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>📍 Hub Logistics & Distance Mapping</h4>", unsafe_allow_html=True)
         
@@ -1137,7 +1120,6 @@ elif view_mode == "State View":
     st.markdown("<h3 style='color:#0F172A; margin-bottom:20px;'>Bihar State Master View</h3>", unsafe_allow_html=True)
     
     with st.spinner("Loading State Data..."):
-        # FIX: Pass start_date and end_date
         state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not state_df.empty:
@@ -1196,7 +1178,6 @@ elif view_mode == "State View":
             display_cols = ['Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
             st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
-            # --- Top 5 / Bottom 5 Chart ---
             st.markdown(f"<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>District Performance Highlights (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
             
             col_chart_ctrl, _ = st.columns([1, 2])
@@ -1276,7 +1257,6 @@ elif view_mode == "Active Spokes":
     st.markdown("This table lists all facilities that are **currently active** (saw at least 1 patient in the selected time range).")
     
     with st.spinner("Loading all active facilities..."):
-        # FIX: Pass start_date and end_date
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not all_fac_df.empty:
@@ -1291,7 +1271,6 @@ elif view_mode == "Active Spokes":
         if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
         if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
         
-        # Sort by Uptime % descending by default
         active_df = active_df.sort_values(by='Uptime %', ascending=False)
         
         def style_grade(val):
@@ -1306,7 +1285,6 @@ elif view_mode == "Active Spokes":
         display_active = active_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients']]
         styled_active = display_active.style.map(style_grade, subset=['Grade'])
         
-        # Wrapped metric card in columns to prevent full width
         col_card, _ = st.columns([1.5, 3])
         with col_card:
             st.markdown(f'''
@@ -1349,7 +1327,6 @@ else:
     st.markdown("This page separates **Operational Failures** (facilities that are supposed to be reporting but aren't) from **Pending Launch** (facilities waiting for infrastructure).")
     
     with st.spinner("Scanning all districts for inactive facilities..."):
-        # FIX: Pass start_date and end_date
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not all_fac_df.empty:
