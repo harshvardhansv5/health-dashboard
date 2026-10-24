@@ -48,7 +48,7 @@ st.markdown("""
         display: flex; flex-direction: column; transition: transform 0.2s ease; border-top: 4px solid #06B6D4;
     }
     .metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-    .metric-label { color: #0F172A; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .metric-label { color: #0F172A; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; cursor: help; }
     .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
     .metric-sub { font-size: 15px; font-weight: 600; color: #64748B; }
 
@@ -148,12 +148,6 @@ st.markdown("""
     /* Date Picker */
     div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1.5px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; box-shadow: 0 2px 4px rgba(6, 182, 212, 0.1) !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
-
-    /* Definitions Popover Outside Styling */
-    div[data-testid="stPopover"] button {
-        background-color: transparent !important; border: 1px solid transparent !important; color: #475569 !important; font-weight: 600 !important; font-size: 13px !important; transition: all 0.2s ease !important; margin-bottom: 8px !important;
-    }
-    div[data-testid="stPopover"] button:hover { color: #06B6D4 !important; background-color: #E2E8F0 !important; border-radius: 6px !important; }
 
     /* Tighten Tabs Container Spacing */
     div[data-testid="stTabs"] { margin-top: 0px !important; padding-top: 0px !important; }
@@ -622,38 +616,6 @@ with col_time_ctrl:
     else:
         date_range_str = time_filter
 
-# --- DEFINITIONS POPOVER (Positioned cleanly on the right) ---
-col_empty, col_defs = st.columns([8.5, 1.5])
-with col_defs:
-    with st.popover("ℹ️ Definitions", use_container_width=True):
-        st.markdown("### Metric Definitions & Grading System")
-        st.markdown("""
-        **📊 Weighted Avg / Day** — *The efficiency score.*  
-        Total patients divided by (facilities × days). This accounts for all facility-days equally.
-        
-        **⏱️ Uptime %** — *The reliability score.*  
-        The percentage of days each facility reported more than 0 patients.
-        
-        **📉 Zero Days** — *The failure indicator.*  
-        The total number of days a facility reported exactly 0 patients.
-        """)
-        
-        st.markdown("**🏆 Grading System**")
-        grade_data = pd.DataFrame({
-            "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
-            "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
-            "Avg Patients Requirement": ["> 10", "> 5", "> 2", "> 1", "0"]
-        })
-        
-        st.dataframe(
-            grade_data, hide_index=True, use_container_width=True,
-            column_config={
-                "Grade": st.column_config.TextColumn("Grade", width="medium"),
-                "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
-                "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
-            }
-        )
-
 PLOTLY_LAYOUT = dict(
     template="plotly_white", 
     font=dict(family="Inter, sans-serif", size=13, color="#475569"), 
@@ -703,19 +665,19 @@ if view_mode == "District View":
 
         st.markdown(f'''
         <div class="metric-grid">
-            <div class="metric-card"><div class="metric-label">Total Spokes</div><div class="metric-value">{stats['total_absolute_facilities']}</div></div>
+            <div class="metric-card"><div class="metric-label" title="Total number of reporting facilities.">Total Spokes</div><div class="metric-value">{stats['total_absolute_facilities']}</div></div>
             <div class="metric-card">
-                <div class="metric-label">Best Performing Spoke</div>
+                <div class="metric-label" title="The facility with the highest average patients per day.">Best Performing Spoke</div>
                 <div class="metric-value" style="font-size: 18px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;" title="{best_name}">{best_name}</div>
                 <div class="metric-sub" style="display: flex; align-items: center; gap: 8px;">
                     <span class="mini-badge-{best_grade}">{best_grade}</span>
                     <span>{best_avg} Avg/Day</span>
                 </div>
             </div>
-            <div class="metric-card"><div class="metric-label">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
-            <div class="metric-card"><div class="metric-label">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
+            <div class="metric-card"><div class="metric-label" title="Total number of patients seen across all facilities.">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
+            <div class="metric-card"><div class="metric-label" title="Total patients divided by (facilities × days).">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
             <div class="metric-card">
-                <div class="metric-label">Facility Uptime</div>
+                <div class="metric-label" title="The percentage of days facilities reported more than 0 patients.">Facility Uptime</div>
                 <div class="metric-value">{uptime_val}%</div>
                 <div style="height: 6px; background-color: #E2E8F0; border-radius: 3px; margin-top: 10px; overflow: hidden;">
                     <div style="height: 100%; width: {uptime_val}%; background-color: {uptime_color};"></div>
@@ -853,10 +815,10 @@ if view_mode == "District View":
         
         st.markdown(f'''
         <div class="metric-grid">
-            <div class="metric-card"><div class="metric-label">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
-            <div class="metric-card"><div class="metric-label">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
-            <div class="metric-card"><div class="metric-label">Facility Uptime</div><div class="metric-value">{calc_uptime(stats)}%</div></div>
-            <div class="metric-card" style="background-color:#F8FAFC;"><div class="metric-label">District Grade</div><div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div></div>
+            <div class="metric-card"><div class="metric-label" title="Total number of patients seen across all facilities.">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
+            <div class="metric-card"><div class="metric-label" title="Total patients divided by (facilities × days).">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
+            <div class="metric-card"><div class="metric-label" title="The percentage of days facilities reported more than 0 patients.">Facility Uptime</div><div class="metric-value">{calc_uptime(stats)}%</div></div>
+            <div class="metric-card" style="background-color:#F8FAFC;"><div class="metric-label" title="The average grade of all facilities in this district.">District Grade</div><div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div></div>
         </div>
         ''', unsafe_allow_html=True)
 
@@ -1129,11 +1091,11 @@ elif view_mode == "State View":
         st.markdown(f'''
         <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
             <div class="metric-card">
-                <div class="metric-label">Active Spokes ({time_filter})</div>
+                <div class="metric-label" title="Total number of currently active facilities.">Active Spokes ({time_filter})</div>
                 <div class="metric-value">{total_active} <span class="metric-sub">/ {total_facilities} Total</span></div>
             </div>
             <div class="metric-card">
-                <div class="metric-label">Statewide Avg Uptime (Active Districts)</div>
+                <div class="metric-label" title="The average uptime across all active districts.">Statewide Avg Uptime (Active Districts)</div>
                 <div class="metric-value">{avg_state_uptime}%</div>
             </div>
         </div>
@@ -1419,3 +1381,33 @@ else:
                 st.success("✅ All facilities have launched!")
     else:
         st.warning("Could not load facility data.")
+
+# --- GLOBAL DEFINITIONS EXPANDER ---
+st.markdown("<br><hr style='border-color: #CBD5E1; margin: 40px 0 20px 0;'><br>", unsafe_allow_html=True)
+with st.expander("ℹ️ Metric Definitions & Grading System"):
+    st.markdown("""
+    **📊 Weighted Avg / Day** — *The efficiency score.*  
+    Total patients divided by (facilities × days). This accounts for all facility-days equally.
+    
+    **⏱️ Uptime %** — *The reliability score.*  
+    The percentage of days each facility reported more than 0 patients.
+    
+    **📉 Zero Days** — *The failure indicator.*  
+    The total number of days a facility reported exactly 0 patients.
+    """)
+    
+    st.markdown("**🏆 Grading System**")
+    grade_data = pd.DataFrame({
+        "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
+        "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
+        "Avg Patients Requirement": ["> 10", "> 5", "> 2", "> 1", "0"]
+    })
+    
+    st.dataframe(
+        grade_data, hide_index=True, use_container_width=True,
+        column_config={
+            "Grade": st.column_config.TextColumn("Grade", width="medium"),
+            "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
+            "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
+        }
+    )
