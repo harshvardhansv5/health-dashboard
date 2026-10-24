@@ -52,6 +52,13 @@ st.markdown("""
     .metric-value { color: #0F172A; font-size: 36px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
     .metric-sub { font-size: 16px; font-weight: 600; color: #64748B; }
 
+    /* Mini Grade Badges for Best Spoke Card */
+    .mini-badge-A { background-color: #CCFBF1; color: #0F766E; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #5EEAD4; }
+    .mini-badge-B { background-color: #D9F99D; color: #4D7C0F; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #BEF264; }
+    .mini-badge-C { background-color: #FEF08A; color: #854D0E; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #FDE047; }
+    .mini-badge-D { background-color: #FED7AA; color: #9A3412; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #FDBA74; }
+    .mini-badge-F { background-color: #FECDD3; color: #991B1B; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #FDA4AF; }
+
     /* Tables & Cards */
     [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 8px; }
     .zm-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 4px solid #06B6D4; }
@@ -99,10 +106,10 @@ st.markdown("""
 
     /* Header Details */
     .header-left { display: flex; align-items: center; gap: 12px; }
-    .header-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background-color: #0891B2; border-radius: 10px; color: #FFFFFF; box-shadow: 0 4px 10px rgba(8, 145, 178, 0.3); }
-    .header-icon svg { width: 20px; height: 20px; stroke: #FFFFFF; }
-    .header-title { font-size: 18px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; }
-    .header-subtitle { font-size: 12px; font-weight: 500; color: #64748B; margin-top: 2px; }
+    .header-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background-color: #06B6D4; border-radius: 10px; color: #FFFFFF; box-shadow: 0 4px 10px rgba(6, 182, 212, 0.3); }
+    .header-icon svg { width: 22px; height: 22px; stroke: #FFFFFF; }
+    .header-title { font-size: 18px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; margin-bottom: 3px; }
+    .header-subtitle { font-size: 13px; font-weight: 500; color: #64748B; margin-top: 0; }
     
     /* Blinking Radar Dot */
     .status-dot { width: 8px; height: 8px; background-color: #14B8A6; border-radius: 50%; animation: pulse-cyan 2s infinite; display: inline-block; }
@@ -121,28 +128,29 @@ st.markdown("""
     .battle-row:last-child { border-bottom: none; }
     .battle-val { font-weight: 700; color: #0F172A; }
 
-    /* --- DEFINITIVE DROPDOWN STYLING --- */
+    /* --- DEFINITIVE DROPDOWN & INPUT STYLING --- */
     div[data-testid="stSelectbox"] { margin-bottom: 0px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
-        background-color: #F8FAFC !important; border: 1px solid #CBD5E1 !important; border-radius: 8px !important; 
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 40px !important; 
+        background-color: #F1F5F9 !important; border: 1px solid #94A3B8 !important; border-radius: 8px !important; 
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important; transition: all 0.2s ease-in-out !important; min-height: 44px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
     div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #06B6D4 !important; background-color: #FFFFFF !important; }
     div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #64748B !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #475569 !important; }
     label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 700 !important; font-size: 13px !important; text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* Date Picker */
-    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1px solid #CBD5E1 !important; border-radius: 8px !important; background-color: #F8FAFC !important; min-height: 44px !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1px solid #94A3B8 !important; border-radius: 8px !important; background-color: #F1F5F9 !important; min-height: 44px !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #06B6D4 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
 
-    /* Popover Button Styling */
+    /* Popover Button Styling (Definitions) */
     div[data-testid="stPopover"] button {
-        background-color: #F8FAFC !important; border: 1px solid #CBD5E1 !important; border-radius: 8px !important; color: #0F172A !important; font-weight: 600 !important; min-height: 44px !important; margin-top: 4px !important;
+        background-color: #F1F5F9 !important; border: 1px solid #94A3B8 !important; border-radius: 8px !important; color: #0F172A !important; font-weight: 600 !important; min-height: 44px !important; margin-top: 4px !important;
+        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
     }
-    div[data-testid="stPopover"] button:hover { border-color: #06B6D4 !important; color: #06B6D4 !important; }
+    div[data-testid="stPopover"] button:hover { border-color: #06B6D4 !important; color: #06B6D4 !important; background-color: #FFFFFF !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -448,7 +456,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.6"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.7"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -475,7 +483,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.6"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.7"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -582,7 +590,7 @@ with col_title:
         <div class="header-left">
             <div class="header-icon">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </div>
             <div>
@@ -597,7 +605,7 @@ with col_nav:
     view_mode = st.radio("Navigation", ["District View", "State View", "Active Spokes", "Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 with col_info:
-    with st.popover("ℹ️ Definitions", use_container_width=True):
+    with st.popover("Definitions", use_container_width=True):
         st.markdown("### Metric Definitions & Grading System")
         st.markdown("""
         **📊 Weighted Avg / Day** — *The efficiency score.*  
@@ -699,8 +707,11 @@ if view_mode == "District View":
             <div class="metric-card"><div class="metric-label">Total Spokes</div><div class="metric-value">{stats['total_absolute_facilities']}</div></div>
             <div class="metric-card">
                 <div class="metric-label">Best Performing Spoke</div>
-                <div class="metric-value" style="font-size: 18px; margin-bottom: 4px;">{best_name}</div>
-                <div class="metric-sub">🏆 {best_grade} | {best_avg}/day</div>
+                <div class="metric-value" style="font-size: 18px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;" title="{best_name}">{best_name}</div>
+                <div class="metric-sub" style="display: flex; align-items: center; gap: 8px;">
+                    <span class="mini-badge-{best_grade}">{best_grade}</span>
+                    <span>{best_avg} Avg/Day</span>
+                </div>
             </div>
             <div class="metric-card"><div class="metric-label">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
             <div class="metric-card"><div class="metric-label">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
@@ -1133,9 +1144,6 @@ elif view_mode == "State View":
             avg_state_uptime = round(reporting_districts['Uptime %'].mean(), 1)
         else:
             avg_state_uptime = 0.0
-        
-        if time_filter == "All Available Data" and anchor_date:
-            st.caption(f"ℹ️ **Statewide Totals are anchored to {anchor_date.strftime('%d %b %Y')}.** Data after this date is excluded to ensure a fair comparison across all districts.")
         
         st.markdown(f'''
         <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
