@@ -346,12 +346,12 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
         }
 
     active_dates = sorted_dates
-    if time_filter == "Custom Range" and start_date and end_date:
+    if time_filter == "Select Dates..." and start_date and end_date:
         active_dates = [d for d in sorted_dates if start_date <= d.date() <= end_date]
     else:
-        if time_filter == "Last 7 Days": active_dates = sorted_dates[-7:]
-        elif time_filter == "Last 15 Days": active_dates = sorted_dates[-15:]
-        elif time_filter == "Last 30 Days": active_dates = sorted_dates[-30:]
+        if time_filter == "Past Week": active_dates = sorted_dates[-7:]
+        elif time_filter == "Past 2 Weeks": active_dates = sorted_dates[-15:]
+        elif time_filter == "Past Month": active_dates = sorted_dates[-30:]
         
     if not active_dates: active_dates = sorted_dates
 
@@ -451,11 +451,11 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.9"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
-    if time_filter == "All Available Data":
+    if time_filter == "Full History":
         anchor_date = find_global_latest_date(sheet_names_tuple, file_bytes)
         
     data = []
@@ -478,7 +478,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.9"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -607,9 +607,9 @@ with col_time_ctrl:
         </div>
     </div>
     """, unsafe_allow_html=True)
-    time_filter = st.selectbox("Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days", "Custom Range"], label_visibility="collapsed")
+    time_filter = st.selectbox("Time Range", ["Full History", "Past Week", "Past 2 Weeks", "Past Month", "Select Dates..."], label_visibility="collapsed")
     start_date, end_date = None, None
-    if time_filter == "Custom Range":
+    if time_filter == "Select Dates...":
         start_date = st.date_input("Start Date", value=pd.Timestamp.now() - timedelta(days=30))
         end_date = st.date_input("End Date", value=pd.Timestamp.now())
         date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
@@ -705,14 +705,17 @@ if view_mode == "District View":
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
+            # --- COMPACT CENTERED GRADE LEGEND ---
             st.markdown("""
-            <div style="display: flex; gap: 16px; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 8px; margin-top: 10px; justify-content: center; background-color: #FFFFFF; padding: 10px; border-radius: 8px; border: 1px solid #E2E8F0;">
-                <span style="color: #64748B;">Grade Legend:</span>
-                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#14B8A6; border-radius:2px;"></span> A</div>
-                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#84CC16; border-radius:2px;"></span> B</div>
-                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#FBBF24; border-radius:2px;"></span> C</div>
-                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#F97316; border-radius:2px;"></span> D</div>
-                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#F43F5E; border-radius:2px;"></span> F</div>
+            <div style="text-align: center; margin-top: 10px; margin-bottom: 8px;">
+                <div style="display: inline-flex; gap: 16px; font-size: 13px; font-weight: 600; color: #475569; background-color: #FFFFFF; padding: 8px 16px; border-radius: 20px; border: 1px solid #E2E8F0; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <span style="color: #64748B;">Grade Legend:</span>
+                    <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#14B8A6; border-radius:2px;"></span> A</div>
+                    <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#84CC16; border-radius:2px;"></span> B</div>
+                    <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#FBBF24; border-radius:2px;"></span> C</div>
+                    <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#F97316; border-radius:2px;"></span> D</div>
+                    <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#F43F5E; border-radius:2px;"></span> F</div>
+                </div>
             </div>
             """, unsafe_allow_html=True)
 
