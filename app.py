@@ -19,7 +19,7 @@ SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwjDNp1zjbEX
 DISTANCE_FALLBACK = {}
 
 # --- PAGE SETUP ---
-st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🏥", layout="wide")
+st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🩸", layout="wide")
 
 # --- CLINICAL PEARL UI CSS ---
 st.markdown("""
@@ -106,7 +106,7 @@ st.markdown("""
 
     /* Header Details */
     .header-left { display: flex; align-items: center; gap: 12px; }
-    .header-icon { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; background-color: #06B6D4; border-radius: 10px; color: #FFFFFF; box-shadow: 0 4px 10px rgba(6, 182, 212, 0.3); }
+    .header-icon { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; background-color: #DC2626; border-radius: 10px; color: #FFFFFF; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); }
     .header-icon svg { width: 20px; height: 20px; stroke: #FFFFFF; }
     .header-title { font-size: 17px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; margin-bottom: 2px; }
     .header-subtitle { font-size: 12px; font-weight: 500; color: #64748B; margin-top: 0; }
@@ -451,7 +451,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.1"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -478,7 +478,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.1"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -584,7 +584,9 @@ with col_title:
         <div class="header-left">
             <div class="header-icon">
                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5h0c-1.4 0-2.5-1.1-2.5-2.5V2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M8.5 2h7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M14.5 16h-5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
                 </svg>
             </div>
             <div>
