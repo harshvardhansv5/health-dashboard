@@ -40,9 +40,10 @@ st.markdown("""
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
 
-    /* --- HIDE UGLY DATAFRAME COLUMN MENUS --- */
+    /* --- HIDE UGLY DATAFRAME COLUMN MENUS (WITHOUT BREAKING SORTING) --- */
     [data-testid="stDataFrameColumnMenu"] { display: none !important; }
-    div[data-testid="stDataFrame"] div[role="button"] { display: none !important; }
+    /* Ensure headers remain clickable */
+    [data-testid="stDataFrame"] div[role="columnheader"] { cursor: pointer !important; }
 
     /* Metric Cards (Floating Glass) */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
@@ -137,7 +138,7 @@ st.markdown("""
     div[data-testid="stSelectbox"] div[role="combobox"] { 
         background-color: #FFFFFF !important; 
         border: 2px solid #06B6D4 !important; 
-        box-shadow: 0 0 0 1px #06B6D4 !important; /* Double ring to force streamlit to render it */
+        box-shadow: 0 0 0 1px #06B6D4 !important; 
         border-radius: 8px !important; 
         transition: all 0.2s ease-in-out !important; 
         min-height: 40px !important; 
@@ -455,7 +456,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.2"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.3"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -482,7 +483,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.2"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.3"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
