@@ -40,6 +40,10 @@ st.markdown("""
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
 
+    /* --- HIDE UGLY DATAFRAME COLUMN MENUS --- */
+    [data-testid="stDataFrameColumnMenu"] { display: none !important; }
+    div[data-testid="stDataFrame"] div[role="button"] { display: none !important; }
+
     /* Metric Cards (Floating Glass) */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
     .metric-card {
@@ -132,9 +136,9 @@ st.markdown("""
     div[data-testid="stSelectbox"] { margin-bottom: 0px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
         background-color: #FFFFFF !important; 
-        border: 1.5px solid #06B6D4 !important; 
+        border: 2px solid #06B6D4 !important; 
+        box-shadow: 0 0 0 1px #06B6D4 !important; /* Double ring to force streamlit to render it */
         border-radius: 8px !important; 
-        box-shadow: 0 2px 4px rgba(6, 182, 212, 0.1) !important; 
         transition: all 0.2s ease-in-out !important; 
         min-height: 40px !important; 
     }
@@ -146,7 +150,7 @@ st.markdown("""
     label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 700 !important; font-size: 12px !important; text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* Date Picker */
-    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 1.5px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; box-shadow: 0 2px 4px rgba(6, 182, 212, 0.1) !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; box-shadow: 0 0 0 1px #06B6D4 !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
 
     /* Tighten Tabs Container Spacing */
@@ -451,7 +455,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.1"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.2"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -478,7 +482,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.1"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.2"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -836,7 +840,10 @@ if view_mode == "District View":
         display['Total Patients'] = scorecard['Total Patients'].astype(int)
         display['Zero Days'] = scorecard['Zero Days'].astype(int)
         
+        display.insert(0, 'S.No.', range(1, len(display) + 1))
+        
         total_row = pd.DataFrame([{
+            'S.No.': '',
             'Facility': '🏆 TOTAL',
             'Grade': d_grade,
             'Uptime %': round(calc_uptime(stats), 1),
@@ -847,7 +854,7 @@ if view_mode == "District View":
         
         display = pd.concat([total_row, display], ignore_index=True)
         
-        st.dataframe(display, use_container_width=True, hide_index=True, column_config={"Facility": st.column_config.TextColumn("Facility", width="large"), "Grade": st.column_config.TextColumn("Grade", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"), "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"), "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"), "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d")})
+        st.dataframe(display, use_container_width=True, hide_index=True, column_config={"S.No.": st.column_config.NumberColumn("S.No.", width="small"), "Facility": st.column_config.TextColumn("Facility", width="large"), "Grade": st.column_config.TextColumn("Grade", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"), "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"), "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"), "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d")})
         
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
@@ -978,13 +985,16 @@ if view_mode == "District View":
                         'Primary Reason': primary_reason
                     })
             if offense_data:
-                offense_df = pd.DataFrame(offense_data).sort_values('Uptime %', ascending=True)
+                offense_df = pd.DataFrame(offense_data).sort_values('Uptime %', ascending=True).reset_index(drop=True)
+                offense_df.insert(0, 'S.No.', range(1, len(offense_df) + 1))
+                
                 styled_offense = offense_df.style.map(style_reason, subset=['Primary Reason'])
                 st.dataframe(
                     styled_offense, 
                     use_container_width=True, 
                     hide_index=True,
                     column_config={
+                        "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
                         "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%")
                     }
                 )
@@ -1117,6 +1127,7 @@ elif view_mode == "State View":
                 st.caption("⚠️ Districts with less than 7 days of data are hidden to ensure fair comparison.")
             
             lb_df = lb_df.sort_values(state_metric_col, ascending=False).reset_index(drop=True)
+            lb_df.insert(0, 'S.No.', range(1, len(lb_df) + 1))
             
             lb_df['Rank'] = lb_df.index + 1
             
@@ -1124,6 +1135,7 @@ elif view_mode == "State View":
             lb_df['District'] = lb_df.apply(lambda row: f"{medal(row['Rank'])} {row['District']}".strip(), axis=1)
             
             total_row = pd.DataFrame([{
+                'S.No.': '',
                 'Rank': '', 
                 'District': '🏆 TOTAL', 
                 'Total Patients': lb_df['Total Patients'].sum(), 
@@ -1136,8 +1148,8 @@ elif view_mode == "State View":
             
             lb_df = pd.concat([lb_df, total_row], ignore_index=True)
             
-            display_cols = ['Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
-            st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
+            display_cols = ['S.No.', 'Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
+            st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={"S.No.": st.column_config.NumberColumn("S.No.", width="small"), "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
             st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:10px;'>District Performance Highlights (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
             
@@ -1232,7 +1244,8 @@ elif view_mode == "Active Spokes":
         if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
         if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
         
-        active_df = active_df.sort_values(by='Uptime %', ascending=False)
+        active_df = active_df.sort_values(by='Uptime %', ascending=False).reset_index(drop=True)
+        active_df.insert(0, 'S.No.', range(1, len(active_df) + 1))
         
         def style_grade(val):
             if val in ['A', 'B']:
@@ -1243,7 +1256,7 @@ elif view_mode == "Active Spokes":
                 return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
             return ''
             
-        display_active = active_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients']]
+        display_active = active_df[['S.No.', 'District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients']]
         styled_active = display_active.style.map(style_grade, subset=['Grade'])
         
         col_card, _ = st.columns([1.5, 3])
@@ -1260,6 +1273,7 @@ elif view_mode == "Active Spokes":
             use_container_width=True, 
             hide_index=True,
             column_config={
+                "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
                 "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                 "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
                 "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d")
@@ -1293,8 +1307,8 @@ else:
     if not all_fac_df.empty:
         inactive_df = all_fac_df[all_fac_df['Total Patients'] == 0].copy()
         
-        op_failures = inactive_df[inactive_df['Status'] == 'Operational']
-        pending_launch = inactive_df[inactive_df['Status'] == 'Pending Launch']
+        op_failures = inactive_df[inactive_df['Status'] == 'Operational'].reset_index(drop=True)
+        pending_launch = inactive_df[inactive_df['Status'] == 'Pending Launch'].reset_index(drop=True)
         
         col_card1, col_card2, _ = st.columns([1.5, 1.5, 2])
         with col_card1:
@@ -1317,10 +1331,7 @@ else:
         with z_tab1:
             if not op_failures.empty:
                 display_tracker = op_failures[['District', 'Facility', 'Primary Reason']].copy()
-                display_tracker = display_tracker.reset_index(drop=True)
-                display_tracker.index = display_tracker.index + 1
-                display_tracker.index.name = 'S.No.'
-                display_tracker = display_tracker.reset_index()
+                display_tracker.insert(0, 'S.No.', range(1, len(display_tracker) + 1))
                 
                 display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
                 styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
@@ -1352,10 +1363,7 @@ else:
         with z_tab2:
             if not pending_launch.empty:
                 display_pending = pending_launch[['District', 'Facility', 'Primary Reason']].copy()
-                display_pending = display_pending.reset_index(drop=True)
-                display_pending.index = display_pending.index + 1
-                display_pending.index.name = 'S.No.'
-                display_pending = display_pending.reset_index()
+                display_pending.insert(0, 'S.No.', range(1, len(display_pending) + 1))
                 
                 display_pending['Primary Reason'] = display_pending['Primary Reason'].apply(format_reason)
                 styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
