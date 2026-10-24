@@ -147,10 +147,9 @@ st.markdown("""
 
     /* Popover Button Styling (Definitions) */
     div[data-testid="stPopover"] button {
-        background-color: #F1F5F9 !important; border: 1px solid #94A3B8 !important; border-radius: 8px !important; color: #0F172A !important; font-weight: 600 !important; min-height: 44px !important; margin-top: 4px !important;
-        box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
+        background-color: transparent !important; border: 1px solid transparent !important; color: #475569 !important; font-weight: 600 !important; font-size: 14px !important; transition: all 0.2s ease !important;
     }
-    div[data-testid="stPopover"] button:hover { border-color: #06B6D4 !important; color: #06B6D4 !important; background-color: #FFFFFF !important; }
+    div[data-testid="stPopover"] button:hover { color: #06B6D4 !important; background-color: #E2E8F0 !important; border-radius: 6px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -456,7 +455,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.7"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.8"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -483,7 +482,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.7"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v29.8"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -582,7 +581,7 @@ for s in xls.sheet_names:
         available_sheets.append(s)
 
 # --- UNIFIED COMMAND BAR ---
-col_title, col_nav, col_info, col_time_ctrl = st.columns([2.2, 3.2, 0.8, 1.4])
+col_title, col_nav, col_time_ctrl = st.columns([2.5, 4.5, 1.5])
 
 with col_title:
     st.markdown("""
@@ -604,8 +603,30 @@ with col_title:
 with col_nav:
     view_mode = st.radio("Navigation", ["District View", "State View", "Active Spokes", "Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
-with col_info:
-    with st.popover("Definitions", use_container_width=True):
+with col_time_ctrl:
+    st.markdown(f"""
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+        <div style="font-size: 11px; font-weight: 700; color: #64748B; letter-spacing: 0.5px;">TIME RANGE</div>
+        <div style="font-size: 10px; font-weight: 700; color: #0F766E; display: flex; align-items: center; gap: 4px;">
+            <div class="status-dot"></div> Live
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    time_filter = st.selectbox("Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days", "Custom Range"], label_visibility="collapsed")
+    start_date, end_date = None, None
+    if time_filter == "Custom Range":
+        start_date = st.date_input("Start Date", value=pd.Timestamp.now() - timedelta(days=30))
+        end_date = st.date_input("End Date", value=pd.Timestamp.now())
+        date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
+    else:
+        date_range_str = time_filter
+
+st.markdown("<br>", unsafe_allow_html=True)
+
+# --- DEFINITIONS POPOVER (Moved here) ---
+col_empty, col_defs = st.columns([8.5, 1.5])
+with col_defs:
+    with st.popover("ℹ️ Definitions", use_container_width=True):
         st.markdown("### Metric Definitions & Grading System")
         st.markdown("""
         **📊 Weighted Avg / Day** — *The efficiency score.*  
@@ -633,26 +654,6 @@ with col_info:
                 "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
             }
         )
-
-with col_time_ctrl:
-    st.markdown(f"""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <div style="font-size: 11px; font-weight: 700; color: #64748B; letter-spacing: 0.5px;">TIME RANGE</div>
-        <div style="font-size: 10px; font-weight: 700; color: #0F766E; display: flex; align-items: center; gap: 4px;">
-            <div class="status-dot"></div> Live
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    time_filter = st.selectbox("Time Range", ["All Available Data", "Last 7 Days", "Last 15 Days", "Last 30 Days", "Custom Range"], label_visibility="collapsed")
-    start_date, end_date = None, None
-    if time_filter == "Custom Range":
-        start_date = st.date_input("Start Date", value=pd.Timestamp.now() - timedelta(days=30))
-        end_date = st.date_input("End Date", value=pd.Timestamp.now())
-        date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
-    else:
-        date_range_str = time_filter
-
-st.markdown("<br>", unsafe_allow_html=True)
 
 PLOTLY_LAYOUT = dict(
     template="plotly_white", 
