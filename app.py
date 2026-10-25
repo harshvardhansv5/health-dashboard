@@ -483,7 +483,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.4"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.5"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -510,7 +510,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.4"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.5"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -1223,19 +1223,47 @@ elif view_mode == "State View":
             st.plotly_chart(fig_lb, use_container_width=True)
             
         with s_tab2:
-            sorted_sheets = sorted(available_sheets)
-            ca, cb = st.columns(2)
-            with ca: district_a = st.selectbox("District A", sorted_sheets, index=0, key='cmp_a')
-            with cb: district_b = st.selectbox("District B", sorted_sheets, index=min(1, len(sorted_sheets) - 1), key='cmp_b')
+            col_empty1, ca, cb, col_empty2 = st.columns([1, 2, 2, 1])
+            with ca: district_a = st.selectbox("District A", sorted(available_sheets), index=0, key='cmp_a')
+            with cb: district_b = st.selectbox("District B", sorted(available_sheets), index=min(1, len(sorted(available_sheets)) - 1), key='cmp_b')
             
             if district_a and district_b:
                 df_a = read_sheet_robust(xls, district_a); df_b = read_sheet_robust(xls, district_b)
-                pa, ra, sa = process_district_df(df_a, time_filter, start_date, end_date, anchor_date=anchor_date); pb, rb, sb = process_district_df(df_b, time_filter, start_date, end_date, anchor_date=anchor_date)
+                pa, ra, sa = process_district_df(df_a, time_filter, start_date, end_date, anchor_date=anchor_date)
+                pb, rb, sb = process_district_df(df_b, time_filter, start_date, end_date, anchor_date=anchor_date)
+                
                 if pa is None or pb is None: st.error("Could not process one of the selected districts.")
                 else:
+                    a_uptime = calc_uptime(sa)
+                    b_uptime = calc_uptime(sb)
+
+                    def get_style(v1, v2):
+                        if v1 > v2: return "font-weight: 800; color: #0F172A; font-size: 1.15rem;"
+                        if v2 > v1: return "font-weight: 500; color: #64748B; font-size: 1rem;"
+                        return "font-weight: 700; color: #0F172A; font-size: 1rem;"
+
                     col1, col2 = st.columns(2)
-                    with col1: st.markdown(f'<div class="battle-card battle-card-blue"><div class="battle-title" style="color: #06B6D4;">{district_a}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sa["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sa["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sa)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sa["total_absolute_facilities"]}</span></div></div>', unsafe_allow_html=True)
-                    with col2: st.markdown(f'<div class="battle-card battle-card-red"><div class="battle-title" style="color: #F43F5E;">{district_b}</div><div class="battle-row"><span>Total Patients</span> <span class="battle-val">{sb["total"]:,}</span></div><div class="battle-row"><span>Weighted Avg / Day</span> <span class="battle-val">{sb["weighted_avg"]}</span></div><div class="battle-row"><span>Facility Uptime</span> <span class="battle-val">{calc_uptime(sb)}%</span></div><div class="battle-row"><span>Total Spokes</span> <span class="battle-val">{sb["total_absolute_facilities"]}</span></div></div>', unsafe_allow_html=True)
+                    with col1: 
+                        st.markdown(f'''
+                        <div class="battle-card battle-card-blue">
+                            <div class="battle-title" style="color: #06B6D4;">{district_a}</div>
+                            <div class="battle-row"><span>Total Patients</span> <span style="{get_style(sa['total'], sb['total'])}">{sa['total']:,}</span></div>
+                            <div class="battle-row"><span>Weighted Avg / Day</span> <span style="{get_style(sa['weighted_avg'], sb['weighted_avg'])}">{sa['weighted_avg']}</span></div>
+                            <div class="battle-row"><span>Facility Uptime</span> <span style="{get_style(a_uptime, b_uptime)}">{a_uptime}%</span></div>
+                            <div class="battle-row"><span>Total Spokes</span> <span style="{get_style(sa['total_absolute_facilities'], sb['total_absolute_facilities'])}">{sa['total_absolute_facilities']}</span></div>
+                        </div>
+                        ''', unsafe_allow_html=True)
+                    
+                    with col2: 
+                        st.markdown(f'''
+                        <div class="battle-card battle-card-red">
+                            <div class="battle-title" style="color: #F43F5E;">{district_b}</div>
+                            <div class="battle-row"><span>Total Patients</span> <span style="{get_style(sb['total'], sa['total'])}">{sb['total']:,}</span></div>
+                            <div class="battle-row"><span>Weighted Avg / Day</span> <span style="{get_style(sb['weighted_avg'], sa['weighted_avg'])}">{sb['weighted_avg']}</span></div>
+                            <div class="battle-row"><span>Facility Uptime</span> <span style="{get_style(b_uptime, a_uptime)}">{b_uptime}%</span></div>
+                            <div class="battle-row"><span>Total Spokes</span> <span style="{get_style(sb['total_absolute_facilities'], sa['total_absolute_facilities'])}">{sb['total_absolute_facilities']}</span></div>
+                        </div>
+                        ''', unsafe_allow_html=True)
                     
                     st.markdown("#### Daily Patient Trend — Overlaid")
                     def get_trend(p, cols, name):
@@ -1250,8 +1278,13 @@ elif view_mode == "State View":
                     
                     cmp_layout = PLOTLY_LAYOUT.copy()
                     cmp_layout.update(dict(
-                        height=450,
-                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'), 
+                        height=350,
+                        margin=dict(l=10, r=10, t=40, b=40),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                        xaxis=dict(
+                            showgrid=True, gridwidth=1, gridcolor='#CBD5E1',
+                            tickformat="%d %b"
+                        ), 
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1')
                     ))
                     fig_c.update_layout(**cmp_layout)
