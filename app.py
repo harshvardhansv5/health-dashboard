@@ -455,7 +455,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.4"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.5"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -482,7 +482,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.4"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.5"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -840,10 +840,10 @@ if view_mode == "District View":
         display['Total Patients'] = scorecard['Total Patients'].astype(int)
         display['Zero Days'] = scorecard['Zero Days'].astype(int)
         
-        display.insert(0, 'S.No.', range(1, len(display) + 1))
+        display.insert(0, 'S.No.', [str(i) for i in range(1, len(display) + 1)])
         
         total_row = pd.DataFrame([{
-            'S.No.': None,
+            'S.No.': '',
             'Facility': '🏆 TOTAL',
             'Grade': d_grade,
             'Uptime %': round(calc_uptime(stats), 1),
@@ -854,7 +854,7 @@ if view_mode == "District View":
         
         display = pd.concat([total_row, display], ignore_index=True)
         
-        st.dataframe(display, use_container_width=True, hide_index=True, column_config={"S.No.": st.column_config.NumberColumn("S.No.", width="small"), "Facility": st.column_config.TextColumn("Facility", width="large"), "Grade": st.column_config.TextColumn("Grade", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"), "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"), "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"), "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d")})
+        st.dataframe(display, use_container_width=True, hide_index=True, column_config={"S.No.": st.column_config.TextColumn("S.No.", width="small"), "Facility": st.column_config.TextColumn("Facility", width="large"), "Grade": st.column_config.TextColumn("Grade", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"), "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"), "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d"), "Zero Days": st.column_config.NumberColumn("Zero Days", format="%d")})
         
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
@@ -986,7 +986,7 @@ if view_mode == "District View":
                     })
             if offense_data:
                 offense_df = pd.DataFrame(offense_data).sort_values('Uptime %', ascending=True).reset_index(drop=True)
-                offense_df.insert(0, 'S.No.', range(1, len(offense_df) + 1))
+                offense_df.insert(0, 'S.No.', [str(i) for i in range(1, len(offense_df) + 1)])
                 
                 styled_offense = offense_df.style.map(style_reason, subset=['Primary Reason'])
                 st.dataframe(
@@ -994,7 +994,7 @@ if view_mode == "District View":
                     use_container_width=True, 
                     hide_index=True,
                     column_config={
-                        "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
+                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                         "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%")
                     }
                 )
@@ -1127,7 +1127,7 @@ elif view_mode == "State View":
                 st.caption("⚠️ Districts with less than 7 days of data are hidden to ensure fair comparison.")
             
             lb_df = lb_df.sort_values(state_metric_col, ascending=False).reset_index(drop=True)
-            lb_df.insert(0, 'S.No.', range(1, len(lb_df) + 1))
+            lb_df.insert(0, 'S.No.', [str(i) for i in range(1, len(lb_df) + 1)])
             
             lb_df['Rank'] = lb_df.index + 1
             
@@ -1135,7 +1135,7 @@ elif view_mode == "State View":
             lb_df['District'] = lb_df.apply(lambda row: f"{medal(row['Rank'])} {row['District']}".strip(), axis=1)
             
             total_row = pd.DataFrame([{
-                'S.No.': None,
+                'S.No.': '',
                 'Rank': '', 
                 'District': '🏆 TOTAL', 
                 'Total Patients': lb_df['Total Patients'].sum(), 
@@ -1149,7 +1149,7 @@ elif view_mode == "State View":
             lb_df = pd.concat([lb_df, total_row], ignore_index=True)
             
             display_cols = ['S.No.', 'Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
-            st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={"S.No.": st.column_config.NumberColumn("S.No.", width="small"), "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
+            st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={"S.No.": st.column_config.TextColumn("S.No.", width="small"), "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
             st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:10px;'>District Performance Highlights (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
             
@@ -1245,7 +1245,7 @@ elif view_mode == "Active Spokes":
         if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
         
         active_df = active_df.sort_values(by='Uptime %', ascending=False).reset_index(drop=True)
-        active_df.insert(0, 'S.No.', range(1, len(active_df) + 1))
+        active_df.insert(0, 'S.No.', [str(i) for i in range(1, len(active_df) + 1)])
         
         def style_grade(val):
             if val in ['A', 'B']:
@@ -1273,7 +1273,7 @@ elif view_mode == "Active Spokes":
             use_container_width=True, 
             hide_index=True,
             column_config={
-                "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
+                "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                 "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                 "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
                 "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d")
@@ -1331,7 +1331,7 @@ else:
         with z_tab1:
             if not op_failures.empty:
                 display_tracker = op_failures[['District', 'Facility', 'Primary Reason']].copy()
-                display_tracker.insert(0, 'S.No.', range(1, len(display_tracker) + 1))
+                display_tracker.insert(0, 'S.No.', [str(i) for i in range(1, len(display_tracker) + 1)])
                 
                 display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
                 styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
@@ -1339,7 +1339,7 @@ else:
                 st.dataframe(
                     styled_tracker, use_container_width=True, hide_index=True,
                     column_config={
-                        "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
+                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                         "District": st.column_config.TextColumn("District", width="medium"),
                         "Facility": st.column_config.TextColumn("Facility Name", width="large"),
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
@@ -1363,7 +1363,7 @@ else:
         with z_tab2:
             if not pending_launch.empty:
                 display_pending = pending_launch[['District', 'Facility', 'Primary Reason']].copy()
-                display_pending.insert(0, 'S.No.', range(1, len(display_pending) + 1))
+                display_pending.insert(0, 'S.No.', [str(i) for i in range(1, len(display_pending) + 1)])
                 
                 display_pending['Primary Reason'] = display_pending['Primary Reason'].apply(format_reason)
                 styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
@@ -1371,7 +1371,7 @@ else:
                 st.dataframe(
                     styled_pending, use_container_width=True, hide_index=True,
                     column_config={
-                        "S.No.": st.column_config.NumberColumn("S.No.", width="small"),
+                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                         "District": st.column_config.TextColumn("District", width="medium"),
                         "Facility": st.column_config.TextColumn("Facility Name", width="large"),
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
