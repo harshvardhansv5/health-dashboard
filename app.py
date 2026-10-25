@@ -281,6 +281,11 @@ def extract_date(col_name):
         s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
         s = s.strip()
         
+        # --- NEW FIX: Append current year if missing (e.g. "24-Oct" or "24/10") ---
+        if not re.search(r'\d{4}', s):
+            if re.search(r'\b\d{1,2}[-/\.][a-z]{3}\b', s) or re.search(r'\b\d{1,2}[-/\.]\d{1,2}\b', s):
+                s = s + " " + str(pd.Timestamp.today().year)
+        
         match = re.search(r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2})|(\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})|(\d{1,2}[-/\.][a-z]{3}[-/\.]\d{2,4})', s)
         if match:
             raw_date = match.group(0)
@@ -780,7 +785,7 @@ if view_mode == "District View":
                 showlegend=False,
                 xaxis_title=metric_option,
                 yaxis_title="",
-                margin=dict(l=40, r=80, t=80, b=10) # Adjusted right margin to prevent 0 overlap
+                margin=dict(l=40, r=80, t=80, b=10)
             ))
             fig.update_layout(**layout_dict)
             
@@ -854,7 +859,6 @@ if view_mode == "District View":
         </div>
         ''', unsafe_allow_html=True)
 
-        # --- GRADE LEGEND MOVED HERE ---
         st.markdown("""
         <div style="text-align: center; margin-top: 10px; margin-bottom: 8px;">
             <div style="display: inline-flex; gap: 16px; font-size: 13px; font-weight: 600; color: #475569; background-color: #FFFFFF; padding: 8px 16px; border-radius: 20px; border: 1px solid #E2E8F0; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
@@ -1354,7 +1358,7 @@ elif view_mode == "Active Spokes":
         display_active = active_df[['S.No.', 'District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']]
         styled_active = display_active.style.map(style_grade, subset=['Grade'])
         
-        st.markdown("<br>", unsafe_allow_html=True) # Added spacing
+        st.markdown("<br>", unsafe_allow_html=True)
         
         st.dataframe(
             styled_active, 
@@ -1428,7 +1432,6 @@ else:
         
         with z_tab1:
             if not op_failures.empty:
-                # Sort by Last Sample Date (Never Reported first, then oldest to newest)
                 op_failures['SortDate'] = pd.to_datetime(op_failures['Last Sample Date'], errors='coerce')
                 op_failures = op_failures.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
                 
@@ -1465,7 +1468,6 @@ else:
 
         with z_tab2:
             if not pending_launch.empty:
-                # Sort by Last Sample Date
                 pending_launch['SortDate'] = pd.to_datetime(pending_launch['Last Sample Date'], errors='coerce')
                 pending_launch = pending_launch.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
                 
