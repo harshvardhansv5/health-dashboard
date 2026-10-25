@@ -281,7 +281,7 @@ def extract_date(col_name):
         s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
         s = s.strip()
         
-        # --- NEW FIX: Append current year if missing (e.g. "24-Oct" or "24/10") ---
+        # Append current year if missing (e.g. "24-Oct" or "24/10")
         if not re.search(r'\d{4}', s):
             if re.search(r'\b\d{1,2}[-/\.][a-z]{3}\b', s) or re.search(r'\b\d{1,2}[-/\.]\d{1,2}\b', s):
                 s = s + " " + str(pd.Timestamp.today().year)
@@ -297,8 +297,7 @@ def extract_date(col_name):
             except:
                 pass
                 
-    # --- THE FUTURE DATE GUARD ---
-    # If the date is beyond today, it's a typo. Ignore it (return NaT).
+    # FUTURE DATE GUARD
     if pd.notna(dt) and dt > pd.Timestamp.today().normalize():
         return pd.NaT
         
@@ -1355,7 +1354,14 @@ elif view_mode == "Active Spokes":
                 return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
             return ''
             
-        display_active = active_df[['S.No.', 'District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']]
+        # --- DYNAMIC COLUMN NAME FIX ---
+        dynamic_total_label = f"Total Patients ({time_filter})"
+        if time_filter == "Select Dates...":
+            dynamic_total_label = f"Total Patients ({date_range_str})"
+
+        display_active = active_df[['S.No.', 'District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
+        display_active = display_active.rename(columns={'Total Patients': dynamic_total_label})
+        
         styled_active = display_active.style.map(style_grade, subset=['Grade'])
         
         st.markdown("<br>", unsafe_allow_html=True)
@@ -1369,7 +1375,7 @@ elif view_mode == "Active Spokes":
                 "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                 "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
                 "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
-                "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d")
+                dynamic_total_label: st.column_config.NumberColumn(dynamic_total_label, format="%d")
             }
         )
         
