@@ -70,7 +70,7 @@ st.markdown("""
 
     /* Tables & Cards */
     [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 8px; }
-    .zm-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 16px; margin-bottom: 0px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 4px solid #06B6D4; }
+    .zm-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 16px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 4px solid #06B6D4; }
     .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;}
     .zm-card-name { color: #0F172A; font-size: 16px; font-weight: 700; margin-bottom: 2px;}
     .zm-card-zone { color: #06B6D4; font-size: 13px; font-weight: 600;}
@@ -483,7 +483,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.3"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.4"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -510,7 +510,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.3"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.4"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -665,15 +665,15 @@ PLOTLY_LAYOUT = dict(
 # VIEW: DISTRICT VIEW
 # ==============================================================================
 if view_mode == "District View":
-    col_d, col_h, col_zm = st.columns([1, 1, 1.5], vertical_alignment="bottom")
+    col_d, col_h = st.columns(2)
     with col_d: selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
     with col_h:
         zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
         selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[zm_name_for_district][selected_district_zm]))
-    with col_zm:
-        zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
-        display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
-        st.markdown(f'<div class="zm-card"><div class="zm-card-header">Zone Manager</div><div class="zm-card-name">{display_zm}</div><div class="zm-card-zone">{zone_name}</div></div>', unsafe_allow_html=True)
+
+    zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
+    display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
+    st.markdown(f'<div class="zm-card"><div class="zm-card-header">Zone Manager</div><div class="zm-card-name">{display_zm}</div><div class="zm-card-zone">{zone_name}</div></div>', unsafe_allow_html=True)
 
     target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
     sheet_found = any(s == target_district or target_district.lower() in s.lower() for s in available_sheets)
@@ -721,7 +721,7 @@ if view_mode == "District View":
         </div>
         ''', unsafe_allow_html=True)
         
-        c1, c2, c3 = st.columns([2, 1, 1], vertical_alignment="bottom")
+        c1, c2, c3 = st.columns([3, 1.5, 1], vertical_alignment="bottom")
         with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d1")
         with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d2")
         with c3: active_only = st.checkbox("Exclude Inactive", value=False, key="d3")
@@ -746,7 +746,7 @@ if view_mode == "District View":
                 x=metric_col, 
                 orientation='h', 
                 color='Highlight', 
-                color_discrete_map={'Top 5': '#14B8A6', 'Bottom 5': '#F43F5E', 'Others': '#94A3B8'}, 
+                color_discrete_map={'Top 5': '#14B8A6', 'Bottom 5': '#F43F5E', 'Others': '#CBD5E1'}, 
                 text=text_labels, 
                 category_orders={facility_col: sorted_df[facility_col].tolist()},
                 title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
@@ -772,7 +772,7 @@ if view_mode == "District View":
                 showlegend=False,
                 xaxis_title=metric_option,
                 yaxis_title="",
-                margin=dict(l=10, r=80, t=80, b=10) # Adjusted right margin to prevent 0 overlap
+                margin=dict(l=40, r=80, t=80, b=10) # Adjusted right margin to prevent 0 overlap
             ))
             fig.update_layout(**layout_dict)
             
@@ -1282,18 +1282,18 @@ elif view_mode == "Active Spokes":
     if not all_fac_df.empty:
         active_df = all_fac_df[all_fac_df['Total Patients'] > 0].copy()
         
-        col1, col2, col3 = st.columns([1, 1, 1])
+        col1, col2, col3 = st.columns([1.5, 1.5, 1.5], vertical_alignment="bottom")
         with col1:
-            dist_filter = st.multiselect("Filter by District", sorted(active_df['District'].unique()), default=[])
-        with col2:
-            grade_filter = st.multiselect("Filter by Grade", ["A", "B", "C", "D", "F"], default=[])
-        with col3:
             st.markdown(f'''
-            <div class="metric-card" style="border-top: 4px solid #14B8A6; padding: 12px; margin-bottom: 0;">
+            <div class="metric-card" style="border-top: 4px solid #14B8A6; padding: 16px; margin-bottom: 0;">
                 <div class="metric-label">Total Active Spokes</div>
                 <div class="metric-value" style="color:#14B8A6;">{len(active_df)} <span class="metric-sub" style="font-size: 14px;">/ 701 Total</span></div>
             </div>
             ''', unsafe_allow_html=True)
+        with col2:
+            dist_filter = st.multiselect("Filter by District", sorted(active_df['District'].unique()), default=[])
+        with col3:
+            grade_filter = st.multiselect("Filter by Grade", ["A", "B", "C", "D", "F"], default=[])
             
         if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
         if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
@@ -1312,6 +1312,8 @@ elif view_mode == "Active Spokes":
             
         display_active = active_df[['S.No.', 'District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']]
         styled_active = display_active.style.map(style_grade, subset=['Grade'])
+        
+        st.markdown("<br>", unsafe_allow_html=True) # Added spacing
         
         st.dataframe(
             styled_active, 
