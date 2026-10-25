@@ -1279,14 +1279,27 @@ elif view_mode == "State View":
                         ''', unsafe_allow_html=True)
                     
                     st.markdown("#### Daily Patient Trend — Overlaid")
-                    def get_trend(p, cols, name):
+                    
+                    # --- THE FIX: Continuous Date Range for both districts to break gaps ---
+                    dates_a = [pd.to_datetime(c + " 2026", format='%d %b %Y') for c in sa['active_date_cols']]
+                    dates_b = [pd.to_datetime(c + " 2026", format='%d %b %Y') for c in sb['active_date_cols']]
+                    all_dates = sorted(list(set(dates_a + dates_b)))
+                    
+                    def get_trend(p, cols, name, all_dates):
                         d = []
-                        for c in cols:
-                            t = pd.to_numeric(p[c], errors='coerce').fillna(0).sum()
-                            dt = pd.to_datetime(c + " 2026", format='%d %b %Y')
+                        for dt in all_dates:
+                            col_name = dt.strftime('%d %b')
+                            if col_name in cols:
+                                t = pd.to_numeric(p[col_name], errors='coerce').fillna(0).sum()
+                            else:
+                                t = None # Break the line on missing dates
                             d.append({'Date': dt, 'Patients': t, 'District': name})
                         return pd.DataFrame(d)
-                    combined = pd.concat([get_trend(pa, sa['active_date_cols'], district_a), get_trend(pb, sb['active_date_cols'], district_b)])
+                        
+                    combined = pd.concat([
+                        get_trend(pa, sa['active_date_cols'], district_a, all_dates), 
+                        get_trend(pb, sb['active_date_cols'], district_b, all_dates)
+                    ])
                     fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, color_discrete_map={district_a: '#06B6D4', district_b: '#F43F5E'})
                     
                     cmp_layout = PLOTLY_LAYOUT.copy()
