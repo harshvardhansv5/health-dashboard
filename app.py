@@ -87,7 +87,7 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.app-header) {
         background-color: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
-        border-bottom: 3px solid #06B6D4 !important;
+        border-bottom: 3px solid #DC2626 !important;
         border-radius: 12px !important;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
         padding: 10px 20px !important;
@@ -304,6 +304,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
         plot_df['Average Patients'] = 0.0
         plot_df['Zero Days'] = 0
         plot_df['Uptime %'] = 0.0
+        plot_df['Last Sample Date'] = "Never Reported"
         return plot_df, None, {
             'total': 0, 'weighted_avg': 0.0, 'zero_days': 0, 
             'num_facilities': len(df), 'num_days': 0, 
@@ -341,6 +342,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
         plot_df['Average Patients'] = 0.0
         plot_df['Zero Days'] = 0
         plot_df['Uptime %'] = 0.0
+        plot_df['Last Sample Date'] = "Never Reported"
         return plot_df, None, {
             'total': 0, 'weighted_avg': 0.0, 'zero_days': 0, 
             'num_facilities': len(df), 'num_days': 0, 
@@ -386,6 +388,15 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     plot_df['Total Patients'] = plot_df[active_dates].sum(axis=1)
     plot_df['Average Patients'] = plot_df[active_dates].mean(axis=1).round(1)
     plot_df['Zero Days'] = (plot_df[active_dates] == 0).sum(axis=1)
+    
+    # NEW: Calculate Last Sample Date
+    def get_last_sample_date(row):
+        for d in reversed(sorted_dates):
+            if row[d] > 0:
+                return d.strftime('%d %b %Y')
+        return "Never Reported"
+    
+    plot_df['Last Sample Date'] = clean_df.apply(get_last_sample_date, axis=1)
     
     active_facilities = int((plot_df['Total Patients'] > 0).sum())
     
@@ -455,7 +466,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.5"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.6"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -482,7 +493,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.5"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.6"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -507,6 +518,7 @@ def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date
                 'Total Patients': plot_df['Total Patients'],
                 'Avg / Day': plot_df['Average Patients'],
                 'Uptime %': plot_df['Uptime %'],
+                'Last Sample Date': plot_df['Last Sample Date'],
                 'Zero Days': plot_df['Zero Days'],
                 'Status': 'Pending Launch' if is_pending else 'Operational'
             })
@@ -711,20 +723,6 @@ if view_mode == "District View":
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
-            # --- COMPACT CENTERED GRADE LEGEND ---
-            st.markdown("""
-            <div style="text-align: center; margin-top: 10px; margin-bottom: 8px;">
-                <div style="display: inline-flex; gap: 16px; font-size: 13px; font-weight: 600; color: #475569; background-color: #FFFFFF; padding: 8px 16px; border-radius: 20px; border: 1px solid #E2E8F0; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
-                    <span style="color: #64748B;">Grade Legend:</span>
-                    <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#14B8A6; border-radius:2px;"></span> A</div>
-                    <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#84CC16; border-radius:2px;"></span> B</div>
-                    <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#FBBF24; border-radius:2px;"></span> C</div>
-                    <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#F97316; border-radius:2px;"></span> D</div>
-                    <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#F43F5E; border-radius:2px;"></span> F</div>
-                </div>
-            </div>
-            """, unsafe_allow_html=True)
-
             fig = px.bar(
                 sorted_df, 
                 y=facility_col, 
@@ -830,6 +828,20 @@ if view_mode == "District View":
             <div class="metric-card" style="background-color:#F8FAFC;"><div class="metric-label" title="The average grade of all facilities in this district.">District Grade</div><div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div></div>
         </div>
         ''', unsafe_allow_html=True)
+
+        # --- GRADE LEGEND MOVED HERE ---
+        st.markdown("""
+        <div style="text-align: center; margin-top: 10px; margin-bottom: 8px;">
+            <div style="display: inline-flex; gap: 16px; font-size: 13px; font-weight: 600; color: #475569; background-color: #FFFFFF; padding: 8px 16px; border-radius: 20px; border: 1px solid #E2E8F0; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                <span style="color: #64748B;">Grade Legend:</span>
+                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#14B8A6; border-radius:2px;"></span> A</div>
+                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#84CC16; border-radius:2px;"></span> B</div>
+                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#FBBF24; border-radius:2px;"></span> C</div>
+                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#F97316; border-radius:2px;"></span> D</div>
+                <div style="display: flex; align-items: center; gap: 4px;"><span style="display:inline-block; width:12px; height:12px; background-color:#F43F5E; border-radius:2px;"></span> F</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("<h4 style='color:#0F172A; margin-top:16px; margin-bottom:10px;'>Spoke Scorecard</h4>", unsafe_allow_html=True)
         display = pd.DataFrame()
@@ -1256,7 +1268,7 @@ elif view_mode == "Active Spokes":
                 return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
             return ''
             
-        display_active = active_df[['S.No.', 'District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Total Patients']]
+        display_active = active_df[['S.No.', 'District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']]
         styled_active = display_active.style.map(style_grade, subset=['Grade'])
         
         col_card, _ = st.columns([1.5, 3])
@@ -1276,6 +1288,7 @@ elif view_mode == "Active Spokes":
                 "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                 "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                 "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
+                "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
                 "Total Patients": st.column_config.NumberColumn("Total Patients", format="%d")
             }
         )
@@ -1330,7 +1343,7 @@ else:
         
         with z_tab1:
             if not op_failures.empty:
-                display_tracker = op_failures[['District', 'Facility', 'Primary Reason']].copy()
+                display_tracker = op_failures[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
                 display_tracker.insert(0, 'S.No.', [str(i) for i in range(1, len(display_tracker) + 1)])
                 
                 display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
@@ -1342,6 +1355,7 @@ else:
                         "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                         "District": st.column_config.TextColumn("District", width="medium"),
                         "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                     }
                 )
@@ -1362,7 +1376,7 @@ else:
 
         with z_tab2:
             if not pending_launch.empty:
-                display_pending = pending_launch[['District', 'Facility', 'Primary Reason']].copy()
+                display_pending = pending_launch[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
                 display_pending.insert(0, 'S.No.', [str(i) for i in range(1, len(display_pending) + 1)])
                 
                 display_pending['Primary Reason'] = display_pending['Primary Reason'].apply(format_reason)
@@ -1374,6 +1388,7 @@ else:
                         "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                         "District": st.column_config.TextColumn("District", width="medium"),
                         "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                     }
                 )
