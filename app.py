@@ -70,6 +70,16 @@ st.markdown("""
     .zm-card-name { color: #0F172A; font-size: 18px; font-weight: 700; margin-bottom: 2px;}
     .zm-card-zone { color: #06B6D4; font-size: 14px; font-weight: 600;}
 
+    /* --- NEW MODERN PAGE HEADERS --- */
+    .page-header-container { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; margin-top: 10px; }
+    .page-icon-container { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; color: #FFFFFF; }
+    .page-icon-active { background-color: #14B8A6; box-shadow: 0 4px 10px rgba(20, 184, 166, 0.3); }
+    .page-icon-warning { background-color: #F59E0B; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }
+    .page-icon-state { background-color: #3B82F6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+    .page-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; }
+    .page-title-text { font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.2; }
+    .page-subtitle-text { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 2px; }
+
     /* Report Header */
     .report-header { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
     .report-title { color: #0F172A; font-size: 22px; font-weight: 800; margin-bottom: 6px; }
@@ -104,8 +114,15 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
         padding: 6px 12px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important;
     }
+    /* OPTION 3: Solid Red Active Tab */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-        background-color: #FFFFFF !important; border-radius: 6px !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; color: #0F172A !important; font-weight: 700 !important;
+        background-color: #DC2626 !important; 
+        border-radius: 6px !important; 
+        box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important; 
+        font-weight: 700 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) p {
+        color: #FFFFFF !important;
     }
 
     /* Header Details */
@@ -389,7 +406,6 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
     plot_df['Average Patients'] = plot_df[active_dates].mean(axis=1).round(1)
     plot_df['Zero Days'] = (plot_df[active_dates] == 0).sum(axis=1)
     
-    # NEW: Calculate Last Sample Date
     def get_last_sample_date(row):
         for d in reversed(sorted_dates):
             if row[d] > 0:
@@ -466,7 +482,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.6"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.7"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -493,7 +509,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.6"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.7"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -1100,7 +1116,17 @@ if view_mode == "District View":
 # VIEW: STATE VIEW
 # ==============================================================================
 elif view_mode == "State View":
-    st.markdown("<h3 style='color:#0F172A; margin-bottom:16px;'>Bihar State Master View</h3>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class="page-header-container">
+        <div class="page-icon-container page-icon-state">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+        </div>
+        <div>
+            <div class="page-title-text">Bihar State Master View</div>
+            <div class="page-subtitle-text">Statewide operational summary and district performance</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     with st.spinner("Loading State Data..."):
         state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
@@ -1238,8 +1264,17 @@ elif view_mode == "State View":
 # VIEW: ACTIVE SPOKES
 # ==============================================================================
 elif view_mode == "Active Spokes":
-    st.markdown("<h3 style='color:#0F172A; margin-bottom:16px;'>✅ Active Spokes Tracker</h3>", unsafe_allow_html=True)
-    st.markdown("This table lists all facilities that are **currently active** (saw at least 1 patient in the selected time range).")
+    st.markdown("""
+    <div class="page-header-container">
+        <div class="page-icon-container page-icon-active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </div>
+        <div>
+            <div class="page-title-text">Active Spokes Tracker</div>
+            <div class="page-subtitle-text">Facilities currently seeing patients</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     with st.spinner("Loading all active facilities..."):
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
@@ -1311,8 +1346,17 @@ elif view_mode == "Active Spokes":
 # VIEW: ZERO-SAMPLE TRACKER
 # ==============================================================================
 else:
-    st.markdown("<h3 style='color:#0F172A; margin-bottom:16px;'>⚠️ Statewide Zero-Sample Tracker</h3>", unsafe_allow_html=True)
-    st.markdown("This page separates **Operational Failures** (facilities that are supposed to be reporting but aren't) from **Pending Launch** (facilities waiting for infrastructure).")
+    st.markdown("""
+    <div class="page-header-container">
+        <div class="page-icon-container page-icon-warning">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        </div>
+        <div>
+            <div class="page-title-text">Statewide Zero-Sample Tracker</div>
+            <div class="page-subtitle-text">Operational failures and pending infrastructure launches</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
     
     with st.spinner("Scanning all districts for inactive facilities..."):
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
