@@ -97,7 +97,7 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.app-header) {
         background-color: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
-        border-bottom: 3px solid #DC2626 !important;
+        border-bottom: 3px solid #06B6D4 !important;
         border-radius: 12px !important;
         box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
         padding: 10px 20px !important;
@@ -108,44 +108,22 @@ st.markdown("""
         border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important;
     }
     
-    /* --- FORCE RADIO BUTTONS TO BE RED --- */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
         background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; border-radius: 8px !important; padding: 3px !important; gap: 4px !important;
         flex-wrap: nowrap !important;
-    }
-    
-    /* Hide the default radio circle */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"] > div:first-child {
-        display: none !important;
     }
     
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
         padding: 6px 12px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important;
     }
     
-    /* Active Radio Button Background */
+    /* Clean active radio button state */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-        background-color: #DC2626 !important; 
+        background-color: #FFFFFF !important; 
         border-radius: 6px !important; 
-        box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important; 
-    }
-    
-    /* Active Radio Button Text */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) p {
-        color: #FFFFFF !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; 
+        color: #0F172A !important; 
         font-weight: 700 !important;
-    }
-
-    /* --- FORCE STREAMLIT TABS TO BE RED --- */
-    div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
-        background-color: #DC2626 !important; 
-    }
-    div[data-testid="stTabs"] button[data-baseweb="tab"] p {
-        color: #64748B !important; 
-    }
-    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] p {
-        color: #DC2626 !important; 
-        font-weight: 800 !important;
     }
 
     /* Header Details */
@@ -500,7 +478,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.9"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -527,7 +505,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.9"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
