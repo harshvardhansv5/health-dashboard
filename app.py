@@ -193,11 +193,13 @@ ZM_DATA = {
     "Krishna Prakash (Saran)": {"Gopalganj": ["DH Gopalganj"], "Saran": ["DH Saran"], "Siwan": ["DH Siwan"]}
 }
 DISTRICT_TO_ZM = {d: zm for zm, dists in ZM_DATA.items() for d in dists}
+
+# Maps Display Name -> Sheet Name (to handle misspellings in the Google Sheet)
 DISTRICT_MAP = {
-    "Seikhpura": "Sheikhpura", 
-    "Rohtas": "Sasaram",
-    "East Champaran": "Motihari",
-    "West Champaran": "Narkatiaganj"
+    "Sheikhpura": "Seikhpura",       # Display: Sheikhpura -> Sheet: Seikhpura
+    "Rohtas": "Sasaram",             # Display: Rohtas -> Sheet: Sasaram
+    "East Champaran": "Motihari",    # Display: East Champaran -> Sheet: Motihari
+    "West Champaran": "Narkatiaganj" # Display: West Champaran -> Sheet: Narkatiaganj
 }
 REVERSE_DISTRICT_MAP = {v: k for k, v in DISTRICT_MAP.items()}
 
@@ -688,8 +690,8 @@ if view_mode == "District View":
     st.markdown(f'<div class="zm-card"><div class="zm-card-header">Zone Manager</div><div class="zm-card-name">{display_zm}</div><div class="zm-card-zone">{zone_name}</div></div>', unsafe_allow_html=True)
 
     target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
-    sheet_found = any(s == target_district or target_district.lower() in s.lower() for s in available_sheets)
-    sheet_to_load = next((s for s in available_sheets if s == target_district or target_district.lower() in s.lower()), None)
+    sheet_found = any(s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower() for s in available_sheets)
+    sheet_to_load = next((s for s in available_sheets if s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower()), None)
             
     if not sheet_found:
         st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**"); st.stop()
