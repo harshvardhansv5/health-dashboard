@@ -1514,15 +1514,25 @@ else:
 # --- GLOBAL DEFINITIONS EXPANDER ---
 st.markdown("<br><hr style='border-color: #CBD5E1; margin: 40px 0 20px 0;'><br>", unsafe_allow_html=True)
 with st.expander("ℹ️ Metric Definitions & Grading System"):
-    st.markdown("""
-    **📊 Weighted Avg / Day** — *The efficiency score.*  
-    Total patients divided by (facilities × days). This accounts for all facility-days equally.
     
-    **⏱️ Uptime %** — *The reliability score.*  
-    The percentage of days each facility reported more than 0 patients.
+    st.markdown("""
+    **📊 Weighted Avg / Day** — *The efficiency score.*
+    Total patients divided by *(Total Facilities × Total Days)*. 
+    *Why use this?* It prevents a facility that was only open for 1 day with 50 patients from artificially inflating the district's average. It accounts for every facility-day equally.
+    
+    **⏱️ Uptime %** — *The reliability score.*
+    The percentage of days a facility reported more than 0 patients.
     """)
     
+    st.info("""
+    **Example:**
+    *   **Weighted Avg:** 10 facilities report for 5 days (50 total facility-days). They see 100 patients total. The Weighted Avg is **100 ÷ 50 = 2.0**.
+    *   **Uptime:** A facility has 10 days of data. They report `0` on 3 days. Their Uptime is **7 ÷ 10 = 70%**.
+    """)
+
     st.markdown("**🏆 Grading System**")
+    st.markdown("*Note: A facility must meet **BOTH** the Uptime and Avg Patients requirements to earn the grade. If it fails either one, it drops to the next lowest grade.*")
+    
     grade_data = pd.DataFrame({
         "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
         "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
@@ -1537,3 +1547,8 @@ with st.expander("ℹ️ Metric Definitions & Grading System"):
             "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
         }
     )
+    
+    st.info("""
+    **Grading Example:**
+    If a facility reports every single day (100% Uptime) but only sees **1 patient per day** (Avg 1.0), they get a **D**. They do not get an A, because their patient volume is too low.
+    """)
