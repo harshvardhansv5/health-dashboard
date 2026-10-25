@@ -263,33 +263,41 @@ def find_distance_column(df):
     return None
 
 def extract_date(col_name):
-    if isinstance(col_name, pd.Timestamp): return col_name
-    s = str(col_name).lower()
+    dt = pd.NaT
     
-    s = s.replace('\xa0', ' ').replace('\u200b', '').replace('\u200e', '')
-    s = s.replace('<br>', ' ').replace('<br/>', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-    s = re.sub(r'total number of patients( on)?', '', s)
-    s = re.sub(r'\(.*?\)', '', s) 
-    
-    s = s.replace('∕', '/').replace('⁄', '/')
-    s = s.replace('‐', '-').replace('–', '-').replace('—', '-')
-    
-    s = re.sub(r'\s*([-/.∕⁄‐–—])\s*', r'\1', s)
-    s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
-    s = s.strip()
-    
-    match = re.search(r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2})|(\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})|(\d{1,2}[-/\.][a-z]{3}[-/\.]\d{2,4})', s)
-    if match:
-        raw_date = match.group(0)
-        if re.match(r'^\d{4}/\d{4}$', raw_date):
-            raw_date = raw_date[:2] + '/' + raw_date[2:]
+    if isinstance(col_name, pd.Timestamp): 
+        dt = col_name
+    else:
+        s = str(col_name).lower()
+        s = s.replace('\xa0', ' ').replace('\u200b', '').replace('\u200e', '')
+        s = s.replace('<br>', ' ').replace('<br/>', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+        s = re.sub(r'total number of patients( on)?', '', s)
+        s = re.sub(r'\(.*?\)', '', s) 
         
-        try:
-            return pd.to_datetime(raw_date, dayfirst=True, errors='coerce')
-        except:
-            pass
+        s = s.replace('∕', '/').replace('⁄', '/')
+        s = s.replace('‐', '-').replace('–', '-').replace('—', '-')
+        
+        s = re.sub(r'\s*([-/.∕⁄‐–—])\s*', r'\1', s)
+        s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
+        s = s.strip()
+        
+        match = re.search(r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2})|(\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})|(\d{1,2}[-/\.][a-z]{3}[-/\.]\d{2,4})', s)
+        if match:
+            raw_date = match.group(0)
+            if re.match(r'^\d{4}/\d{4}$', raw_date):
+                raw_date = raw_date[:2] + '/' + raw_date[2:]
             
-    return pd.NaT
+            try:
+                dt = pd.to_datetime(raw_date, dayfirst=True, errors='coerce')
+            except:
+                pass
+                
+    # --- THE FUTURE DATE GUARD ---
+    # If the date is beyond today, it's a typo. Ignore it (return NaT).
+    if pd.notna(dt) and dt > pd.Timestamp.today().normalize():
+        return pd.NaT
+        
+    return dt
 
 def find_date_columns(df):
     date_cols = []
