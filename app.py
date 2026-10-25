@@ -93,7 +93,7 @@ st.markdown("""
     .grade-D { background-color: #FED7AA; color: #9A3412; border: 1px solid #FDBA74; }
     .grade-F { background-color: #FECDD3; color: #991B1B; border: 1px solid #FDA4AF; }
 
-    /* --- UNIFIED COMMAND BAR --- */
+    /* --- UNIFIED COMMAND BAR & NAVIGATION --- */
     div[data-testid="stHorizontalBlock"]:has(.app-header) {
         background-color: #FFFFFF !important;
         border: 1px solid #E2E8F0 !important;
@@ -114,7 +114,11 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
         padding: 6px 12px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important;
     }
-    /* OPTION 3: Solid Red Active Tab */
+    
+    /* OPTION 3: FORCE SOLID RED ACTIVE TAB & HIDE DEFAULT RADIO CIRCLE */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+        display: none !important; /* Hides the blue dot */
+    }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
         background-color: #DC2626 !important; 
         border-radius: 6px !important; 
@@ -123,6 +127,18 @@ st.markdown("""
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) p {
         color: #FFFFFF !important;
+    }
+
+    /* --- FORCE STREAMLIT TABS TO BE RED --- */
+    div[data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+        background-color: #DC2626 !important; /* The bottom border of the active tab */
+    }
+    div[data-testid="stTabs"] button[data-baseweb="tab"] p {
+        color: #64748B !important; /* Default tab text */
+    }
+    div[data-testid="stTabs"] button[data-baseweb="tab"][aria-selected="true"] p {
+        color: #DC2626 !important; /* Active tab text */
+        font-weight: 800 !important;
     }
 
     /* Header Details */
@@ -169,11 +185,6 @@ st.markdown("""
     /* Date Picker */
     div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; box-shadow: 0 0 0 1px #06B6D4 !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
-
-    /* Tighten Tabs Container Spacing */
-    div[data-testid="stTabs"] { margin-top: 0px !important; padding-top: 0px !important; }
-    div[data-baseweb="tab-list"] { gap: 8px !important; }
-    div[data-baseweb="tab"] { padding: 8px 16px !important; font-weight: 700 !important; font-size: 14px !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -482,7 +493,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.7"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.8"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -509,7 +520,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.7"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v30.8"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
