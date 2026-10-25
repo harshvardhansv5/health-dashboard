@@ -478,7 +478,7 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
     return min(latest_dates) if latest_dates else None
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.1"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     
     anchor_date = None
@@ -505,7 +505,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.1"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     
@@ -1056,11 +1056,11 @@ if view_mode == "District View":
                 valid_polar_df['Display_Name'] = valid_polar_df[facility_col].apply(lambda x: x if len(x) <= 28 else x[:25] + "...")
                 
                 st.markdown(f"**Hub Center:** {selected_hub_zm}")
-                st.caption("Bar length represents distance from Hub (km). Color represents Facility Grade.")
+                st.caption("Bar length represents distance from Hub (km). Hover for grade and performance details.")
                 
-                fig_polar = px.bar_polar(valid_polar_df, r="Distance", theta="Display_Name", color="Grade",
-                                         color_discrete_map={'A': '#14B8A6', 'B': '#84CC16', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'},
-                                         hover_data={"Distance": ":.1f", "Uptime %": ":.1f", "Average Patients": ":.1f", facility_col: True, "Display_Name": False, "Grade": False})
+                fig_polar = px.bar_polar(valid_polar_df, r="Distance", theta="Display_Name", 
+                                         color_discrete_sequence=['#06B6D4'],
+                                         hover_data={"Distance": ":.1f", "Uptime %": ":.1f", "Average Patients": ":.1f", "Grade": True, facility_col: True, "Display_Name": False})
                 
                 fig_polar.update_traces(marker_line_color='#0F172A', marker_line_width=1, opacity=0.9)
                 
@@ -1068,6 +1068,7 @@ if view_mode == "District View":
                 polar_layout.update(dict(
                     template="plotly_white",
                     height=750,
+                    showlegend=False,
                     margin=dict(l=40, r=40, t=80, b=40),
                     polar=dict(
                         bargap=0.5, 
