@@ -1464,7 +1464,9 @@ elif view_mode == "ZM View":
                     inactive_zm.insert(0, 'S.No.', [str(i) for i in range(1, len(inactive_zm) + 1)])
                     inactive_zm['Primary Reason'] = inactive_zm['Primary Reason'].apply(format_reason)
                     
-                    styled_inactive = inactive_zm.style.map(style_reason, subset=['Primary Reason'])
+                    # --- THE FIX: Explicitly select only the necessary columns ---
+                    display_inactive = inactive_zm[['S.No.', 'District', 'Facility', 'Status', 'Last Sample Date', 'Primary Reason']].copy()
+                    styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
                     
                     st.dataframe(
                         styled_inactive, use_container_width=True, hide_index=True,
