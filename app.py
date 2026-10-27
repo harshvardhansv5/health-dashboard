@@ -52,14 +52,14 @@ st.markdown("""
     /* Metric Cards (Floating Glass) */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
     .metric-card {
-        background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
-        padding: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03); 
+        background-color: #FFFFFF !important; border: 1px solid #E2E8F0 !important; border-radius: 12px !important;
+        padding: 20px !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important; 
         display: flex; flex-direction: column; transition: transform 0.2s ease; border-top: 4px solid #06B6D4;
     }
     .metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
     .metric-label { color: #0F172A; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; cursor: help; }
     .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
-    .metric-sub { font-size: 15px; font-weight: 600; color: #64748B; }
+    .metric-sub { font-size: 14px; font-weight: 600; color: #64748B; }
 
     /* Mini Grade Badges for Best Spoke Card */
     .mini-badge-A { background-color: #CCFBF1; color: #0F766E; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #5EEAD4; }
@@ -80,7 +80,7 @@ st.markdown("""
     .page-header-container { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; margin-top: 10px; }
     .page-icon-container { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; color: #FFFFFF; }
     .page-icon-active { background-color: #14B8A6; box-shadow: 0 4px 10px rgba(20, 184, 166, 0.3); }
-    .page-icon-warning { background-color: #F59E0B; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }
+    .page-icon-warning { background-color: #DC2626; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); }
     .page-icon-state { background-color: #3B82F6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
     .page-icon-zm { background-color: #8B5CF6; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
     .page-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; }
@@ -784,7 +784,6 @@ if view_mode == "District View":
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
-            # --- IMPROVED BAR CHART COLORS ---
             color_scale = 'Teal' if metric_col != 'Uptime %' else 'Blues'
             
             fig = px.bar(
@@ -809,7 +808,6 @@ if view_mode == "District View":
                 current_avg = round(filtered['Uptime %'].mean(), 1)
                 avg_label = f"Avg Uptime: {current_avg}%"
                 
-            # --- FIXED FLOATING AVERAGE LINE ---
             fig.add_vline(x=current_avg, line_dash="dash", line_color="#06B6D4", line_width=2)
             fig.add_annotation(
                 x=current_avg, y=1.05, yref="paper", 
@@ -826,8 +824,8 @@ if view_mode == "District View":
                 showlegend=False,
                 xaxis_title=metric_option,
                 yaxis_title="",
-                margin=dict(l=40, r=80, t=90, b=10), # Increased top margin for annotation
-                coloraxis_showscale=False # Hide the colorbar as X-axis shows the value
+                margin=dict(l=40, r=80, t=90, b=10),
+                coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
             
@@ -837,7 +835,6 @@ if view_mode == "District View":
             st.markdown("<hr style='margin: 20px 0 16px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
             st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>🔍 Facility Drill-Down</h4>", unsafe_allow_html=True)
             
-            # --- AUTO-SELECT BEST FACILITY ---
             default_facility = sorted_df.iloc[0][facility_col] if not sorted_df.empty else None
             drill_options = sorted_df[facility_col].tolist()
             
@@ -1731,7 +1728,7 @@ else:
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container page-icon-warning">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
         </div>
         <div>
             <div class="page-title-text">Statewide Zero-Sample Tracker</div>
@@ -1753,17 +1750,39 @@ else:
         with col_card1:
             st.markdown(f'''
             <div class="metric-card" style="border-top: 4px solid #F43F5E; padding: 16px; margin-bottom: 16px;">
-                <div class="metric-label">Operational Failures</div>
+                <div class="metric-label" title="Facilities that exist but failed to report patients.">Operational Failures</div>
                 <div class="metric-value" style="color:#F43F5E;">{len(op_failures)}</div>
+                <div class="metric-sub" style="margin-top: 8px;">Requires immediate intervention</div>
             </div>
             ''', unsafe_allow_html=True)
         with col_card2:
             st.markdown(f'''
             <div class="metric-card" style="border-top: 4px solid #94A3B8; padding: 16px; margin-bottom: 16px;">
-                <div class="metric-label">Pending Launch</div>
+                <div class="metric-label" title="Facilities that have no data columns yet.">Pending Launch</div>
                 <div class="metric-value" style="color:#64748B;">{len(pending_launch)}</div>
+                <div class="metric-sub" style="margin-top: 8px;">Awaiting infrastructure readiness</div>
             </div>
             ''', unsafe_allow_html=True)
+
+        # --- NEW CHART: Top Offending Districts ---
+        if not op_failures.empty:
+            st.markdown("<h4 style='color:#0F172A; margin-top:10px; margin-bottom:10px;'>Top Offending Districts (Operational Failures)</h4>", unsafe_allow_html=True)
+            district_counts = op_failures['District'].value_counts().head(5).reset_index()
+            district_counts.columns = ['District', 'Failures']
+            
+            fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures')
+            fig_off.update_traces(marker_color='#F43F5E', textposition='outside')
+            
+            off_layout = PLOTLY_LAYOUT.copy()
+            off_layout.update(dict(
+                height=250, 
+                showlegend=False, 
+                xaxis_title="Number of Facilities", 
+                yaxis_title="",
+                margin=dict(l=10, r=20, t=20, b=10)
+            ))
+            fig_off.update_layout(**off_layout)
+            st.plotly_chart(fig_off, use_container_width=True)
 
         z_tab1, z_tab2 = st.tabs([f"🔴 True Operational Failures ({len(op_failures)})", f"🚧 Pending Launch ({len(pending_launch)})"])
         
