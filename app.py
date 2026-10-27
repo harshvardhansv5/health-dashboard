@@ -1327,7 +1327,7 @@ elif view_mode == "ZM View":
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container page-icon-zm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
         </div>
         <div>
             <div class="page-title-text">Zone Manager View</div>
@@ -1354,11 +1354,20 @@ elif view_mode == "ZM View":
             total_facilities = zm_df['Facilities'].sum()
             avg_uptime = round(zm_df['Uptime %'].mean(), 1)
             
+            # --- DYNAMIC COVERAGE TEXT ---
+            sub_districts = ['Barh', 'Danapur']
+            sub_count = len([d for d in zm_districts if d in sub_districts])
+            dist_count = len(zm_districts) - sub_count
+            
+            coverage_text = f"{dist_count} Districts"
+            if sub_count > 0:
+                coverage_text += f" & {sub_count} Sub-districts"
+            
             st.markdown(f'''
             <div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
                 <div class="metric-card">
-                    <div class="metric-label">Total Districts</div>
-                    <div class="metric-value">{len(zm_df)}</div>
+                    <div class="metric-label">Coverage</div>
+                    <div class="metric-value" style="font-size: 24px; margin-top: 4px;">{coverage_text}</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Total Patients</div>
