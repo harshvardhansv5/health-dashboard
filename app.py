@@ -1364,16 +1364,18 @@ elif view_mode == "ZM View":
             sub_districts = ['Barh', 'Danapur']
             sub_count = len([d for d in zm_districts if d in sub_districts])
             dist_count = len(zm_districts) - sub_count
+            total_units = dist_count + sub_count
             
-            coverage_text = f"{dist_count} Districts"
+            breakdown_text = f"{dist_count} Districts"
             if sub_count > 0:
-                coverage_text += f" & {sub_count} Sub-districts"
+                breakdown_text += f" & {sub_count} Sub-districts"
             
             st.markdown(f'''
             <div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
                 <div class="metric-card">
                     <div class="metric-label">Coverage</div>
-                    <div class="metric-value" style="font-size: 24px; margin-top: 4px;">{coverage_text}</div>
+                    <div class="metric-value">{total_units}</div>
+                    <div class="metric-sub" style="font-size: 13px; margin-top: 6px;">{breakdown_text}</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Weighted Avg / Day</div>
@@ -1464,7 +1466,6 @@ elif view_mode == "ZM View":
                     inactive_zm.insert(0, 'S.No.', [str(i) for i in range(1, len(inactive_zm) + 1)])
                     inactive_zm['Primary Reason'] = inactive_zm['Primary Reason'].apply(format_reason)
                     
-                    # --- THE FIX: Explicitly select only the necessary columns ---
                     display_inactive = inactive_zm[['S.No.', 'District', 'Facility', 'Status', 'Last Sample Date', 'Primary Reason']].copy()
                     styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
                     
