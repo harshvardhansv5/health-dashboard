@@ -1342,7 +1342,6 @@ elif view_mode == "ZM View":
         state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not state_df.empty:
-        # Filter the state_df for just this ZM's districts
         zm_districts = list(ZM_DATA[selected_zm].keys())
         zm_df = state_df[state_df['District'].isin(zm_districts)].copy()
         
@@ -1352,9 +1351,13 @@ elif view_mode == "ZM View":
             total_patients = zm_df['Total Patients'].sum()
             total_active = zm_df['Active Spokes'].sum()
             total_facilities = zm_df['Facilities'].sum()
+            
+            # Calculate the true Zone Weighted Avg
+            zm_days = zm_df['Days Reported'].max() if not zm_df.empty else 0
+            zone_weighted_avg = round(total_patients / (total_facilities * zm_days), 1) if total_facilities > 0 and zm_days > 0 else 0.0
+            
             avg_uptime = round(zm_df['Uptime %'].mean(), 1)
             
-            # --- DYNAMIC COVERAGE TEXT ---
             sub_districts = ['Barh', 'Danapur']
             sub_count = len([d for d in zm_districts if d in sub_districts])
             dist_count = len(zm_districts) - sub_count
@@ -1370,8 +1373,8 @@ elif view_mode == "ZM View":
                     <div class="metric-value" style="font-size: 24px; margin-top: 4px;">{coverage_text}</div>
                 </div>
                 <div class="metric-card">
-                    <div class="metric-label">Total Patients</div>
-                    <div class="metric-value">{total_patients:,}</div>
+                    <div class="metric-label">Weighted Avg / Day</div>
+                    <div class="metric-value">{zone_weighted_avg}</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Active Spokes</div>
