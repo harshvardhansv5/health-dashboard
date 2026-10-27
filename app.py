@@ -284,12 +284,13 @@ def extract_date(col_name):
         s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
         s = s.strip()
         
-        # Append current year if missing (e.g. "24-Oct" or "24/10")
+        # Append current year if missing (handles "24-Oct", "24/10", and "24 Oct")
         if not re.search(r'\d{4}', s):
-            if re.search(r'\b\d{1,2}[-/\.][a-z]{3}\b', s) or re.search(r'\b\d{1,2}[-/\.]\d{1,2}\b', s):
+            if re.search(r'\b\d{1,2}[-/\.\s][a-z]{3}\b', s) or re.search(r'\b\d{1,2}[-/\.\s]\d{1,2}\b', s):
                 s = s + " " + str(pd.Timestamp.today().year)
         
-        match = re.search(r'(\d{4}[-/\.]\d{1,2}[-/\.]\d{1,2})|(\d{1,2}[-/\.]\d{1,2}[-/\.]\d{2,4})|(\d{1,2}[-/\.][a-z]{3}[-/\.]\d{2,4})', s)
+        # Match date with separators OR spaces
+        match = re.search(r'(\d{4}[-/\.\s]\d{1,2}[-/\.\s]\d{1,2})|(\d{1,2}[-/\.\s]\d{1,2}[-/\.\s]\d{2,4})|(\d{1,2}[-/\.\s][a-z]{3}[-/\.\s]\d{2,4})', s)
         if match:
             raw_date = match.group(0)
             if re.match(r'^\d{4}/\d{4}$', raw_date):
