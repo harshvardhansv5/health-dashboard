@@ -1355,6 +1355,11 @@ elif view_mode == "ZM View":
             total_active = zm_df['Active Spokes'].sum()
             total_facilities = zm_df['Facilities'].sum()
             
+            # --- THE MATH FIX: Exclude Pending Launch from denominator ---
+            pending_zm = zm_fac_df[zm_fac_df['Status'] == 'Pending Launch']
+            total_pending = len(pending_zm)
+            total_operational = total_facilities - total_pending
+            
             # Calculate the true Zone Weighted Avg
             zm_days = zm_df['Days Reported'].max() if not zm_df.empty else 0
             zone_weighted_avg = round(total_patients / (total_facilities * zm_days), 1) if total_facilities > 0 and zm_days > 0 else 0.0
@@ -1383,7 +1388,7 @@ elif view_mode == "ZM View":
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Active Spokes</div>
-                    <div class="metric-value">{total_active} <span class="metric-sub">/ {total_facilities} Total</span></div>
+                    <div class="metric-value">{total_active} <span class="metric-sub">/ {total_operational} Operational</span></div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Avg Zone Uptime</div>
@@ -1392,7 +1397,15 @@ elif view_mode == "ZM View":
             </div>
             ''', unsafe_allow_html=True)
             
-            zm_tab1, zm_tab2, zm_tab3 = st.tabs(["📊 Zone Summary", f"🟢 Active Spokes ({total_active})", f"🔴 Inactive Spokes ({total_facilities - total_active})"])
+            # --- THE TAB FIX: 4 distinct tabs ---
+            op_failures_zm = zm_fac_df[(zm_fac_df['Total Patients'] == 0) & (zm_fac_df['Status'] == 'Operational')]
+            
+            zm_tab1, zm_tab2, zm_tab3, zm_tab4 = st.tabs([
+                "📊 Zone Summary", 
+                f"🟢 Active Spokes ({total_active})", 
+                f"🔴 Operational Failures ({len(op_failures_zm)})",
+                f"🚧 Pending Launch ({total_pending})"
+            ])
             
             with zm_tab1:
                 st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:10px;'>District Breakdown</h4>", unsafe_allow_html=True)
@@ -1458,15 +1471,14 @@ elif view_mode == "ZM View":
                     )
 
             with zm_tab3:
-                inactive_zm = zm_fac_df[zm_fac_df['Total Patients'] == 0].copy()
-                if inactive_zm.empty:
-                    st.success("✅ No inactive spokes in this zone! All facilities are reporting.")
+                if op_failures_zm.empty:
+                    st.success("✅ Excellent! No operational failures in this zone.")
                 else:
-                    inactive_zm = inactive_zm.sort_values(by=['Status', 'District', 'Facility']).reset_index(drop=True)
-                    inactive_zm.insert(0, 'S.No.', [str(i) for i in range(1, len(inactive_zm) + 1)])
-                    inactive_zm['Primary Reason'] = inactive_zm['Primary Reason'].apply(format_reason)
+                    op_failures_zm = op_failures_zm.sort_values(by=['District', 'Facility']).reset_index(drop=True)
+                    op_failures_zm.insert(0, 'S.No.', [str(i) for i in range(1, len(op_failures_zm) + 1)])
+                    op_failures_zm['Primary Reason'] = op_failures_zm['Primary Reason'].apply(format_reason)
                     
-                    display_inactive = inactive_zm[['S.No.', 'District', 'Facility', 'Status', 'Last Sample Date', 'Primary Reason']].copy()
+                    display_inactive = op_failures_zm[['S.No.', 'District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
                     styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
                     
                     st.dataframe(
@@ -1475,12 +1487,32 @@ elif view_mode == "ZM View":
                             "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                             "District": st.column_config.TextColumn("District", width="medium"),
                             "Facility": st.column_config.TextColumn("Facility Name", width="large"),
-                            "Status": st.column_config.TextColumn("Status", width="small"),
                             "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
                             "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                         }
                     )
-                    st.info("💡 Tip: 'Pending Launch' means the facility infrastructure isn't ready. 'Operational' means the facility exists but failed to report patients.")
+
+            with zm_tab4:
+                if pending_zm.empty:
+                    st.success("✅ All facilities in this zone have launched!")
+                else:
+                    pending_zm = pending_zm.sort_values(by=['District', 'Facility']).reset_index(drop=True)
+                    pending_zm.insert(0, 'S.No.', [str(i) for i in range(1, len(pending_zm) + 1)])
+                    
+                    display_pending = pending_zm[['S.No.', 'District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                    styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
+                    
+                    st.dataframe(
+                        styled_pending, use_container_width=True, hide_index=True,
+                        column_config={
+                            "S.No.": st.column_config.TextColumn("S.No.", width="small"),
+                            "District": st.column_config.TextColumn("District", width="medium"),
+                            "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                            "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                            "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                        }
+                    )
+                    st.info("These facilities will automatically move to 'Operational' as soon as their first data column is added.")
 
 # ==============================================================================
 # VIEW: ACTIVE SPOKES
