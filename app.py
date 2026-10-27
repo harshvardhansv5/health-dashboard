@@ -70,10 +70,11 @@ st.markdown("""
 
     /* Tables & Cards */
     [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 8px; }
-    .zm-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 10px 16px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 4px solid #06B6D4; }
+    .zm-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 4px solid #06B6D4; display: flex; justify-content: space-between; align-items: center; }
     .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;}
     .zm-card-name { color: #0F172A; font-size: 16px; font-weight: 700; margin-bottom: 2px;}
     .zm-card-zone { color: #06B6D4; font-size: 13px; font-weight: 600;}
+    .zm-card-right { text-align: right; }
 
     /* --- NEW MODERN PAGE HEADERS --- */
     .page-header-container { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; margin-top: 10px; }
@@ -689,7 +690,23 @@ if view_mode == "District View":
 
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
     display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
-    st.markdown(f'<div class="zm-card"><div class="zm-card-header">Zone Manager</div><div class="zm-card-name">{display_zm}</div><div class="zm-card-zone">{zone_name}</div></div>', unsafe_allow_html=True)
+    
+    # Improved ZM Card
+    st.markdown(f'''
+    <div class="zm-card">
+        <div>
+            <div class="zm-card-header">Zone Manager</div>
+            <div class="zm-card-name">{display_zm}</div>
+            <div class="zm-card-zone">{zone_name}</div>
+        </div>
+        <div class="zm-card-right">
+            <div class="zm-card-header">Live Operations</div>
+            <div style="font-size: 14px; font-weight: 700; color: #14B8A6; display: flex; align-items: center; gap: 6px; justify-content: flex-end;">
+                <div class="status-dot"></div> Active
+            </div>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
 
     target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
     sheet_found = any(s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower() for s in available_sheets)
@@ -703,15 +720,17 @@ if view_mode == "District View":
     if plot_df is None: st.error(f"Could not process data."); st.stop()
     facility_col = stats['facility_col']
 
-    # --- ADDED TAB COUNTS ---
+    # --- DYNAMIC TAB COUNTS ---
     total_active = stats['active_facilities']
     total_inactive = stats['num_facilities'] - total_active
+    active_icon = "🟢" if total_active > 0 else "🔴"
+    inactive_icon = "🔴" if total_inactive > 0 else "🟢"
 
     d_tab1, d_tab2, d_tab3, d_tab4, d_tab5, d_tab6, d_tab7 = st.tabs([
         "Dashboard", 
         "Report Card", 
-        f"🟢 Active Spokes ({total_active})", 
-        f"🔴 Inactive Spokes ({total_inactive})", 
+        f"{active_icon} Active Spokes ({total_active})", 
+        f"{inactive_icon} Inactive Spokes ({total_inactive})", 
         "Trends & Analytics", 
         "🩺 Diagnosis", 
         "📍 Hub Logistics"
@@ -762,19 +781,19 @@ if view_mode == "District View":
         else:
             sorted_df = filtered.sort_values(by=metric_col, ascending=(sort_option == "Lowest to Highest"))
             sorted_df['Highlight'] = 'Others'
-            if len(sorted_df) > 10:
-                sorted_df.loc[sorted_df.nlargest(5, metric_col).index, 'Highlight'] = 'Top 5'
-                sorted_df.loc[sorted_df.nsmallest(5, metric_col).index, 'Highlight'] = 'Bottom 5'
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
+            # --- IMPROVED BAR CHART COLORS ---
+            color_scale = 'Teal' if metric_col != 'Uptime %' else 'Blues'
+            
             fig = px.bar(
                 sorted_df, 
                 y=facility_col, 
                 x=metric_col, 
                 orientation='h', 
-                color='Highlight', 
-                color_discrete_map={'Top 5': '#14B8A6', 'Bottom 5': '#F43F5E', 'Others': '#CBD5E1'}, 
+                color=metric_col, 
+                color_continuous_scale=color_scale,
                 text=text_labels, 
                 category_orders={facility_col: sorted_df[facility_col].tolist()},
                 title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
@@ -790,7 +809,14 @@ if view_mode == "District View":
                 current_avg = round(filtered['Uptime %'].mean(), 1)
                 avg_label = f"Avg Uptime: {current_avg}%"
                 
-            fig.add_vline(x=current_avg, line_dash="dash", line_color="#06B6D4", line_width=2, annotation_text=avg_label, annotation_position="bottom right", annotation_font_color="#06B6D4", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#06B6D4", annotation_borderwidth=1, annotation_borderpad=4)
+            # --- FIXED FLOATING AVERAGE LINE ---
+            fig.add_vline(x=current_avg, line_dash="dash", line_color="#06B6D4", line_width=2)
+            fig.add_annotation(
+                x=current_avg, y=1.05, yref="paper", 
+                text=avg_label, showarrow=False, 
+                font=dict(color="#06B6D4", weight="bold", size=12),
+                bgcolor="rgba(255,255,255,0.9)", bordercolor="#06B6D4", borderwidth=1, borderpad=4
+            )
             
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
@@ -800,7 +826,8 @@ if view_mode == "District View":
                 showlegend=False,
                 xaxis_title=metric_option,
                 yaxis_title="",
-                margin=dict(l=40, r=80, t=80, b=10)
+                margin=dict(l=40, r=80, t=90, b=10), # Increased top margin for annotation
+                coloraxis_showscale=False # Hide the colorbar as X-axis shows the value
             ))
             fig.update_layout(**layout_dict)
             
@@ -810,10 +837,18 @@ if view_mode == "District View":
             st.markdown("<hr style='margin: 20px 0 16px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
             st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>🔍 Facility Drill-Down</h4>", unsafe_allow_html=True)
             
-            drill_options = ["-- Select a facility --"] + sorted_df[facility_col].tolist()
-            selected_drill_facility = st.selectbox("Facility", drill_options, label_visibility="collapsed")
+            # --- AUTO-SELECT BEST FACILITY ---
+            default_facility = sorted_df.iloc[0][facility_col] if not sorted_df.empty else None
+            drill_options = sorted_df[facility_col].tolist()
             
-            if selected_drill_facility != "-- Select a facility --":
+            selected_drill_facility = st.selectbox(
+                "Facility", 
+                drill_options, 
+                index=0 if drill_options else None, 
+                label_visibility="collapsed"
+            )
+            
+            if selected_drill_facility:
                 fac_row = plot_df[plot_df[facility_col] == selected_drill_facility].iloc[0]
                 
                 m1, m2, m3 = st.columns(3)
