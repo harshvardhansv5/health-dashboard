@@ -81,6 +81,7 @@ st.markdown("""
     .page-icon-active { background-color: #14B8A6; box-shadow: 0 4px 10px rgba(20, 184, 166, 0.3); }
     .page-icon-warning { background-color: #F59E0B; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3); }
     .page-icon-state { background-color: #3B82F6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+    .page-icon-zm { background-color: #8B5CF6; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
     .page-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; }
     .page-title-text { font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.2; }
     .page-subtitle-text { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 2px; }
@@ -645,7 +646,7 @@ with col_title:
     """, unsafe_allow_html=True)
 
 with col_nav:
-    view_mode = st.radio("Navigation", ["District View", "State View", "Active Spokes", "Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
+    view_mode = st.radio("Navigation", ["District View", "State View", "ZM View", "Active Spokes", "Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 with col_time_ctrl:
     st.markdown(f"""
@@ -1318,6 +1319,91 @@ elif view_mode == "State View":
                     st.plotly_chart(fig_c, use_container_width=True)
     else:
         st.warning("No district data available for the selected time range.")
+
+# ==============================================================================
+# VIEW: ZM VIEW
+# ==============================================================================
+elif view_mode == "ZM View":
+    st.markdown("""
+    <div class="page-header-container">
+        <div class="page-icon-container page-icon-zm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+        </div>
+        <div>
+            <div class="page-title-text">Zone Manager View</div>
+            <div class="page-subtitle-text">Drill down into specific Zonal performance</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    selected_zm = st.selectbox("Select Zone Manager", sorted(ZM_DATA.keys()))
+    
+    with st.spinner(f"Loading data for {selected_zm}..."):
+        state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+        
+    if not state_df.empty:
+        # Filter the state_df for just this ZM's districts
+        zm_districts = list(ZM_DATA[selected_zm].keys())
+        zm_df = state_df[state_df['District'].isin(zm_districts)].copy()
+        
+        if zm_df.empty:
+            st.warning(f"No data available for {selected_zm}'s districts in the selected time range.")
+        else:
+            total_patients = zm_df['Total Patients'].sum()
+            total_active = zm_df['Active Spokes'].sum()
+            total_facilities = zm_df['Facilities'].sum()
+            avg_uptime = round(zm_df['Uptime %'].mean(), 1)
+            
+            st.markdown(f'''
+            <div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="metric-card">
+                    <div class="metric-label">Total Districts</div>
+                    <div class="metric-value">{len(zm_df)}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Total Patients</div>
+                    <div class="metric-value">{total_patients:,}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Active Spokes</div>
+                    <div class="metric-value">{total_active} <span class="metric-sub">/ {total_facilities} Total</span></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Avg Zone Uptime</div>
+                    <div class="metric-value">{avg_uptime}%</div>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+            
+            st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:10px;'>District Breakdown</h4>", unsafe_allow_html=True)
+            
+            display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
+            display_df = zm_df[display_cols].sort_values('Total Patients', ascending=False).reset_index(drop=True)
+            
+            st.dataframe(
+                display_df, 
+                use_container_width=True, 
+                hide_index=True, 
+                column_config={
+                    "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100),
+                    "Total Patients": st.column_config.NumberColumn(format="%d"),
+                    "Weighted Avg": st.column_config.NumberColumn(format="%.1f")
+                }
+            )
+            
+            st.markdown(f"<h4 style='color:#0F172A; margin-top:24px; margin-bottom:10px;'>District Comparison</h4>", unsafe_allow_html=True)
+            
+            fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients')
+            fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside', marker_line_color='#0F172A', marker_line_width=1)
+            
+            zm_layout = PLOTLY_LAYOUT.copy()
+            zm_layout.update(dict(
+                height=400,
+                xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")),
+                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients")
+            ))
+            fig_zm.update_layout(**zm_layout)
+            st.plotly_chart(fig_zm, use_container_width=True)
 
 # ==============================================================================
 # VIEW: ACTIVE SPOKES
