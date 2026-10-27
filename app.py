@@ -703,7 +703,19 @@ if view_mode == "District View":
     if plot_df is None: st.error(f"Could not process data."); st.stop()
     facility_col = stats['facility_col']
 
-    d_tab1, d_tab2, d_tab3, d_tab4, d_tab5, d_tab6, d_tab7 = st.tabs(["Dashboard", "Report Card", "🟢 Active Spokes", "🔴 Inactive Spokes", "Trends & Analytics", "🩺 Diagnosis", "📍 Hub Logistics"])
+    # --- ADDED TAB COUNTS ---
+    total_active = stats['active_facilities']
+    total_inactive = stats['num_facilities'] - total_active
+
+    d_tab1, d_tab2, d_tab3, d_tab4, d_tab5, d_tab6, d_tab7 = st.tabs([
+        "Dashboard", 
+        "Report Card", 
+        f"🟢 Active Spokes ({total_active})", 
+        f"🔴 Inactive Spokes ({total_inactive})", 
+        "Trends & Analytics", 
+        "🩺 Diagnosis", 
+        "📍 Hub Logistics"
+    ])
 
     with d_tab1:
         best_idx = plot_df['Average Patients'].idxmax()
