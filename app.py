@@ -1338,13 +1338,15 @@ elif view_mode == "ZM View":
     """, unsafe_allow_html=True)
     
     selected_zm = st.selectbox("Select Zone Manager", sorted(ZM_DATA.keys()))
+    zm_districts = list(ZM_DATA[selected_zm].keys())
     
     with st.spinner(f"Loading data for {selected_zm}..."):
         state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
-    if not state_df.empty:
-        zm_districts = list(ZM_DATA[selected_zm].keys())
+    if not state_df.empty and not all_fac_df.empty:
         zm_df = state_df[state_df['District'].isin(zm_districts)].copy()
+        zm_fac_df = all_fac_df[all_fac_df['District'].isin(zm_districts)].copy()
         
         if zm_df.empty:
             st.warning(f"No data available for {selected_zm}'s districts in the selected time range.")
@@ -1388,35 +1390,94 @@ elif view_mode == "ZM View":
             </div>
             ''', unsafe_allow_html=True)
             
-            st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:10px;'>District Breakdown</h4>", unsafe_allow_html=True)
+            zm_tab1, zm_tab2, zm_tab3 = st.tabs(["📊 Zone Summary", f"🟢 Active Spokes ({total_active})", f"🔴 Inactive Spokes ({total_facilities - total_active})"])
             
-            display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
-            display_df = zm_df[display_cols].sort_values('Total Patients', ascending=False).reset_index(drop=True)
-            
-            st.dataframe(
-                display_df, 
-                use_container_width=True, 
-                hide_index=True, 
-                column_config={
-                    "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100),
-                    "Total Patients": st.column_config.NumberColumn(format="%d"),
-                    "Weighted Avg": st.column_config.NumberColumn(format="%.1f")
-                }
-            )
-            
-            st.markdown(f"<h4 style='color:#0F172A; margin-top:24px; margin-bottom:10px;'>District Comparison</h4>", unsafe_allow_html=True)
-            
-            fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients')
-            fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside', marker_line_color='#0F172A', marker_line_width=1)
-            
-            zm_layout = PLOTLY_LAYOUT.copy()
-            zm_layout.update(dict(
-                height=400,
-                xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")),
-                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients")
-            ))
-            fig_zm.update_layout(**zm_layout)
-            st.plotly_chart(fig_zm, use_container_width=True)
+            with zm_tab1:
+                st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:10px;'>District Breakdown</h4>", unsafe_allow_html=True)
+                
+                display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
+                display_df = zm_df[display_cols].sort_values('Total Patients', ascending=False).reset_index(drop=True)
+                
+                st.dataframe(
+                    display_df, 
+                    use_container_width=True, 
+                    hide_index=True, 
+                    column_config={
+                        "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100),
+                        "Total Patients": st.column_config.NumberColumn(format="%d"),
+                        "Weighted Avg": st.column_config.NumberColumn(format="%.1f")
+                    }
+                )
+                
+                st.markdown(f"<h4 style='color:#0F172A; margin-top:24px; margin-bottom:10px;'>District Comparison</h4>", unsafe_allow_html=True)
+                
+                fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients')
+                fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside', marker_line_color='#0F172A', marker_line_width=1)
+                
+                zm_layout = PLOTLY_LAYOUT.copy()
+                zm_layout.update(dict(
+                    height=400,
+                    xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")),
+                    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients")
+                ))
+                fig_zm.update_layout(**zm_layout)
+                st.plotly_chart(fig_zm, use_container_width=True)
+
+            with zm_tab2:
+                active_zm = zm_fac_df[zm_fac_df['Total Patients'] > 0].copy()
+                if active_zm.empty:
+                    st.info("No active spokes in this zone for the selected time range.")
+                else:
+                    active_zm = active_zm.sort_values(by=['Uptime %', 'Total Patients'], ascending=[False, False]).reset_index(drop=True)
+                    active_zm.insert(0, 'S.No.', [str(i) for i in range(1, len(active_zm) + 1)])
+                    
+                    def style_grade(val):
+                        if val in ['A', 'B']: return 'background-color: #CCFBF1; color: #0F766E; font-weight: bold;'
+                        elif val in ['C', 'D']: return 'background-color: #FEF08A; color: #854D0E; font-weight: bold;'
+                        elif val == 'F': return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
+                        return ''
+                        
+                    dynamic_total_label = f"Total Patients ({time_filter})"
+                    if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
+                    
+                    display_active = active_zm[['S.No.', 'District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
+                    display_active = display_active.rename(columns={'Total Patients': dynamic_total_label})
+                    styled_active = display_active.style.map(style_grade, subset=['Grade'])
+                    
+                    st.dataframe(
+                        styled_active, use_container_width=True, hide_index=True,
+                        column_config={
+                            "S.No.": st.column_config.TextColumn("S.No.", width="small"),
+                            "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
+                            "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
+                            "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                            dynamic_total_label: st.column_config.NumberColumn(dynamic_total_label, format="%d")
+                        }
+                    )
+
+            with zm_tab3:
+                inactive_zm = zm_fac_df[zm_fac_df['Total Patients'] == 0].copy()
+                if inactive_zm.empty:
+                    st.success("✅ No inactive spokes in this zone! All facilities are reporting.")
+                else:
+                    inactive_zm = inactive_zm.sort_values(by=['Status', 'District', 'Facility']).reset_index(drop=True)
+                    inactive_zm.insert(0, 'S.No.', [str(i) for i in range(1, len(inactive_zm) + 1)])
+                    inactive_zm['Primary Reason'] = inactive_zm['Primary Reason'].apply(format_reason)
+                    
+                    styled_inactive = inactive_zm.style.map(style_reason, subset=['Primary Reason'])
+                    
+                    st.dataframe(
+                        styled_inactive, use_container_width=True, hide_index=True,
+                        column_config={
+                            "S.No.": st.column_config.TextColumn("S.No.", width="small"),
+                            "District": st.column_config.TextColumn("District", width="medium"),
+                            "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                            "Status": st.column_config.TextColumn("Status", width="small"),
+                            "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                            "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                        }
+                    )
+                    st.info("💡 Tip: 'Pending Launch' means the facility infrastructure isn't ready. 'Operational' means the facility exists but failed to report patients.")
 
 # ==============================================================================
 # VIEW: ACTIVE SPOKES
