@@ -82,7 +82,7 @@ st.markdown("""
     .page-icon-active { background-color: #14B8A6; box-shadow: 0 4px 10px rgba(20, 184, 166, 0.3); }
     .page-icon-warning { background-color: #DC2626; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); }
     .page-icon-state { background-color: #3B82F6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
-    .page-icon-zm { background-color: #8B5CF6; box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3); }
+    .page-icon-zm { background-color: #4F46E5; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); } /* Deep Indigo for ZM */
     .page-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; }
     .page-title-text { font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.2; }
     .page-subtitle-text { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 2px; }
@@ -1446,7 +1446,7 @@ elif view_mode == "ZM View":
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container page-icon-zm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
         </div>
         <div>
             <div class="page-title-text">Zone Manager View</div>
