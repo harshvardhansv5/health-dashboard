@@ -183,6 +183,25 @@ st.markdown("""
     /* Date Picker */
     div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; box-shadow: 0 0 0 1px #06B6D4 !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
+
+    /* Custom Refresh Button */
+    div[data-testid="stButton"] > button {
+        background-color: #F8FAFC !important;
+        border: 1px solid #E2E8F0 !important;
+        color: #0F172A !important;
+        border-radius: 8px !important;
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        padding: 0px 12px !important;
+        height: 40px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+        transition: all 0.2s !important;
+    }
+    div[data-testid="stButton"] > button:hover {
+        border-color: #06B6D4 !important;
+        color: #06B6D4 !important;
+        background-color: #FFFFFF !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -745,14 +764,15 @@ for s in xls.sheet_names:
 
 # --- GLOBAL LATEST DATE FOR FRESHNESS ---
 global_latest = find_global_latest_date_cached(tuple(available_sheets), file_bytes)
-freshness_text = f"Synced: {global_latest.strftime('%d %b %Y')}" if global_latest else "Live"
-freshness_color = "#14B8A6" if global_latest == pd.Timestamp.now().date() else "#F59E0B"
+is_live = (global_latest == pd.Timestamp.now().date()) if global_latest else False
+live_color = "#14B8A6" if is_live else "#F59E0B"
+live_text = "Live" if is_live else "Delayed"
 
 # --- UNIFIED COMMAND BAR ---
 col_title, col_nav, col_time_ctrl = st.columns([2.2, 5.0, 1.8])
 
 with col_title:
-    st.markdown("""
+    st.markdown(f"""
     <div class="app-header">
         <div class="header-left">
             <div class="header-icon">
@@ -765,6 +785,10 @@ with col_title:
             <div>
                 <div class="header-title">Bihar Health Dashboard</div>
                 <div class="header-subtitle">Statewide Operations & Pathology</div>
+                <div style="display: flex; align-items: center; gap: 6px; margin-top: 4px;">
+                    <div class="status-dot" style="background-color: {live_color};"></div>
+                    <span style="font-size: 10px; font-weight: 700; color: {live_color}; text-transform: uppercase; letter-spacing: 0.5px;">{live_text}</span>
+                </div>
             </div>
         </div>
     </div>
@@ -774,14 +798,6 @@ with col_nav:
     view_mode = st.radio("Navigation", ["District View", "State View", "ZM View", "Active Spokes", "Zero-Sample Tracker"], horizontal=True, label_visibility="collapsed")
 
 with col_time_ctrl:
-    st.markdown(f"""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
-        <div style="font-size: 10px; font-weight: 700; color: #64748B; letter-spacing: 0.5px;">TIME RANGE</div>
-        <div style="font-size: 10px; font-weight: 700; color: {freshness_color}; display: flex; align-items: center; gap: 3px;">
-            <div class="status-dot" style="background-color:{freshness_color};"></div> {freshness_text}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
     time_filter = st.selectbox("Time Range", ["Full History", "Past Week", "Past 2 Weeks", "Past Month", "Select Dates..."], label_visibility="collapsed")
     start_date, end_date = None, None
     if time_filter == "Select Dates...":
@@ -790,6 +806,12 @@ with col_time_ctrl:
         date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
     else:
         date_range_str = time_filter
+
+# Manual Refresh Button placed below the selectbox
+if st.button("🔄 Refresh Data", help="Force sync with Google Sheets and clear cache."):
+    st.cache_data.clear()
+    st.cache_resource.clear()
+    st.rerun()
 
 PLOTLY_LAYOUT = dict(
     template="plotly_white", 
@@ -2062,20 +2084,4 @@ with st.expander("ℹ️ Metric Definitions & Grading System"):
     
     grade_data = pd.DataFrame({
         "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
-        "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
-        "Avg Patients Requirement": ["> 10", "> 5", "> 2", "> 1", "0"]
-    })
-    
-    st.dataframe(
-        grade_data, hide_index=True, use_container_width=True,
-        column_config={
-            "Grade": st.column_config.TextColumn("Grade", width="medium"),
-            "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
-            "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
-        }
-    )
-    
-    st.info("""
-    **Grading Example:**
-    If a facility reports every single day (100% Uptime) but only sees **1 patient per day** (Avg 1.0), they get a **D**. They do not get an A, because their patient volume is too low.
-    """)
+        "U
