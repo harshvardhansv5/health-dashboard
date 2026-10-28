@@ -7,6 +7,7 @@ import io
 import math
 import requests
 import unicodedata
+from functools import lru_cache
 
 # --- CONSTANTS ---
 TOTAL_SPOKES = 701 
@@ -253,7 +254,7 @@ def calc_trend(current, previous, is_percent=False):
     return f'<span class="{cls}">{icon} {val_str}</span>'
 
 # --- CACHED GOOGLE SHEETS FETCHER ---
-@st.cache_data(ttl=900, show_spinner="Fetching live data from Google Sheets...")
+@st.cache_data(ttl=900, show_spinner="Downloading raw data...")
 def fetch_google_sheet(url):
     try:
         response = requests.get(url)
@@ -263,9 +264,14 @@ def fetch_google_sheet(url):
         st.error(f"Failed to connect to Google Sheets: {e}")
         return None
 
+@st.cache_resource(show_spinner="Parsing Excel file...")
+def get_excel_engine(file_bytes):
+    return pd.ExcelFile(io.BytesIO(file_bytes))
+
 # --- DATA PROCESSING HELPERS ---
-def read_sheet_robust(xls, sheet_name):
+def read_sheet_robust(file_bytes, sheet_name):
     try:
+        xls = get_excel_engine(file_bytes)
         df_raw = pd.read_excel(xls, sheet_name=sheet_name, header=None)
         header_idx = next((i for i in range(min(15, len(df_raw))) for cell in df_raw.iloc[i] if 'name of the hospital' in str(cell).lower()), None)
         df = pd.read_excel(xls, sheet_name=sheet_name, header=header_idx) if header_idx is not None else pd.read_excel(xls, sheet_name=sheet_name)
@@ -296,40 +302,39 @@ def find_distance_column(df):
             return c
     return None
 
-def extract_date(col_name):
+@lru_cache(maxsize=1000)
+def extract_date(col_name_str):
     dt = pd.NaT
+    s = str(col_name_str).lower()
     
-    if isinstance(col_name, pd.Timestamp): 
-        dt = col_name
-    else:
-        s = str(col_name).lower()
-        s = s.replace('\xa0', ' ').replace('\u200b', '').replace('\u200e', '')
-        s = s.replace('<br>', ' ').replace('<br/>', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
-        s = re.sub(r'total number of patients( on)?', '', s)
-        s = re.sub(r'\(.*?\)', '', s) 
+    s = s.replace('\xa0', ' ').replace('\u200b', '').replace('\u200e', '')
+    s = s.replace('<br>', ' ').replace('<br/>', ' ').replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
+    s = re.sub(r'total number of patients( on)?', '', s)
+    s = re.sub(r'\(.*?\)', '', s) 
+    
+    s = s.replace('∕', '/').replace('⁄', '/')
+    s = s.replace('‐', '-').replace('–', '-').replace('—', '-')
+    
+    s = re.sub(r'\s*([-/.∕⁄‐–—])\s*', r'\1', s)
+    s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
+    s = s.strip()
+    
+    if not re.search(r'\d{4}', s):
+        if re.search(r'\b\d{1,2}[-/\.\s][a-z]{3}\b', s) or re.search(r'\b\d{1,2}[-/\.\s]\d{1,2}\b', s):
+            s = s + " " + str(pd.Timestamp.today().year)
+    
+    match = re.search(r'(\d{4}[-/\.\s]\d{1,2}[-/\.\s]\d{1,2})|(\d{1,2}[-/\.\s]\d{1,2}[-/\.\s]\d{2,4})|(\d{1,2}[-/\.\s][a-z]{3}[-/\.\s]\d{2,4})', s)
+    if match:
+        raw_date = match.group(0)
+        if re.match(r'^\d{4}/\d{4}$', raw_date):
+            raw_date = raw_date[:2] + '/' + raw_date[2:]
         
-        s = s.replace('∕', '/').replace('⁄', '/')
-        s = s.replace('‐', '-').replace('–', '-').replace('—', '-')
-        
-        s = re.sub(r'\s*([-/.∕⁄‐–—])\s*', r'\1', s)
-        s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
-        s = s.strip()
-        
-        if not re.search(r'\d{4}', s):
-            if re.search(r'\b\d{1,2}[-/\.\s][a-z]{3}\b', s) or re.search(r'\b\d{1,2}[-/\.\s]\d{1,2}\b', s):
-                s = s + " " + str(pd.Timestamp.today().year)
-        
-        match = re.search(r'(\d{4}[-/\.\s]\d{1,2}[-/\.\s]\d{1,2})|(\d{1,2}[-/\.\s]\d{1,2}[-/\.\s]\d{2,4})|(\d{1,2}[-/\.\s][a-z]{3}[-/\.\s]\d{2,4})', s)
-        if match:
-            raw_date = match.group(0)
-            if re.match(r'^\d{4}/\d{4}$', raw_date):
-                raw_date = raw_date[:2] + '/' + raw_date[2:]
+        try:
+            dt = pd.to_datetime(raw_date, dayfirst=True, errors='coerce')
+        except:
+            pass
             
-            try:
-                dt = pd.to_datetime(raw_date, dayfirst=True, errors='coerce')
-            except:
-                pass
-                
+    # FUTURE DATE GUARD
     if pd.notna(dt) and dt > pd.Timestamp.today().normalize():
         return pd.NaT
         
@@ -338,7 +343,7 @@ def extract_date(col_name):
 def find_date_columns(df):
     date_cols = []
     for c in df.columns:
-        if pd.notna(extract_date(c)):
+        if pd.notna(extract_date(str(c))):
             date_cols.append(c)
     return date_cols
 
@@ -375,7 +380,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, anchor_
             'total_absolute_facilities': total_absolute_facilities
         }
 
-    paired = [(c, extract_date(c)) for c in date_cols]
+    paired = [(c, extract_date(str(c))) for c in date_cols]
     paired = [(c, d) for c, d in paired if pd.notna(d)]
     
     date_map = {}
@@ -499,19 +504,19 @@ def district_grade(plot_df):
 
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
-def find_global_latest_date(sheet_names_tuple, file_bytes):
-    xls = pd.ExcelFile(io.BytesIO(file_bytes))
+@st.cache_data(show_spinner=False)
+def find_global_latest_date_cached(sheet_names_tuple, file_bytes):
     latest_dates = []
     for sheet in sheet_names_tuple:
         try:
-            df = read_sheet_robust(xls, sheet)
+            df = read_sheet_robust(file_bytes, sheet)
             fac_col = find_facility_column(df)
             if not fac_col: continue
             df = df[get_facility_mask(df, fac_col)]
             date_cols = find_date_columns(df)
             if not date_cols: continue
             
-            paired = [(c, extract_date(c)) for c in date_cols]
+            paired = [(c, extract_date(str(c))) for c in date_cols]
             paired = [(c, d) for c, d in paired if pd.notna(d)]
             paired.sort(key=lambda x: x[1])
             sorted_dates = [d for c, d in paired]
@@ -526,52 +531,16 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
             pass
     return min(latest_dates) if latest_dates else None
 
-# --- TREND & COMPARISON HELPERS ---
-def get_previous_period_stats(df_raw, facility_col, time_filter, start_date, end_date):
-    date_cols = find_date_columns(df_raw)
-    if not date_cols: return 0, 0.0
-    
-    paired = [(c, extract_date(c)) for c in date_cols]
-    paired = [(c, d) for c, d in paired if pd.notna(d)]
-    paired.sort(key=lambda x: x[1])
-    sorted_dates = [d for c, d in paired]
-    
-    if time_filter == "Select Dates..." and start_date and end_date:
-        days_diff = (end_date - start_date).days
-        prev_end = start_date - timedelta(days=1)
-        prev_start = prev_end - timedelta(days=days_diff)
-        prev_dates = [d for d in sorted_dates if prev_start <= d.date() <= prev_end]
-    else:
-        if time_filter == "Past Week": prev_dates = sorted_dates[-14:-7]
-        elif time_filter == "Past 2 Weeks": prev_dates = sorted_dates[-30:-15]
-        elif time_filter == "Past Month": prev_dates = sorted_dates[-60:-30]
-        else: prev_dates = [] 
-        
-    if not prev_dates: return 0, 0.0
-    
-    clean_df = df_raw[[facility_col] + [c for c, d in paired if d in prev_dates]].copy()
-    total = 0
-    for d in prev_dates:
-        cols = [c for c, dv in paired if dv == d]
-        for c in cols:
-            total += pd.to_numeric(clean_df[c], errors='coerce').fillna(0).sum()
-            
-    num_facs = len(clean_df[get_facility_mask(clean_df, facility_col)])
-    avg = round(total / (num_facs * len(prev_dates)), 1) if num_facs > 0 and len(prev_dates) > 0 else 0
-    return total, avg
-
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.5"):
-    xls = pd.ExcelFile(io.BytesIO(file_bytes))
-    
+def calculate_all_districts_cached(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v32"):
     anchor_date = None
     if time_filter == "Full History":
-        anchor_date = find_global_latest_date(sheet_names_tuple, file_bytes)
+        anchor_date = find_global_latest_date_cached(sheet_names_tuple, file_bytes)
         
     data = []
     for sheet in sheet_names_tuple:
         try:
-            sdf = read_sheet_robust(xls, sheet)
+            sdf = read_sheet_robust(file_bytes, sheet)
             _, _, s = process_district_df(sdf, time_filter, start_date, end_date, anchor_date=anchor_date)
             if s:
                 display_name = REVERSE_DISTRICT_MAP.get(sheet, sheet)
@@ -588,13 +557,12 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data), anchor_date
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.5"):
-    xls = pd.ExcelFile(io.BytesIO(file_bytes))
+def get_all_facility_data_cached(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v32"):
     all_data = []
     
     for sheet in sheet_names_tuple:
         try:
-            sdf = read_sheet_robust(xls, sheet)
+            sdf = read_sheet_robust(file_bytes, sheet)
             fac_col_raw = find_facility_column(sdf)
             if not fac_col_raw: continue
             
@@ -641,7 +609,7 @@ def get_district_monthly_trend(df_raw, facility_col):
     date_cols = find_date_columns(df_filtered)
     
     for c in date_cols:
-        dt = extract_date(c)
+        dt = extract_date(str(c))
         if pd.isna(dt): continue
         
         month_key = dt.strftime('%b %Y')
@@ -657,40 +625,93 @@ def get_district_monthly_trend(df_raw, facility_col):
     trend_df = trend_df.dropna(subset=['Sort_Date']).sort_values('Sort_Date')
     return trend_df
 
-def check_data_quality(df_raw, facility_col):
-    issues = []
-    date_cols = find_date_columns(df_raw)
-    if not date_cols: return issues
+@st.cache_data(show_spinner=False)
+def calculate_zm_trend_cached(zm_districts_tuple, file_bytes, time_filter, start_date, end_date):
+    prev_patients = 0
+    prev_avg = 0.0
+    count = 0
     
-    paired = [(c, extract_date(c)) for c in date_cols]
-    paired = [(c, d) for c, d in paired if pd.notna(d)]
-    paired.sort(key=lambda x: x[1])
-    sorted_dates = [d for c, d in paired]
-    
-    for _, row in df_raw[get_facility_mask(df_raw, facility_col)].iterrows():
-        fac_name = row[facility_col]
-        nums = []
-        for c, d in paired:
-            val = pd.to_numeric(row[c], errors='coerce')
-            if pd.notna(val):
-                nums.append(val)
-                
-        if not nums: continue
-        
-        if max(nums) > 200:
-            issues.append({"Facility": fac_name, "District": "Unknown", "Issue": f"Suspicious High Count: {max(nums)} in one day", "Severity": "High"})
-            
-        if len(nums) >= 7:
-            consecutive = 1
-            for i in range(1, len(nums)):
-                if nums[i] == nums[i-1] and nums[i] > 0:
-                    consecutive += 1
-                    if consecutive >= 7:
-                        issues.append({"Facility": fac_name, "District": "Unknown", "Issue": f"Flatline: Exactly {nums[i]} reported for 7+ days", "Severity": "Medium"})
-                        break
-                else:
-                    consecutive = 1
+    for d in zm_districts_tuple:
+        target_sheet = DISTRICT_MAP.get(d, d)
+        sheet_match = next((s for s in available_sheets if s == target_sheet or target_sheet.lower() in s.lower()), None)
+        if sheet_match:
+            sdf = read_sheet_robust(file_bytes, sheet_match)
+            fac_col = find_facility_column(sdf)
+            if fac_col:
+                # Re-implementing the prev stats logic here to cache it
+                date_cols = find_date_columns(sdf)
+                if date_cols:
+                    paired = [(c, extract_date(str(c))) for c in date_cols]
+                    paired = [(c, d) for c, d in paired if pd.notna(d)]
+                    paired.sort(key=lambda x: x[1])
+                    sorted_dates = [d for c, d in paired]
+                    
+                    if time_filter == "Select Dates..." and start_date and end_date:
+                        days_diff = (end_date - start_date).days
+                        prev_end = start_date - timedelta(days=1)
+                        prev_start = prev_end - timedelta(days=days_diff)
+                        prev_dates = [d for d in sorted_dates if prev_start <= d.date() <= prev_end]
+                    else:
+                        if time_filter == "Past Week": prev_dates = sorted_dates[-14:-7]
+                        elif time_filter == "Past 2 Weeks": prev_dates = sorted_dates[-30:-15]
+                        elif time_filter == "Past Month": prev_dates = sorted_dates[-60:-30]
+                        else: prev_dates = [] 
+                        
+                    if prev_dates:
+                        clean_df = sdf[[fac_col] + [c for c, dt in paired if dt in prev_dates]].copy()
+                        total = 0
+                        for dt in prev_dates:
+                            cols = [c for c, dv in paired if dv == dt]
+                            for c in cols:
+                                total += pd.to_numeric(clean_df[c], errors='coerce').fillna(0).sum()
+                                
+                        num_facs = len(clean_df[get_facility_mask(clean_df, fac_col)])
+                        avg = round(total / (num_facs * len(prev_dates)), 1) if num_facs > 0 and len(prev_dates) > 0 else 0
+                        prev_patients += total
+                        prev_avg += avg
+                        count += 1
+                        
+    if count > 0: prev_avg = prev_avg / count
+    return prev_patients, prev_avg
 
+@st.cache_data(show_spinner=False)
+def check_data_quality_cached(sheet_names_tuple, file_bytes):
+    issues = []
+    for sheet in sheet_names_tuple:
+        sdf = read_sheet_robust(file_bytes, sheet)
+        fac_col = find_facility_column(sdf)
+        if not fac_col: continue
+        
+        date_cols = find_date_columns(sdf)
+        if not date_cols: continue
+        
+        paired = [(c, extract_date(str(c))) for c in date_cols]
+        paired = [(c, d) for c, d in paired if pd.notna(d)]
+        paired.sort(key=lambda x: x[1])
+        
+        for _, row in sdf[get_facility_mask(sdf, fac_col)].iterrows():
+            fac_name = row[fac_col]
+            nums = []
+            for c, d in paired:
+                val = pd.to_numeric(row[c], errors='coerce')
+                if pd.notna(val):
+                    nums.append(val)
+                    
+            if not nums: continue
+            
+            if max(nums) > 200:
+                issues.append({"Facility": fac_name, "District": REVERSE_DISTRICT_MAP.get(sheet, sheet), "Issue": f"Suspicious High Count: {max(nums)} in one day", "Severity": "High"})
+                
+            if len(nums) >= 7:
+                consecutive = 1
+                for i in range(1, len(nums)):
+                    if nums[i] == nums[i-1] and nums[i] > 0:
+                        consecutive += 1
+                        if consecutive >= 7:
+                            issues.append({"Facility": fac_name, "District": REVERSE_DISTRICT_MAP.get(sheet, sheet), "Issue": f"Flatline: Exactly {nums[i]} reported for 7+ days", "Severity": "Medium"})
+                            break
+                    else:
+                        consecutive = 1
     return issues
 
 # --- MAIN AREA ---
@@ -714,7 +735,7 @@ if file_bytes is None:
     """, unsafe_allow_html=True)
     st.stop()
 
-xls = pd.ExcelFile(io.BytesIO(file_bytes))
+xls = get_excel_engine(file_bytes)
 valid_keywords = set(DISTRICT_TO_ZM.keys()).union(set(DISTRICT_MAP.values())).union(set(DISTRICT_MAP.keys()))
 available_sheets = []
 for s in xls.sheet_names:
@@ -723,9 +744,9 @@ for s in xls.sheet_names:
         available_sheets.append(s)
 
 # --- GLOBAL LATEST DATE FOR FRESHNESS ---
-global_latest = find_global_latest_date(tuple(available_sheets), file_bytes)
+global_latest = find_global_latest_date_cached(tuple(available_sheets), file_bytes)
 freshness_text = f"Synced: {global_latest.strftime('%d %b %Y')}" if global_latest else "Live"
-freshness_color = "#14B8A6" if global_latest == pd.Timestamp.now().date() else "#F59E0B" # Amber if not today
+freshness_color = "#14B8A6" if global_latest == pd.Timestamp.now().date() else "#F59E0B"
 
 # --- UNIFIED COMMAND BAR ---
 col_title, col_nav, col_time_ctrl = st.columns([2.2, 5.0, 1.8])
@@ -816,7 +837,7 @@ if view_mode == "District View":
     if not sheet_found:
         st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**"); st.stop()
         
-    df_raw = read_sheet_robust(xls, sheet_to_load)
+    df_raw = read_sheet_robust(file_bytes, sheet_to_load)
     plot_df, _, stats = process_district_df(df_raw, time_filter, start_date, end_date)
     if plot_df is None: st.error(f"Could not process data."); st.stop()
     facility_col = stats['facility_col']
@@ -1385,7 +1406,7 @@ elif view_mode == "State View":
     """, unsafe_allow_html=True)
     
     with st.spinner("Loading State Data..."):
-        state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+        state_df, anchor_date = calculate_all_districts_cached(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not state_df.empty:
         total_active = state_df['Active Spokes'].sum()
@@ -1510,7 +1531,7 @@ elif view_mode == "State View":
             with cb: district_b = st.selectbox("District B", sorted(available_sheets), index=min(1, len(sorted(available_sheets)) - 1), key='cmp_b')
             
             if district_a and district_b:
-                df_a = read_sheet_robust(xls, district_a); df_b = read_sheet_robust(xls, district_b)
+                df_a = read_sheet_robust(file_bytes, district_a); df_b = read_sheet_robust(file_bytes, district_b)
                 pa, ra, sa = process_district_df(df_a, time_filter, start_date, end_date, anchor_date=anchor_date)
                 pb, rb, sb = process_district_df(df_b, time_filter, start_date, end_date, anchor_date=anchor_date)
                 
@@ -1585,15 +1606,7 @@ elif view_mode == "State View":
             st.markdown("Scans all 701 facilities for suspicious data entry patterns that could break the dashboard.")
             
             with st.spinner("Scanning for anomalies..."):
-                dq_issues = []
-                for sheet in available_sheets:
-                    sdf = read_sheet_robust(xls, sheet)
-                    fac_col = find_facility_column(sdf)
-                    if fac_col:
-                        issues = check_data_quality(sdf, fac_col)
-                        for i in issues:
-                            i['District'] = REVERSE_DISTRICT_MAP.get(sheet, sheet)
-                            dq_issues.append(i)
+                dq_issues = check_data_quality_cached(tuple(available_sheets), file_bytes)
                             
                 if dq_issues:
                     dq_df = pd.DataFrame(dq_issues)
@@ -1624,8 +1637,8 @@ elif view_mode == "ZM View":
     zm_districts = list(ZM_DATA[selected_zm].keys())
     
     with st.spinner(f"Loading data for {selected_zm}..."):
-        state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
-        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+        state_df, anchor_date = calculate_all_districts_cached(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+        all_fac_df = get_all_facility_data_cached(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not state_df.empty and not all_fac_df.empty:
         zm_df = state_df[state_df['District'].isin(zm_districts)].copy()
@@ -1657,19 +1670,7 @@ elif view_mode == "ZM View":
                 breakdown_text += f" & {sub_count} Sub-districts"
             
             # TREND CALCULATION
-            prev_patients, prev_avg = 0, 0.0
-            for d in zm_districts:
-                target_sheet = DISTRICT_MAP.get(d, d)
-                sheet_match = next((s for s in available_sheets if s == target_sheet or target_sheet.lower() in s.lower()), None)
-                if sheet_match:
-                    sdf = read_sheet_robust(xls, sheet_match)
-                    fac_col = find_facility_column(sdf)
-                    if fac_col:
-                        p_tot, p_avg = get_previous_period_stats(sdf, fac_col, time_filter, start_date, end_date)
-                        prev_patients += p_tot
-                        prev_avg += p_avg
-            
-            prev_avg = prev_avg / len(zm_districts) if len(zm_districts) > 0 else 0
+            prev_patients, prev_avg = calculate_zm_trend_cached(tuple(zm_districts), file_bytes, time_filter, start_date, end_date)
             
             st.markdown(f'''
             <div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
@@ -1827,7 +1828,7 @@ elif view_mode == "Active Spokes":
     """, unsafe_allow_html=True)
     
     with st.spinner("Loading all active facilities..."):
-        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+        all_fac_df = get_all_facility_data_cached(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not all_fac_df.empty:
         active_df = all_fac_df[all_fac_df['Total Patients'] > 0].copy()
@@ -1905,176 +1906,4 @@ else:
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container page-icon-warning">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-        </div>
-        <div>
-            <div class="page-title-text">Statewide Zero-Sample Tracker</div>
-            <div class="page-subtitle-text">Operational failures and pending infrastructure launches</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    with st.spinner("Scanning all districts for inactive facilities..."):
-        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
-        
-    if not all_fac_df.empty:
-        inactive_df = all_fac_df[all_fac_df['Total Patients'] == 0].copy()
-        
-        op_failures = inactive_df[inactive_df['Status'] == 'Operational'].reset_index(drop=True)
-        pending_launch = inactive_df[inactive_df['Status'] == 'Pending Launch'].reset_index(drop=True)
-        
-        col_card1, col_card2 = st.columns(2)
-        with col_card1:
-            st.markdown(f'''
-            <div class="metric-card" style="border-top: 4px solid #F43F5E; padding: 16px; margin-bottom: 16px;">
-                <div class="metric-label" title="Facilities that exist but failed to report patients.">Operational Failures</div>
-                <div class="metric-value" style="color:#F43F5E;">{len(op_failures)}</div>
-                <div class="metric-sub" style="margin-top: 8px;">Requires immediate intervention</div>
-            </div>
-            ''', unsafe_allow_html=True)
-        with col_card2:
-            st.markdown(f'''
-            <div class="metric-card" style="border-top: 4px solid #94A3B8; padding: 16px; margin-bottom: 16px;">
-                <div class="metric-label" title="Facilities that have no data columns yet.">Pending Launch</div>
-                <div class="metric-value" style="color:#64748B;">{len(pending_launch)}</div>
-                <div class="metric-sub" style="margin-top: 8px;">Awaiting infrastructure readiness</div>
-            </div>
-            ''', unsafe_allow_html=True)
-
-        if not op_failures.empty:
-            st.markdown("<h4 style='color:#0F172A; margin-top:10px; margin-bottom:10px;'>Top Offending Districts (Operational Failures)</h4>", unsafe_allow_html=True)
-            district_counts = op_failures['District'].value_counts().head(5).reset_index()
-            district_counts.columns = ['District', 'Failures']
-            
-            fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures')
-            fig_off.update_traces(marker_color='#F43F5E', textposition='outside')
-            
-            off_layout = PLOTLY_LAYOUT.copy()
-            off_layout.update(dict(
-                height=250, 
-                showlegend=False, 
-                xaxis_title="Number of Facilities", 
-                yaxis_title="",
-                margin=dict(l=10, r=20, t=20, b=10)
-            ))
-            fig_off.update_layout(**off_layout)
-            st.plotly_chart(fig_off, use_container_width=True)
-
-        z_tab1, z_tab2 = st.tabs([f"🔴 True Operational Failures ({len(op_failures)})", f"🚧 Pending Launch ({len(pending_launch)})"])
-        
-        with z_tab1:
-            if not op_failures.empty:
-                op_failures['SortDate'] = pd.to_datetime(op_failures['Last Sample Date'], errors='coerce')
-                op_failures = op_failures.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
-                
-                display_tracker = op_failures[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
-                display_tracker.insert(0, 'S.No.', [str(i) for i in range(1, len(display_tracker) + 1)])
-                
-                display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
-                styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
-                
-                st.dataframe(
-                    styled_tracker, use_container_width=True, hide_index=True,
-                    column_config={
-                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
-                        "District": st.column_config.TextColumn("District", width="medium"),
-                        "Facility": st.column_config.TextColumn("Facility Name", width="large"),
-                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
-                        "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
-                    }
-                )
-                
-                buffer1 = io.BytesIO()
-                with pd.ExcelWriter(buffer1, engine='openpyxl') as writer:
-                    display_tracker.to_excel(writer, index=False, sheet_name='Operational Failures')
-                    
-                st.download_button(
-                    label=f"📥 Download Operational Failures ({len(op_failures)})",
-                    data=buffer1.getvalue(),
-                    file_name=f"Statewide_OpFailures_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
-            else:
-                st.success("✅ Excellent! No operational facilities found with 0 patients.")
-
-        with z_tab2:
-            if not pending_launch.empty:
-                pending_launch['SortDate'] = pd.to_datetime(pending_launch['Last Sample Date'], errors='coerce')
-                pending_launch = pending_launch.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
-                
-                display_pending = pending_launch[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
-                display_pending.insert(0, 'S.No.', [str(i) for i in range(1, len(display_pending) + 1)])
-                
-                display_pending['Primary Reason'] = display_pending['Primary Reason'].apply(format_reason)
-                styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
-                
-                st.dataframe(
-                    styled_pending, use_container_width=True, hide_index=True,
-                    column_config={
-                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
-                        "District": st.column_config.TextColumn("District", width="medium"),
-                        "Facility": st.column_config.TextColumn("Facility Name", width="large"),
-                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
-                        "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
-                    }
-                )
-                st.info("These facilities will automatically move to 'Operational' as soon as their first data column is added.")
-                
-                buffer2 = io.BytesIO()
-                with pd.ExcelWriter(buffer2, engine='openpyxl') as writer:
-                    display_pending.to_excel(writer, index=False, sheet_name='Pending Launch')
-                    
-                st.download_button(
-                    label=f"📥 Download Pending Launch ({len(pending_launch)})",
-                    data=buffer2.getvalue(),
-                    file_name=f"Statewide_PendingLaunch_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
-            else:
-                st.success("✅ All facilities have launched!")
-    else:
-        st.warning("Could not load facility data.")
-
-# --- GLOBAL DEFINITIONS EXPANDER ---
-st.markdown("<br><hr style='border-color: #CBD5E1; margin: 40px 0 20px 0;'><br>", unsafe_allow_html=True)
-with st.expander("ℹ️ Metric Definitions & Grading System"):
-    
-    st.markdown("""
-    **📊 Weighted Avg / Day** — *The efficiency score.*
-    Total patients divided by *(Total Facilities × Total Days)*. 
-    *Why use this?* It prevents a facility that was only open for 1 day with 50 patients from artificially inflating the district's average. It accounts for every facility-day equally.
-    
-    **⏱️ Uptime %** — *The reliability score.*
-    The percentage of days a facility reported more than 0 patients.
-    """)
-    
-    st.info("""
-    **Example:**
-    *   **Weighted Avg:** 10 facilities report for 5 days (50 total facility-days). They see 100 patients total. The Weighted Avg is **100 ÷ 50 = 2.0**.
-    *   **Uptime:** A facility has 10 days of data. They report `0` on 3 days. Their Uptime is **7 ÷ 10 = 70%**.
-    """)
-
-    st.markdown("**🏆 Grading System**")
-    st.markdown("*Note: A facility must meet **BOTH** the Uptime and Avg Patients requirements to earn the grade. If it fails either one, it drops to the next lowest grade.*")
-    
-    grade_data = pd.DataFrame({
-        "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
-        "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
-        "Avg Patients Requirement": ["> 10", "> 5", "> 2", "> 1", "0"]
-    })
-    
-    st.dataframe(
-        grade_data, hide_index=True, use_container_width=True,
-        column_config={
-            "Grade": st.column_config.TextColumn("Grade", width="medium"),
-            "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
-            "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
-        }
-    )
-    
-    st.info("""
-    **Grading Example:**
-    If a facility reports every single day (100% Uptime) but only sees **1 patient per day** (Avg 1.0), they get a **D**. They do not get an A, because their patient volume is too low.
-    """)
+            <svg viewBox="0 0 24 24" fill="none
