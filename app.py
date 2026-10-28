@@ -61,6 +61,11 @@ st.markdown("""
     .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
     .metric-sub { font-size: 14px; font-weight: 600; color: #64748B; }
 
+    /* Trend Arrows */
+    .trend-up { color: #10B981; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 2px;}
+    .trend-down { color: #EF4444; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 2px;}
+    .trend-neutral { color: #94A3B8; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 2px;}
+
     /* Mini Grade Badges for Best Spoke Card */
     .mini-badge-A { background-color: #CCFBF1; color: #0F766E; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #5EEAD4; }
     .mini-badge-B { background-color: #D9F99D; color: #4D7C0F; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #BEF264; }
@@ -82,7 +87,7 @@ st.markdown("""
     .page-icon-active { background-color: #14B8A6; box-shadow: 0 4px 10px rgba(20, 184, 166, 0.3); }
     .page-icon-warning { background-color: #DC2626; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); }
     .page-icon-state { background-color: #3B82F6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
-    .page-icon-zm { background-color: #4F46E5; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); } /* Deep Indigo for ZM */
+    .page-icon-zm { background-color: #4F46E5; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }
     .page-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; }
     .page-title-text { font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.2; }
     .page-subtitle-text { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 2px; }
@@ -222,6 +227,31 @@ def format_reason(reason):
     words = str(reason).split()
     return ' '.join([w if w.upper() in acronyms else w.capitalize() for w in words])
 
+def calc_trend(current, previous, is_percent=False):
+    if previous == 0 or pd.isna(previous):
+        return '<span class="trend-neutral">➖ 0%</span>' if not is_percent else '<span class="trend-neutral">➖ 0.0%</span>'
+    
+    diff = current - previous
+    pct_change = (diff / previous) * 100
+    
+    if diff > 0:
+        sign = "+"
+        cls = "trend-up"
+        icon = "▲"
+    elif diff < 0:
+        sign = ""
+        cls = "trend-down"
+        icon = "▼"
+    else:
+        return '<span class="trend-neutral">➖ 0%</span>' if not is_percent else '<span class="trend-neutral">➖ 0.0%</span>'
+
+    if is_percent:
+        val_str = f"{sign}{diff:.1f}%"
+    else:
+        val_str = f"{sign}{pct_change:.1f}%"
+        
+    return f'<span class="{cls}">{icon} {val_str}</span>'
+
 # --- CACHED GOOGLE SHEETS FETCHER ---
 @st.cache_data(ttl=900, show_spinner="Fetching live data from Google Sheets...")
 def fetch_google_sheet(url):
@@ -285,12 +315,10 @@ def extract_date(col_name):
         s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
         s = s.strip()
         
-        # Append current year if missing (handles "24-Oct", "24/10", and "24 Oct")
         if not re.search(r'\d{4}', s):
             if re.search(r'\b\d{1,2}[-/\.\s][a-z]{3}\b', s) or re.search(r'\b\d{1,2}[-/\.\s]\d{1,2}\b', s):
                 s = s + " " + str(pd.Timestamp.today().year)
         
-        # Match date with separators OR spaces
         match = re.search(r'(\d{4}[-/\.\s]\d{1,2}[-/\.\s]\d{1,2})|(\d{1,2}[-/\.\s]\d{1,2}[-/\.\s]\d{2,4})|(\d{1,2}[-/\.\s][a-z]{3}[-/\.\s]\d{2,4})', s)
         if match:
             raw_date = match.group(0)
@@ -302,7 +330,6 @@ def extract_date(col_name):
             except:
                 pass
                 
-    # FUTURE DATE GUARD
     if pd.notna(dt) and dt > pd.Timestamp.today().normalize():
         return pd.NaT
         
@@ -499,6 +526,40 @@ def find_global_latest_date(sheet_names_tuple, file_bytes):
             pass
     return min(latest_dates) if latest_dates else None
 
+# --- TREND & COMPARISON HELPERS ---
+def get_previous_period_stats(df_raw, facility_col, time_filter, start_date, end_date):
+    date_cols = find_date_columns(df_raw)
+    if not date_cols: return 0, 0.0
+    
+    paired = [(c, extract_date(c)) for c in date_cols]
+    paired = [(c, d) for c, d in paired if pd.notna(d)]
+    paired.sort(key=lambda x: x[1])
+    sorted_dates = [d for c, d in paired]
+    
+    if time_filter == "Select Dates..." and start_date and end_date:
+        days_diff = (end_date - start_date).days
+        prev_end = start_date - timedelta(days=1)
+        prev_start = prev_end - timedelta(days=days_diff)
+        prev_dates = [d for d in sorted_dates if prev_start <= d.date() <= prev_end]
+    else:
+        if time_filter == "Past Week": prev_dates = sorted_dates[-14:-7]
+        elif time_filter == "Past 2 Weeks": prev_dates = sorted_dates[-30:-15]
+        elif time_filter == "Past Month": prev_dates = sorted_dates[-60:-30]
+        else: prev_dates = [] 
+        
+    if not prev_dates: return 0, 0.0
+    
+    clean_df = df_raw[[facility_col] + [c for c, d in paired if d in prev_dates]].copy()
+    total = 0
+    for d in prev_dates:
+        cols = [c for c, dv in paired if dv == d]
+        for c in cols:
+            total += pd.to_numeric(clean_df[c], errors='coerce').fillna(0).sum()
+            
+    num_facs = len(clean_df[get_facility_mask(clean_df, facility_col)])
+    avg = round(total / (num_facs * len(prev_dates)), 1) if num_facs > 0 and len(prev_dates) > 0 else 0
+    return total, avg
+
 @st.cache_data(show_spinner=False)
 def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v31.5"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
@@ -596,6 +657,42 @@ def get_district_monthly_trend(df_raw, facility_col):
     trend_df = trend_df.dropna(subset=['Sort_Date']).sort_values('Sort_Date')
     return trend_df
 
+def check_data_quality(df_raw, facility_col):
+    issues = []
+    date_cols = find_date_columns(df_raw)
+    if not date_cols: return issues
+    
+    paired = [(c, extract_date(c)) for c in date_cols]
+    paired = [(c, d) for c, d in paired if pd.notna(d)]
+    paired.sort(key=lambda x: x[1])
+    sorted_dates = [d for c, d in paired]
+    
+    for _, row in df_raw[get_facility_mask(df_raw, facility_col)].iterrows():
+        fac_name = row[facility_col]
+        nums = []
+        for c, d in paired:
+            val = pd.to_numeric(row[c], errors='coerce')
+            if pd.notna(val):
+                nums.append(val)
+                
+        if not nums: continue
+        
+        if max(nums) > 200:
+            issues.append({"Facility": fac_name, "District": "Unknown", "Issue": f"Suspicious High Count: {max(nums)} in one day", "Severity": "High"})
+            
+        if len(nums) >= 7:
+            consecutive = 1
+            for i in range(1, len(nums)):
+                if nums[i] == nums[i-1] and nums[i] > 0:
+                    consecutive += 1
+                    if consecutive >= 7:
+                        issues.append({"Facility": fac_name, "District": "Unknown", "Issue": f"Flatline: Exactly {nums[i]} reported for 7+ days", "Severity": "Medium"})
+                        break
+                else:
+                    consecutive = 1
+
+    return issues
+
 # --- MAIN AREA ---
 if SPREADSHEET_URL == "YOUR_PUBLISHED_XLSX_URL_HERE":
     st.error("Please insert your Published Google Sheets URL in the code.")
@@ -624,6 +721,11 @@ for s in xls.sheet_names:
     s_lower = s.lower()
     if any(kw.lower() in s_lower or s_lower in kw.lower() for kw in valid_keywords):
         available_sheets.append(s)
+
+# --- GLOBAL LATEST DATE FOR FRESHNESS ---
+global_latest = find_global_latest_date(tuple(available_sheets), file_bytes)
+freshness_text = f"Synced: {global_latest.strftime('%d %b %Y')}" if global_latest else "Live"
+freshness_color = "#14B8A6" if global_latest == pd.Timestamp.now().date() else "#F59E0B" # Amber if not today
 
 # --- UNIFIED COMMAND BAR ---
 col_title, col_nav, col_time_ctrl = st.columns([2.2, 5.0, 1.8])
@@ -654,8 +756,8 @@ with col_time_ctrl:
     st.markdown(f"""
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
         <div style="font-size: 10px; font-weight: 700; color: #64748B; letter-spacing: 0.5px;">TIME RANGE</div>
-        <div style="font-size: 10px; font-weight: 700; color: #0F766E; display: flex; align-items: center; gap: 3px;">
-            <div class="status-dot"></div> Live
+        <div style="font-size: 10px; font-weight: 700; color: {freshness_color}; display: flex; align-items: center; gap: 3px;">
+            <div class="status-dot" style="background-color:{freshness_color};"></div> {freshness_text}
         </div>
     </div>
     """, unsafe_allow_html=True)
@@ -736,7 +838,6 @@ if view_mode == "District View":
     ])
 
     with d_tab1:
-        # --- THE MATH FIX: Checkbox now affects the cards and math ---
         active_only = st.checkbox("Exclude Inactive Facilities from Math", value=False, key="d1")
         
         filtered_base = plot_df.copy()
@@ -1309,7 +1410,7 @@ elif view_mode == "State View":
         </div>
         ''', unsafe_allow_html=True)
         
-        s_tab1, s_tab2 = st.tabs(["Leaderboard", "District vs District"])
+        s_tab1, s_tab2, s_tab3, s_tab4 = st.tabs(["Leaderboard", "🏆 Zonal Leaderboard", "District vs District", "🚨 Data Quality"])
         with s_tab1:
             state_metric_label = st.radio("Rank & Compare by:", ["Total Patient Count", "Weighted Avg", "Uptime %"], horizontal=True)
             state_metric_col = {"Total Patient Count": "Total Patients", "Weighted Avg": "Weighted Avg", "Uptime %": "Uptime %"}[state_metric_label]
@@ -1374,8 +1475,36 @@ elif view_mode == "State View":
             ))
             fig_lb.update_layout(**lb_layout)
             st.plotly_chart(fig_lb, use_container_width=True)
-            
+
         with s_tab2:
+            zm_data = []
+            for zm, districts in ZM_DATA.items():
+                dist_names = list(districts.keys())
+                zm_df = state_df[state_df['District'].isin(dist_names)]
+                if zm_df.empty: continue
+                
+                zm_total = zm_df['Total Patients'].sum()
+                zm_avg = round(zm_df['Weighted Avg'].mean(), 1)
+                zm_uptime = round(zm_df['Uptime %'].mean(), 1)
+                zm_active = zm_df['Active Spokes'].sum()
+                zm_facs = zm_df['Facilities'].sum()
+                
+                zm_data.append({
+                    'Zone Manager': zm,
+                    'Total Patients': zm_total,
+                    'Weighted Avg': zm_avg,
+                    'Uptime %': zm_uptime,
+                    'Active Spokes': f"{zm_active} / {zm_facs}"
+                })
+                
+            if zm_data:
+                zm_lb_df = pd.DataFrame(zm_data).sort_values('Weighted Avg', ascending=False).reset_index(drop=True)
+                zm_lb_df.index = zm_lb_df.index + 1
+                zm_lb_df = zm_lb_df.rename_axis('Rank').reset_index()
+                
+                st.dataframe(zm_lb_df, use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
+
+        with s_tab3:
             col_empty1, ca, cb, col_empty2 = st.columns([1, 2, 2, 1])
             with ca: district_a = st.selectbox("District A", sorted(available_sheets), index=0, key='cmp_a')
             with cb: district_b = st.selectbox("District B", sorted(available_sheets), index=min(1, len(sorted(available_sheets)) - 1), key='cmp_b')
@@ -1419,8 +1548,6 @@ elif view_mode == "State View":
                         ''', unsafe_allow_html=True)
                     
                     st.markdown("#### Daily Patient Trend — Overlaid")
-                    
-                    # --- THE FIX: Continuous Date Range for both districts to break gaps ---
                     dates_a = [pd.to_datetime(c + " 2026", format='%d %b %Y') for c in sa['active_date_cols']]
                     dates_b = [pd.to_datetime(c + " 2026", format='%d %b %Y') for c in sb['active_date_cols']]
                     all_dates = sorted(list(set(dates_a + dates_b)))
@@ -1432,7 +1559,7 @@ elif view_mode == "State View":
                             if col_name in cols:
                                 t = pd.to_numeric(p[col_name], errors='coerce').fillna(0).sum()
                             else:
-                                t = None # Break the line on missing dates
+                                t = None
                             d.append({'Date': dt, 'Patients': t, 'District': name})
                         return pd.DataFrame(d)
                         
@@ -1447,17 +1574,32 @@ elif view_mode == "State View":
                         height=350,
                         margin=dict(l=10, r=10, t=40, b=40),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                        xaxis=dict(
-                            showgrid=True, gridwidth=1, gridcolor='#CBD5E1',
-                            tickformat="%d %b"
-                        ), 
+                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickformat="%d %b"), 
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1')
                     ))
                     fig_c.update_layout(**cmp_layout)
-                    
                     st.plotly_chart(fig_c, use_container_width=True)
-    else:
-        st.warning("No district data available for the selected time range.")
+
+        with s_tab4:
+            st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>🚨 Automated Data Quality Alerts</h3>", unsafe_allow_html=True)
+            st.markdown("Scans all 701 facilities for suspicious data entry patterns that could break the dashboard.")
+            
+            with st.spinner("Scanning for anomalies..."):
+                dq_issues = []
+                for sheet in available_sheets:
+                    sdf = read_sheet_robust(xls, sheet)
+                    fac_col = find_facility_column(sdf)
+                    if fac_col:
+                        issues = check_data_quality(sdf, fac_col)
+                        for i in issues:
+                            i['District'] = REVERSE_DISTRICT_MAP.get(sheet, sheet)
+                            dq_issues.append(i)
+                            
+                if dq_issues:
+                    dq_df = pd.DataFrame(dq_issues)
+                    st.dataframe(dq_df[['District', 'Facility', 'Issue', 'Severity']], use_container_width=True, hide_index=True)
+                else:
+                    st.success("✅ No suspicious data entry patterns detected. All numbers look realistic.")
 
 # ==============================================================================
 # VIEW: ZM VIEW
@@ -1496,12 +1638,10 @@ elif view_mode == "ZM View":
             total_active = zm_df['Active Spokes'].sum()
             total_facilities = zm_df['Facilities'].sum()
             
-            # --- THE MATH FIX: Exclude Pending Launch from denominator ---
             pending_zm = zm_fac_df[zm_fac_df['Status'] == 'Pending Launch']
             total_pending = len(pending_zm)
             total_operational = total_facilities - total_pending
             
-            # Calculate the true Zone Weighted Avg
             zm_days = zm_df['Days Reported'].max() if not zm_df.empty else 0
             zone_weighted_avg = round(total_patients / (total_facilities * zm_days), 1) if total_facilities > 0 and zm_days > 0 else 0.0
             
@@ -1516,6 +1656,21 @@ elif view_mode == "ZM View":
             if sub_count > 0:
                 breakdown_text += f" & {sub_count} Sub-districts"
             
+            # TREND CALCULATION
+            prev_patients, prev_avg = 0, 0.0
+            for d in zm_districts:
+                target_sheet = DISTRICT_MAP.get(d, d)
+                sheet_match = next((s for s in available_sheets if s == target_sheet or target_sheet.lower() in s.lower()), None)
+                if sheet_match:
+                    sdf = read_sheet_robust(xls, sheet_match)
+                    fac_col = find_facility_column(sdf)
+                    if fac_col:
+                        p_tot, p_avg = get_previous_period_stats(sdf, fac_col, time_filter, start_date, end_date)
+                        prev_patients += p_tot
+                        prev_avg += p_avg
+            
+            prev_avg = prev_avg / len(zm_districts) if len(zm_districts) > 0 else 0
+            
             st.markdown(f'''
             <div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
                 <div class="metric-card">
@@ -1526,6 +1681,7 @@ elif view_mode == "ZM View":
                 <div class="metric-card">
                     <div class="metric-label">Weighted Avg / Day</div>
                     <div class="metric-value">{zone_weighted_avg}</div>
+                    <div class="metric-sub" style="margin-top: 6px;">{calc_trend(zone_weighted_avg, prev_avg, is_percent=False)}</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-label">Active Spokes</div>
@@ -1538,7 +1694,6 @@ elif view_mode == "ZM View":
             </div>
             ''', unsafe_allow_html=True)
             
-            # --- THE TAB FIX: 4 distinct tabs ---
             op_failures_zm = zm_fac_df[(zm_fac_df['Total Patients'] == 0) & (zm_fac_df['Status'] == 'Operational')]
             
             zm_tab1, zm_tab2, zm_tab3, zm_tab4 = st.tabs([
@@ -1705,7 +1860,6 @@ elif view_mode == "Active Spokes":
                 return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
             return ''
             
-        # --- DYNAMIC COLUMN NAME FIX ---
         dynamic_total_label = f"Total Patients ({time_filter})"
         if time_filter == "Select Dates...":
             dynamic_total_label = f"Total Patients ({date_range_str})"
@@ -1787,7 +1941,6 @@ else:
             </div>
             ''', unsafe_allow_html=True)
 
-        # --- NEW CHART: Top Offending Districts ---
         if not op_failures.empty:
             st.markdown("<h4 style='color:#0F172A; margin-top:10px; margin-bottom:10px;'>Top Offending Districts (Operational Failures)</h4>", unsafe_allow_html=True)
             district_counts = op_failures['District'].value_counts().head(5).reset_index()
