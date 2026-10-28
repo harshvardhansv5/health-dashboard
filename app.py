@@ -2084,4 +2084,20 @@ with st.expander("ℹ️ Metric Definitions & Grading System"):
     
     grade_data = pd.DataFrame({
         "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
-        "U
+        "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
+        "Avg Patients Requirement": ["> 10", "> 5", "> 2", "> 1", "0"]
+    })
+    
+    st.dataframe(
+        grade_data, hide_index=True, use_container_width=True,
+        column_config={
+            "Grade": st.column_config.TextColumn("Grade", width="medium"),
+            "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
+            "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
+        }
+    )
+    
+    st.info("""
+    **Grading Example:**
+    If a facility reports every single day (100% Uptime) but only sees **1 patient per day** (Avg 1.0), they get a **D**. They do not get an A, because their patient volume is too low.
+    """)
