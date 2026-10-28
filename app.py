@@ -1906,4 +1906,176 @@ else:
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container page-icon-warning">
-            <svg viewBox="0 0 24 24" fill="none
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        </div>
+        <div>
+            <div class="page-title-text">Statewide Zero-Sample Tracker</div>
+            <div class="page-subtitle-text">Operational failures and pending infrastructure launches</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    with st.spinner("Scanning all districts for inactive facilities..."):
+        all_fac_df = get_all_facility_data_cached(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+        
+    if not all_fac_df.empty:
+        inactive_df = all_fac_df[all_fac_df['Total Patients'] == 0].copy()
+        
+        op_failures = inactive_df[inactive_df['Status'] == 'Operational'].reset_index(drop=True)
+        pending_launch = inactive_df[inactive_df['Status'] == 'Pending Launch'].reset_index(drop=True)
+        
+        col_card1, col_card2 = st.columns(2)
+        with col_card1:
+            st.markdown(f'''
+            <div class="metric-card" style="border-top: 4px solid #F43F5E; padding: 16px; margin-bottom: 16px;">
+                <div class="metric-label" title="Facilities that exist but failed to report patients.">Operational Failures</div>
+                <div class="metric-value" style="color:#F43F5E;">{len(op_failures)}</div>
+                <div class="metric-sub" style="margin-top: 8px;">Requires immediate intervention</div>
+            </div>
+            ''', unsafe_allow_html=True)
+        with col_card2:
+            st.markdown(f'''
+            <div class="metric-card" style="border-top: 4px solid #94A3B8; padding: 16px; margin-bottom: 16px;">
+                <div class="metric-label" title="Facilities that have no data columns yet.">Pending Launch</div>
+                <div class="metric-value" style="color:#64748B;">{len(pending_launch)}</div>
+                <div class="metric-sub" style="margin-top: 8px;">Awaiting infrastructure readiness</div>
+            </div>
+            ''', unsafe_allow_html=True)
+
+        if not op_failures.empty:
+            st.markdown("<h4 style='color:#0F172A; margin-top:10px; margin-bottom:10px;'>Top Offending Districts (Operational Failures)</h4>", unsafe_allow_html=True)
+            district_counts = op_failures['District'].value_counts().head(5).reset_index()
+            district_counts.columns = ['District', 'Failures']
+            
+            fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures')
+            fig_off.update_traces(marker_color='#F43F5E', textposition='outside')
+            
+            off_layout = PLOTLY_LAYOUT.copy()
+            off_layout.update(dict(
+                height=250, 
+                showlegend=False, 
+                xaxis_title="Number of Facilities", 
+                yaxis_title="",
+                margin=dict(l=10, r=20, t=20, b=10)
+            ))
+            fig_off.update_layout(**off_layout)
+            st.plotly_chart(fig_off, use_container_width=True)
+
+        z_tab1, z_tab2 = st.tabs([f"🔴 True Operational Failures ({len(op_failures)})", f"🚧 Pending Launch ({len(pending_launch)})"])
+        
+        with z_tab1:
+            if not op_failures.empty:
+                op_failures['SortDate'] = pd.to_datetime(op_failures['Last Sample Date'], errors='coerce')
+                op_failures = op_failures.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
+                
+                display_tracker = op_failures[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                display_tracker.insert(0, 'S.No.', [str(i) for i in range(1, len(display_tracker) + 1)])
+                
+                display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
+                styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
+                
+                st.dataframe(
+                    styled_tracker, use_container_width=True, hide_index=True,
+                    column_config={
+                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
+                        "District": st.column_config.TextColumn("District", width="medium"),
+                        "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                        "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                    }
+                )
+                
+                buffer1 = io.BytesIO()
+                with pd.ExcelWriter(buffer1, engine='openpyxl') as writer:
+                    display_tracker.to_excel(writer, index=False, sheet_name='Operational Failures')
+                    
+                st.download_button(
+                    label=f"📥 Download Operational Failures ({len(op_failures)})",
+                    data=buffer1.getvalue(),
+                    file_name=f"Statewide_OpFailures_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            else:
+                st.success("✅ Excellent! No operational facilities found with 0 patients.")
+
+        with z_tab2:
+            if not pending_launch.empty:
+                pending_launch['SortDate'] = pd.to_datetime(pending_launch['Last Sample Date'], errors='coerce')
+                pending_launch = pending_launch.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
+                
+                display_pending = pending_launch[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                display_pending.insert(0, 'S.No.', [str(i) for i in range(1, len(display_pending) + 1)])
+                
+                display_pending['Primary Reason'] = display_pending['Primary Reason'].apply(format_reason)
+                styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
+                
+                st.dataframe(
+                    styled_pending, use_container_width=True, hide_index=True,
+                    column_config={
+                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
+                        "District": st.column_config.TextColumn("District", width="medium"),
+                        "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                        "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                    }
+                )
+                st.info("These facilities will automatically move to 'Operational' as soon as their first data column is added.")
+                
+                buffer2 = io.BytesIO()
+                with pd.ExcelWriter(buffer2, engine='openpyxl') as writer:
+                    display_pending.to_excel(writer, index=False, sheet_name='Pending Launch')
+                    
+                st.download_button(
+                    label=f"📥 Download Pending Launch ({len(pending_launch)})",
+                    data=buffer2.getvalue(),
+                    file_name=f"Statewide_PendingLaunch_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+            else:
+                st.success("✅ All facilities have launched!")
+    else:
+        st.warning("Could not load facility data.")
+
+# --- GLOBAL DEFINITIONS EXPANDER ---
+st.markdown("<br><hr style='border-color: #CBD5E1; margin: 40px 0 20px 0;'><br>", unsafe_allow_html=True)
+with st.expander("ℹ️ Metric Definitions & Grading System"):
+    
+    st.markdown("""
+    **📊 Weighted Avg / Day** — *The efficiency score.*
+    Total patients divided by *(Total Facilities × Total Days)*. 
+    *Why use this?* It prevents a facility that was only open for 1 day with 50 patients from artificially inflating the district's average. It accounts for every facility-day equally.
+    
+    **⏱️ Uptime %** — *The reliability score.*
+    The percentage of days a facility reported more than 0 patients.
+    """)
+    
+    st.info("""
+    **Example:**
+    *   **Weighted Avg:** 10 facilities report for 5 days (50 total facility-days). They see 100 patients total. The Weighted Avg is **100 ÷ 50 = 2.0**.
+    *   **Uptime:** A facility has 10 days of data. They report `0` on 3 days. Their Uptime is **7 ÷ 10 = 70%**.
+    """)
+
+    st.markdown("**🏆 Grading System**")
+    st.markdown("*Note: A facility must meet **BOTH** the Uptime and Avg Patients requirements to earn the grade. If it fails either one, it drops to the next lowest grade.*")
+    
+    grade_data = pd.DataFrame({
+        "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
+        "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
+        "Avg Patients Requirement": ["> 10", "> 5", "> 2", "> 1", "0"]
+    })
+    
+    st.dataframe(
+        grade_data, hide_index=True, use_container_width=True,
+        column_config={
+            "Grade": st.column_config.TextColumn("Grade", width="medium"),
+            "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
+            "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
+        }
+    )
+    
+    st.info("""
+    **Grading Example:**
+    If a facility reports every single day (100% Uptime) but only sees **1 patient per day** (Avg 1.0), they get a **D**. They do not get an A, because their patient volume is too low.
+    """)
