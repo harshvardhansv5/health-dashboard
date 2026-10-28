@@ -691,7 +691,6 @@ if view_mode == "District View":
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
     display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
     
-    # Improved ZM Card
     st.markdown(f'''
     <div class="zm-card">
         <div>
@@ -737,17 +736,40 @@ if view_mode == "District View":
     ])
 
     with d_tab1:
-        best_idx = plot_df['Average Patients'].idxmax()
-        best_row = plot_df.loc[best_idx]
-        best_name = best_row[facility_col]
-        best_grade = calculate_grade(best_row['Uptime %'], best_row['Average Patients'])
-        best_avg = best_row['Average Patients']
-        uptime_val = calc_uptime(stats)
-        uptime_color = "#14B8A6" if uptime_val >= 50 else "#F43F5E"
+        # --- THE MATH FIX: Checkbox now affects the cards and math ---
+        active_only = st.checkbox("Exclude Inactive Facilities from Math", value=False, key="d1")
+        
+        filtered_base = plot_df.copy()
+        if active_only: filtered_base = filtered_base[filtered_base['Total Patients'] > 0]
+        
+        num_facs = len(filtered_base)
+        dist_total = int(filtered_base['Total Patients'].sum())
+        
+        if num_facs > 0 and stats['num_days'] > 0:
+            new_weighted_avg = round(dist_total / (num_facs * stats['num_days']), 1)
+            total_fd = num_facs * stats['num_days']
+            new_zero_days = int(filtered_base['Zero Days'].sum())
+            new_uptime = round(((total_fd - new_zero_days) / total_fd * 100), 1)
+        else:
+            new_weighted_avg = 0.0
+            new_uptime = 0.0
+            
+        if not filtered_base.empty:
+            best_idx = filtered_base['Average Patients'].idxmax()
+            best_row = filtered_base.loc[best_idx]
+            best_name = best_row[facility_col]
+            best_grade = calculate_grade(best_row['Uptime %'], best_row['Average Patients'])
+            best_avg = best_row['Average Patients']
+        else:
+            best_name = "N/A"
+            best_grade = "F"
+            best_avg = 0
+            
+        uptime_color = "#14B8A6" if new_uptime >= 50 else "#F43F5E"
 
         st.markdown(f'''
         <div class="metric-grid">
-            <div class="metric-card"><div class="metric-label" title="Total number of reporting facilities.">Total Spokes</div><div class="metric-value">{stats['total_absolute_facilities']}</div></div>
+            <div class="metric-card"><div class="metric-label" title="Total number of reporting facilities.">Total Spokes</div><div class="metric-value">{num_facs}</div></div>
             <div class="metric-card">
                 <div class="metric-label" title="The facility with the highest average patients per day.">Best Performing Spoke</div>
                 <div class="metric-value" style="font-size: 18px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;" title="{best_name}">{best_name}</div>
@@ -756,26 +778,24 @@ if view_mode == "District View":
                     <span>{best_avg} Avg/Day</span>
                 </div>
             </div>
-            <div class="metric-card"><div class="metric-label" title="Total number of patients seen across all facilities.">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
-            <div class="metric-card"><div class="metric-label" title="Total patients divided by (facilities × days).">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
+            <div class="metric-card"><div class="metric-label" title="Total number of patients seen across all facilities.">Total Patients</div><div class="metric-value">{dist_total:,}</div></div>
+            <div class="metric-card"><div class="metric-label" title="Total patients divided by (facilities × days).">Weighted Avg / Day</div><div class="metric-value">{new_weighted_avg}</div></div>
             <div class="metric-card">
                 <div class="metric-label" title="The percentage of days facilities reported more than 0 patients.">Facility Uptime</div>
-                <div class="metric-value">{uptime_val}%</div>
+                <div class="metric-value">{new_uptime}%</div>
                 <div style="height: 6px; background-color: #E2E8F0; border-radius: 3px; margin-top: 10px; overflow: hidden;">
-                    <div style="height: 100%; width: {uptime_val}%; background-color: {uptime_color};"></div>
+                    <div style="height: 100%; width: {new_uptime}%; background-color: {uptime_color};"></div>
                 </div>
             </div>
         </div>
         ''', unsafe_allow_html=True)
         
-        c1, c2, c3 = st.columns([3, 1.5, 1], vertical_alignment="bottom")
-        with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d1")
-        with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d2")
-        with c3: active_only = st.checkbox("Exclude Inactive", value=False, key="d3")
+        c1, c2 = st.columns([3, 1.5], vertical_alignment="bottom")
+        with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d2")
+        with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d3")
         
         metric_col = {'Average Patients': 'Average Patients', 'Total Patients': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
-        filtered = plot_df.copy()
-        if active_only: filtered = filtered[filtered['Total Patients'] > 0]
+        filtered = filtered_base.copy()
             
         if filtered.empty: st.warning("No data matches the filters.")
         else:
@@ -799,7 +819,7 @@ if view_mode == "District View":
             )
             
             if metric_col == 'Average Patients':
-                current_avg = round(filtered['Total Patients'].sum() / (len(filtered) * stats['num_days']), 1) if len(filtered) > 0 and stats['num_days'] > 0 else 0
+                current_avg = new_weighted_avg
                 avg_label = f"Weighted Avg: {current_avg}"
             elif metric_col == 'Total Patients':
                 current_avg = round(filtered['Total Patients'].mean(), 1)
@@ -1446,7 +1466,10 @@ elif view_mode == "ZM View":
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container page-icon-zm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <path d="M9 12l2 2 4-4"></path>
+            </svg>
         </div>
         <div>
             <div class="page-title-text">Zone Manager View</div>
