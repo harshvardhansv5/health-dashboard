@@ -1314,7 +1314,12 @@ elif view_mode == "State View":
         
         s_tab1, s_tab2 = st.tabs(["Leaderboard", "District vs District"])
         with s_tab1:
-            state_metric_label = st.radio("Rank & Compare by:", ["Total Patient Count", "Weighted Avg", "Uptime %"], horizontal=True)
+            c1, c2 = st.columns(2)
+            with c1:
+                state_metric_label = st.radio("Rank & Compare by:", ["Total Patient Count", "Weighted Avg", "Uptime %"], horizontal=True)
+            with c2:
+                state_sort_order = st.radio("Sort Order:", ["Descending", "Ascending"], horizontal=True)
+                
             state_metric_col = {"Total Patient Count": "Total Patients", "Weighted Avg": "Weighted Avg", "Uptime %": "Uptime %"}[state_metric_label]
             
             lb_df = state_df.copy()
@@ -1322,14 +1327,15 @@ elif view_mode == "State View":
                 lb_df = lb_df[lb_df['Days Reported'] >= 7]
                 st.caption("⚠️ Districts with less than 7 days of data are hidden to ensure fair comparison.")
             
-            # --- THE FIX: Sort by Uptime % first, then Weighted Avg ---
-            lb_df = lb_df.sort_values(by=['Uptime %', 'Weighted Avg'], ascending=[False, False]).reset_index(drop=True)
+            is_ascending = (state_sort_order == "Ascending")
+            lb_df = lb_df.sort_values(state_metric_col, ascending=is_ascending).reset_index(drop=True)
             
             lb_df['Rank'] = lb_df.index + 1
             
             def medal(r): return "🥇" if r == 1 else "🥈" if r == 2 else "🥉" if r == 3 else ""
-            lb_df['District'] = lb_df.apply(lambda row: f"{medal(row['Rank'])} {row['District']}".strip(), axis=1)
-            
+            if not is_ascending:
+                lb_df['District'] = lb_df.apply(lambda row: f"{medal(row['Rank'])} {row['District']}".strip(), axis=1)
+                
             total_row = pd.DataFrame([{
                 'Rank': '', 
                 'District': '🏆 TOTAL', 
@@ -1553,11 +1559,17 @@ elif view_mode == "ZM View":
             ])
             
             with zm_tab1:
+                col_sort, _ = st.columns([1.5, 3.5])
+                with col_sort:
+                    zm_sort_order = st.radio("Sort Order:", ["Descending", "Ascending"], horizontal=True, key="zm_sort")
+                
                 st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:10px;'>District Breakdown</h4>", unsafe_allow_html=True)
                 
                 display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
+                is_ascending = (zm_sort_order == "Ascending")
+                
                 # --- THE SORT FIX: Highest Uptime, then Weighted Avg ---
-                display_df = zm_df[display_cols].sort_values(by=['Uptime %', 'Weighted Avg'], ascending=[False, False]).reset_index(drop=True)
+                display_df = zm_df[display_cols].sort_values(by=['Uptime %', 'Weighted Avg'], ascending=[is_ascending, is_ascending]).reset_index(drop=True)
                 
                 st.dataframe(
                     display_df, 
