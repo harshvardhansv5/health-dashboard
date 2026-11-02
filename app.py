@@ -708,10 +708,13 @@ if view_mode == "District View":
     ''', unsafe_allow_html=True)
 
     target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
-    sheet_found = any(s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower() for s in available_sheets)
-    sheet_to_load = next((s for s in available_sheets if s == target_district or target_district.lower() in s.lower() or s.lower() in target_district.lower()), None)
+    
+    # --- ROBUST SHEET LOOKUP FIX ---
+    sheet_to_load = next((s for s in available_sheets if s.lower() == selected_district_zm.lower() or s.lower() == target_district.lower()), None)
+    if not sheet_to_load:
+        sheet_to_load = next((s for s in available_sheets if selected_district_zm.lower() in s.lower() or s.lower() in selected_district_zm.lower() or target_district.lower() in s.lower() or s.lower() in target_district.lower()), None)
             
-    if not sheet_found:
+    if not sheet_to_load:
         st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**"); st.stop()
         
     df_raw = read_sheet_robust(xls, sheet_to_load)
@@ -1319,7 +1322,8 @@ elif view_mode == "State View":
                 lb_df = lb_df[lb_df['Days Reported'] >= 7]
                 st.caption("⚠️ Districts with less than 7 days of data are hidden to ensure fair comparison.")
             
-            lb_df = lb_df.sort_values(state_metric_col, ascending=False).reset_index(drop=True)
+            # --- THE FIX: Sort by Uptime % first, then Weighted Avg ---
+            lb_df = lb_df.sort_values(by=['Uptime %', 'Weighted Avg'], ascending=[False, False]).reset_index(drop=True)
             
             lb_df['Rank'] = lb_df.index + 1
             
@@ -1552,7 +1556,8 @@ elif view_mode == "ZM View":
                 st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:10px;'>District Breakdown</h4>", unsafe_allow_html=True)
                 
                 display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
-                display_df = zm_df[display_cols].sort_values('Total Patients', ascending=False).reset_index(drop=True)
+                # --- THE SORT FIX: Highest Uptime, then Weighted Avg ---
+                display_df = zm_df[display_cols].sort_values(by=['Uptime %', 'Weighted Avg'], ascending=[False, False]).reset_index(drop=True)
                 
                 st.dataframe(
                     display_df, 
