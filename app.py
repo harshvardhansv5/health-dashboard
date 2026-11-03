@@ -321,8 +321,7 @@ def format_reason(reason):
 @st.cache_data(ttl=3600, show_spinner="Fetching live data from Google Sheets...")
 def fetch_google_sheet(url):
     try:
-        # ADDED TIMEOUT HERE TO PREVENT INFINITE HANGS
-        response = requests.get(url, timeout=20) 
+        response = requests.get(url, timeout=20) # Added timeout
         response.raise_for_status()
         return response.content
     except Exception as e:
@@ -577,7 +576,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v33.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v34.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -599,7 +598,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v33.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v34.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1121,6 +1120,7 @@ if view_mode == "District View":
                 dynamic_total_label = f"Total Patients ({time_filter})"
                 if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
                 
+                # This line is correct, uses Average Patients
                 display_active = active_df[['Facility', 'Grade', 'Uptime %', 'Average Patients', 'Last Sample Date', 'Total Patients']].copy()
                 display_active = display_active.rename(columns={'Average Patients': 'Avg / Day', 'Total Patients': dynamic_total_label})
                 display_active['Grade'] = display_active['Grade'].apply(grade_emoji)
