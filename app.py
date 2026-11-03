@@ -205,7 +205,7 @@ st.markdown("""
         transition: all 0.15s ease !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
         height: 36px !important;
-        width: auto !important; /* Forces it to not stretch */
+        width: 100% !important; /* Fills the column fully */
     }
     div[data-testid="stFormSubmitButton"] > button:hover {
         background-color: #0E7490 !important;
@@ -225,6 +225,7 @@ st.markdown("""
         height: 32px !important;
         transition: all 0.15s ease !important;
         padding: 0px 12px !important;
+        width: 100% !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button:hover {
         background-color: #F8FAFC !important;
@@ -232,7 +233,7 @@ st.markdown("""
         color: #06B6D4 !important;
     }
 
-    /* Compact Download Buttons */
+    /* Compact Download Buttons (Right Aligned) */
     div[data-testid="stDownloadButton"] > button {
         background-color: #FFFFFF !important;
         color: #475569 !important;
@@ -240,8 +241,9 @@ st.markdown("""
         border-radius: 6px !important;
         font-weight: 600 !important;
         font-size: 12px !important;
-        height: 38px !important;
+        height: 36px !important;
         transition: all 0.15s ease !important;
+        width: 100% !important;
     }
     div[data-testid="stDownloadButton"] > button:hover {
         background-color: #F8FAFC !important;
@@ -782,7 +784,7 @@ if view_mode == "District View":
         with col_chk:
             active_only = st.checkbox("Exclude Inactive", value=False)
         with col_btn:
-            submitted = st.form_submit_button("Apply", use_container_width=False)
+            submitted = st.form_submit_button("Apply", use_container_width=True)
 
     # --- SEAMLESS WHITE ZM RIBBON ---
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
@@ -903,7 +905,16 @@ if view_mode == "District View":
             elif metric_col == 'Total Patients': current_avg = round(filtered['Total Patients'].mean(), 1)
             else: current_avg = round(filtered['Uptime %'].mean(), 1)
                 
-            fig.add_vline(x=current_avg, line_dash="dash", line_color="#0F172A", line_width=2)
+            # --- FIX: Annotated Average Line ---
+            fig.add_vline(
+                x=current_avg, 
+                line_dash="dash", 
+                line_color="#0F172A", 
+                line_width=1.5,
+                annotation_text=f" Avg: {current_avg}", 
+                annotation_position="top right",
+                annotation_font=dict(size=11, color="#0F172A", weight="bold")
+            )
             
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
@@ -1056,7 +1067,7 @@ if view_mode == "District View":
             summary_df.to_excel(writer, index=False, sheet_name='Summary')
             display.to_excel(writer, index=False, sheet_name='Scorecard')
             
-        col_dl1, col_dl2, col_dl3 = st.columns([3, 1.5, 1.5])
+        col_dl1, col_dl2 = st.columns([8, 2])
         with col_dl2:
             st.download_button(
                 label="📥 Download Report", data=buffer.getvalue(),
@@ -1094,7 +1105,7 @@ if view_mode == "District View":
                     with pd.ExcelWriter(buf, engine='openpyxl') as writer:
                         offense_df.to_excel(writer, index=False, sheet_name='Follow-Up List')
                     
-                    col_dl1, col_dl2, col_dl3 = st.columns([3, 1.5, 1.5])
+                    col_dl1, col_dl2 = st.columns([8, 2])
                     with col_dl2:
                         st.download_button(
                             label="🚨 Download Follow-up", data=buf.getvalue(),
@@ -1291,7 +1302,7 @@ elif view_mode == "State View":
             with pd.ExcelWriter(buf_state, engine='openpyxl') as writer:
                 lb_df.to_excel(writer, index=False, sheet_name='Leaderboard')
             
-            col_dl1, col_dl2, col_dl3 = st.columns([3, 1.5, 1.5])
+            col_dl1, col_dl2 = st.columns([8, 2])
             with col_dl2:
                 st.download_button("📥 Download Leaderboard", data=buf_state.getvalue(), file_name="State_Leaderboard.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
             
@@ -1625,7 +1636,7 @@ elif view_mode == "ZM View":
                     with pd.ExcelWriter(buf, engine='openpyxl') as writer:
                         display_inactive.to_excel(writer, index=False, sheet_name='Follow-Up List')
                     
-                    col_dl1, col_dl2, col_dl3 = st.columns([3, 1.5, 1.5])
+                    col_dl1, col_dl2 = st.columns([8, 2])
                     with col_dl2:
                         st.download_button(
                             label="🚨 Download ZM Follow-up", data=buf.getvalue(),
@@ -1719,10 +1730,10 @@ elif view_mode == "Active Spokes":
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
             display_active.to_excel(writer, index=False, sheet_name='Active Spokes')
         
-        col_dl1, col_dl2, col_dl3 = st.columns([3, 1.5, 1.5])
+        col_dl1, col_dl2 = st.columns([8, 2])
         with col_dl2:
             st.download_button(
-                label=f"📥 Download ({len(active_df)})", data=buffer.getvalue(),
+                label=f"📥 Download Active ({len(active_df)})", data=buffer.getvalue(),
                 file_name=f"Statewide_Active_Spokes_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
             )
@@ -1806,7 +1817,7 @@ else:
                 with pd.ExcelWriter(buffer1, engine='openpyxl') as writer:
                     display_tracker.to_excel(writer, index=False, sheet_name='Operational Failures')
                 
-                col_dl1, col_dl2, col_dl3 = st.columns([3, 1.5, 1.5])
+                col_dl1, col_dl2 = st.columns([8, 2])
                 with col_dl2:
                     st.download_button(
                         label=f"📥 Download Failures ({len(op_failures)})", data=buffer1.getvalue(),
@@ -1837,7 +1848,7 @@ else:
                 with pd.ExcelWriter(buffer2, engine='openpyxl') as writer:
                     display_pending.to_excel(writer, index=False, sheet_name='Pending Launch')
                 
-                col_dl1, col_dl2, col_dl3 = st.columns([3, 1.5, 1.5])
+                col_dl1, col_dl2 = st.columns([8, 2])
                 with col_dl2:
                     st.download_button(
                         label=f"📥 Download Pending ({len(pending_launch)})", data=buffer2.getvalue(),
