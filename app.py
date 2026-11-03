@@ -58,8 +58,10 @@ st.markdown("""
     }
     .metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
     .metric-label { color: #0F172A; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; cursor: help; }
-    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; }
+    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
     .metric-sub { font-size: 14px; font-weight: 600; color: #64748B; }
+    .trend-up { color: #14B8A6; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 2px; }
+    .trend-down { color: #F43F5E; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 2px; }
 
     /* Mini Grade Badges for Best Spoke Card */
     .mini-badge-A { background-color: #CCFBF1; color: #0F766E; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #5EEAD4; }
@@ -161,22 +163,22 @@ st.markdown("""
     div[data-testid="stSelectbox"] { margin-bottom: 0px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
         background-color: #FFFFFF !important; 
-        border: 2px solid #06B6D4 !important; 
-        box-shadow: 0 0 0 1px #06B6D4 !important; 
+        border: none !important; 
+        box-shadow: 0 0 0 2px #06B6D4 inset !important; 
         border-radius: 8px !important; 
         transition: all 0.2s ease-in-out !important; 
         min-height: 40px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover { border-color: #0891B2 !important; background-color: #F8FAFC !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { background-color: #F8FAFC !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { box-shadow: 0 0 0 3px #0891B2 inset !important; background-color: #FFFFFF !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; font-size: 13px !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #06B6D4 !important; }
     label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 700 !important; font-size: 12px !important; text-transform: uppercase; letter-spacing: 0.5px; }
 
     /* Date Picker */
-    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; box-shadow: 0 0 0 1px #06B6D4 !important; }
-    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: none !important; box-shadow: 0 0 0 2px #06B6D4 inset !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { box-shadow: 0 0 0 3px #0891B2 inset !important; background-color: #FFFFFF !important; }
 
     /* Style the Form Submit Button */
     div[data-testid="stFormSubmitButton"] > button {
@@ -752,21 +754,23 @@ if view_mode == "District View":
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
     display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
     
-    st.markdown(f'''
-    <div class="zm-card">
-        <div>
-            <div class="zm-card-header">Zone Manager</div>
-            <div class="zm-card-name">{display_zm}</div>
-            <div class="zm-card-zone">{zone_name}</div>
-        </div>
-        <div class="zm-card-right">
-            <div class="zm-card-header">Live Operations</div>
-            <div style="font-size: 14px; font-weight: 700; color: #14B8A6; display: flex; align-items: center; gap: 6px; justify-content: flex-end;">
-                <div class="status-dot"></div> Active
+    # Clickable ZM Card Logic
+    col_zm_card, col_zm_btn = st.columns([4, 1], vertical_alignment="center")
+    with col_zm_card:
+        st.markdown(f'''
+        <div class="zm-card" style="margin-bottom: 0;">
+            <div>
+                <div class="zm-card-header">Zone Manager</div>
+                <div class="zm-card-name">{display_zm}</div>
+                <div class="zm-card-zone">{zone_name}</div>
             </div>
         </div>
-    </div>
-    ''', unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
+    with col_zm_btn:
+        if st.button("View ZM Profile", use_container_width=True):
+            st.session_state.zm_view_target = zm_name_for_district
+            st.session_state.view_mode_override = "ZM View"
+            st.rerun()
 
     target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
     
@@ -787,14 +791,12 @@ if view_mode == "District View":
     active_icon = "🟢" if total_active > 0 else "🔴"
     inactive_icon = "🔴" if total_inactive > 0 else "🟢"
 
-    d_tab1, d_tab2, d_tab3, d_tab4, d_tab5, d_tab6, d_tab7 = st.tabs([
-        "Dashboard", 
-        "Report Card", 
-        f"{active_icon} Active Spokes ({total_active})", 
-        f"{inactive_icon} Inactive Spokes ({total_inactive})", 
-        "Trends & Analytics", 
-        "🩺 Diagnosis", 
-        "📍 Hub Logistics"
+    # --- CONSOLIDATED TABS ---
+    d_tab1, d_tab2, d_tab3, d_tab4 = st.tabs([
+        "📊 Dashboard", 
+        "📋 Report Card", 
+        "🩺 Diagnosis & Tracking", 
+        "📍 Logistics"
     ])
 
     with d_tab1:
@@ -859,19 +861,20 @@ if view_mode == "District View":
         if filtered.empty: st.warning("No data matches the filters.")
         else:
             sorted_df = filtered.sort_values(by=metric_col, ascending=(sort_option == "Lowest to Highest"))
-            sorted_df['Highlight'] = 'Others'
+            sorted_df['Grade'] = sorted_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
             
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
-            color_scale = 'Teal' if metric_col != 'Uptime %' else 'Blues'
+            # --- UGLY TRUTH FIX: Color by Grade ---
+            grade_color_map = {'A': '#14B8A6', 'B': '#84CC16', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
             
             fig = px.bar(
                 sorted_df, 
                 y=facility_col, 
                 x=metric_col, 
                 orientation='h', 
-                color=metric_col, 
-                color_continuous_scale=color_scale,
+                color='Grade', 
+                color_discrete_map=grade_color_map,
                 text=text_labels, 
                 category_orders={facility_col: sorted_df[facility_col].tolist()},
                 title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
@@ -884,8 +887,7 @@ if view_mode == "District View":
             else:
                 current_avg = round(filtered['Uptime %'].mean(), 1)
                 
-            # Just draw the line, no floating box
-            fig.add_vline(x=current_avg, line_dash="dash", line_color="#06B6D4", line_width=2)
+            fig.add_vline(x=current_avg, line_dash="dash", line_color="#0F172A", line_width=2)
             
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
@@ -895,7 +897,7 @@ if view_mode == "District View":
                 showlegend=False,
                 xaxis_title=metric_option,
                 yaxis_title="",
-                margin=dict(l=40, r=80, t=80, b=10), # Increased top margin
+                margin=dict(l=40, r=80, t=80, b=10),
                 coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
@@ -942,8 +944,37 @@ if view_mode == "District View":
                         margin=dict(l=10, r=10, t=20, b=10)
                     ))
                     fig_dt.update_layout(**dt_layout)
-                    
                     st.plotly_chart(fig_dt, use_container_width=True)
+
+        st.markdown("<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>📈 Monthly Patient Volume</h4>", unsafe_allow_html=True)
+        monthly_df = get_district_monthly_trend(df_raw, facility_col)
+        
+        if not monthly_df.empty:
+            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
+            fig_m.update_traces(marker_color='#06B6D4', texttemplate='%{text:,}', textposition='outside')
+            m_layout = PLOTLY_LAYOUT.copy()
+            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients")))
+            fig_m.update_layout(**m_layout)
+            st.plotly_chart(fig_m, use_container_width=True)
+
+        st.markdown("<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>🔥 Spoke Heatmap</h4>", unsafe_allow_html=True)
+        if stats['active_date_cols']:
+            heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
+            heatmap_df['Total'] = heatmap_df.sum(axis=1)
+            heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
+            
+            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F0FDFA'], [0.1, '#99F6E4'], [1, '#0F766E']], labels=dict(x="Date", y="", color="Patients"))
+            fig_h.update_traces(xgap=2, ygap=2)
+            
+            hm_layout = PLOTLY_LAYOUT.copy()
+            hm_layout.update(dict(
+                height=max(400, len(heatmap_df) * 35),
+                yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")),
+                xaxis=dict(tickfont=dict(size=11, color="#475569"), tickangle=-45),
+                coloraxis_colorbar=dict(title="Patients", thickness=15)
+            ))
+            fig_h.update_layout(**hm_layout)
+            st.plotly_chart(fig_h, use_container_width=True)
 
     with d_tab2:
         period_str = "N/A"
@@ -1034,207 +1065,124 @@ if view_mode == "District View":
         st.caption("The Excel file contains two sheets: one for the District Summary and one for the full Spoke Scorecard.")
 
     with d_tab3:
-        active_df = plot_df[plot_df['Total Patients'] > 0].copy()
-        if active_df.empty:
-            st.info("No active spokes in this district for the selected time range.")
-        else:
-            active_df['Grade'] = active_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
-            active_df = active_df.sort_values(by=['Grade', 'Uptime %', 'Average Patients'], ascending=[True, False, False]).reset_index(drop=True)
-            active_df.insert(0, 'S.No.', [str(i) for i in range(1, len(active_df) + 1)])
-            
-            def style_grade_local(val):
-                if val in ['A', 'B']: return 'background-color: #CCFBF1; color: #0F766E; font-weight: bold;'
-                elif val in ['C', 'D']: return 'background-color: #FEF08A; color: #854D0E; font-weight: bold;'
-                elif val == 'F': return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
-                return ''
-                
-            dynamic_total_label = f"Total Patients ({time_filter})"
-            if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
-            
-            display_active = active_df[['S.No.', facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Last Sample Date', 'Total Patients']].copy()
-            display_active = display_active.rename(columns={facility_col: 'Facility', 'Average Patients': 'Avg / Day', 'Total Patients': dynamic_total_label})
-            display_active['Grade'] = display_active['Grade'].apply(grade_emoji)
-            
-            styled_active = display_active.style.map(style_grade_local, subset=['Grade'])
-            
-            st.dataframe(
-                styled_active, use_container_width=True, hide_index=True,
-                column_config={
-                    "S.No.": st.column_config.TextColumn("S.No.", width="small"),
-                    "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
-                    "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
-                    "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
-                    dynamic_total_label: st.column_config.NumberColumn(dynamic_total_label, format="%d")
-                }
-            )
-
-    with d_tab4:
-        inactive_df = plot_df[plot_df['Total Patients'] == 0].copy()
-        if inactive_df.empty:
-            st.success("✅ No inactive spokes in this district! All facilities are reporting.")
-        else:
-            is_pending = stats['num_days'] == 0
-            inactive_df['Status'] = 'Pending Launch' if is_pending else 'Operational'
-            
+        sub_tab1, sub_tab2, sub_tab3 = st.tabs([f"🔴 Failures", f"{active_icon} Active ({total_active})", f"{inactive_icon} Inactive ({total_inactive})"])
+        
+        with sub_tab1:
             text_records = stats.get('text_records', [])
-            def get_reason(row):
-                if is_pending: return "Awaiting Launch"
-                fac_texts = [t for t in text_records if t['Facility'] == row[facility_col]]
-                if fac_texts:
-                    return fac_texts[-1]['Raw_Note']
-                return "Unknown / No Note"
-                
-            inactive_df['Primary Reason'] = inactive_df.apply(get_reason, axis=1)
-            inactive_df['Primary Reason'] = inactive_df['Primary Reason'].apply(format_reason)
-            
-            inactive_df = inactive_df.sort_values(by=['Status', facility_col]).reset_index(drop=True)
-            inactive_df.insert(0, 'S.No.', [str(i) for i in range(1, len(inactive_df) + 1)])
-            
-            display_inactive = inactive_df[['S.No.', facility_col, 'Status', 'Last Sample Date', 'Primary Reason']].copy()
-            display_inactive = display_inactive.rename(columns={facility_col: 'Facility'})
-            
-            styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
-            
-            st.dataframe(
-                styled_inactive, use_container_width=True, hide_index=True,
-                column_config={
-                    "S.No.": st.column_config.TextColumn("S.No.", width="small"),
-                    "Facility": st.column_config.TextColumn("Facility", width="large"),
-                    "Status": st.column_config.TextColumn("Status", width="small"),
-                    "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
-                    "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
-                }
-            )
-            st.info("💡 Tip: 'Pending Launch' means the facility infrastructure isn't ready. 'Operational' means the facility exists but failed to report patients.")
-
-    with d_tab5:
-        st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>Daily Patient Trend</h4>", unsafe_allow_html=True)
-        if stats['active_date_cols']:
-            trend_data = [{'Date': pd.to_datetime(c + " 2026", format='%d %b %Y'), 'Patients': pd.to_numeric(plot_df[c], errors='coerce').fillna(0).sum()} for c in stats['active_date_cols']]
-            if trend_data:
-                trend_df = pd.DataFrame(trend_data).sort_values('Date')
-                fig_t = px.area(trend_df, x='Date', y='Patients', markers=True)
-                fig_t.update_traces(line_color='#06B6D4', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#06B6D4')), fillcolor='rgba(6, 182, 212, 0.1)')
-                
-                t_layout = PLOTLY_LAYOUT.copy()
-                t_layout.update(dict(
-                    xaxis=dict(
-                        showgrid=True, gridwidth=1, gridcolor='#CBD5E1',
-                        tickformat="%d %b",
-                        range=[trend_df['Date'].min(), trend_df['Date'].max()]
+            if not text_records:
+                st.success("✅ No text notes (reasons) were found for this district in the selected time range. All zero days are pure numerical zeroes.")
+            else:
+                df_texts = pd.DataFrame(text_records)
+                offense_data = []
+                for _, row in plot_df.iterrows():
+                    fac_name = row[facility_col]
+                    z_days = row['Zero Days']
+                    if z_days > 0:
+                        fac_texts = df_texts[df_texts['Facility'] == fac_name]
+                        primary_reason = fac_texts['Raw_Note'].value_counts().idxmax() if not fac_texts.empty else "Unknown / No Note"
+                        offense_data.append({
+                            'Facility': fac_name,
+                            'Uptime %': row['Uptime %'],
+                            'Primary Reason': primary_reason
+                        })
+                if offense_data:
+                    offense_df = pd.DataFrame(offense_data).sort_values('Uptime %', ascending=True).reset_index(drop=True)
+                    offense_df.insert(0, 'S.No.', [str(i) for i in range(1, len(offense_df) + 1)])
+                    
+                    styled_offense = offense_df.style.map(style_reason, subset=['Primary Reason'])
+                    st.dataframe(
+                        styled_offense, use_container_width=True, hide_index=True,
+                        column_config={"S.No.": st.column_config.TextColumn("S.No.", width="small"), "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%")}
                     )
-                ))
-                fig_t.update_layout(**t_layout)
-                st.plotly_chart(fig_t, use_container_width=True)
+                    
+                    # Actionable Export
+                    buf = io.BytesIO()
+                    with pd.ExcelWriter(buf, engine='openpyxl') as writer:
+                        offense_df.to_excel(writer, index=False, sheet_name='Follow-Up List')
+                    st.download_button(
+                        label="🚨 Download Follow-up List",
+                        data=buf.getvalue(),
+                        file_name=f"{selected_district_zm}_Followup.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+                else:
+                    st.info("No facilities had zero days in this period.")
         
-        st.markdown("<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Monthly Patient Volume</h4>", unsafe_allow_html=True)
-        monthly_df = get_district_monthly_trend(df_raw, facility_col)
-        
-        if not monthly_df.empty:
-            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
-            fig_m.update_traces(marker_color='#06B6D4', texttemplate='%{text:,}', textposition='outside')
-            
-            m_layout = PLOTLY_LAYOUT.copy()
-            m_layout.update(dict(
-                height=350,
-                xaxis=dict(showgrid=False, type='category'),
-                yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients")
-            ))
-            fig_m.update_layout(**m_layout)
-            st.plotly_chart(fig_m, use_container_width=True)
-        else:
-            st.info("No monthly data available for this district.")
-            
-        st.markdown("<h4 style='color:#0F172A; margin-top:20px; margin-bottom:10px;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
-        if stats['active_date_cols']:
-            heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
-            heatmap_df['Total'] = heatmap_df.sum(axis=1)
-            heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
-            
-            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F0FDFA'], [0.1, '#99F6E4'], [1, '#0F766E']], labels=dict(x="Date", y="", color="Patients"))
-            fig_h.update_traces(xgap=2, ygap=2)
-            
-            hm_layout = PLOTLY_LAYOUT.copy()
-            hm_layout.update(dict(
-                height=max(400, len(heatmap_df) * 35),
-                yaxis=dict(tickfont=dict(size=12, color="#1E293B", weight="bold")),
-                xaxis=dict(tickfont=dict(size=11, color="#475569"), tickangle=-45),
-                coloraxis_colorbar=dict(title="Patients", thickness=15)
-            ))
-            fig_h.update_layout(**hm_layout)
-            st.plotly_chart(fig_h, use_container_width=True)
-        else:
-            st.info("No date data available to display heatmap.")
-
-    with d_tab6:
-        st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>🩺 Diagnosis & Root Cause Analysis</h4>", unsafe_allow_html=True)
-        text_records = stats.get('text_records', [])
-        
-        if not text_records:
-            st.success("✅ No text notes (reasons) were found for this district in the selected time range. All zero days are pure numerical zeroes.")
-        else:
-            df_texts = pd.DataFrame(text_records)
-            
-            inactive_count = len(plot_df[plot_df['Total Patients'] == 0])
-            worst_fac = plot_df.nsmallest(1, 'Uptime %')[facility_col].iloc[0] if not plot_df.empty else "N/A"
-            
-            st.markdown(f'''
-            <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
-                <div class="metric-card"><div class="metric-label">Zero-Sample Spokes</div><div class="metric-value">{inactive_count} <span class="metric-sub">/ {stats['num_facilities']} Total</span></div></div>
-                <div class="metric-card"><div class="metric-label">Worst Facility (Lowest Uptime)</div><div class="metric-value" style="font-size: 18px;">{worst_fac}</div></div>
-            </div>
-            ''', unsafe_allow_html=True)
-
-            st.markdown("<h5 style='color:#0F172A; margin-top:16px;'>Most Common Data Entry Notes</h5>", unsafe_allow_html=True)
-            
-            def clean_text(text):
-                text = unicodedata.normalize('NFKD', str(text)).encode('ascii', 'ignore').decode('utf-8')
-                text = re.sub(r'\s+', ' ', text).strip().lower()
-                return text if text else "Unknown"
-
-            df_texts['Clean_Note'] = df_texts['Raw_Note'].apply(clean_text)
-            note_counts = df_texts['Clean_Note'].value_counts().head(10).reset_index()
-            note_counts.columns = ['Note', 'Count']
-            
-            fig_diag = px.bar(note_counts, x='Count', y='Note', orientation='h')
-            fig_diag.update_traces(marker_color='#06B6D4', texttemplate='%{x}', textposition='outside')
-            
-            d_layout = PLOTLY_LAYOUT.copy()
-            d_layout.update(dict(height=350, showlegend=False, xaxis_title="Frequency", yaxis_title=""))
-            fig_diag.update_layout(**d_layout)
-            st.plotly_chart(fig_diag, use_container_width=True)
-
-            st.markdown("<h5 style='color:#0F172A; margin-top:16px;'>Facility Offenders</h5>", unsafe_allow_html=True)
-            offense_data = []
-            for _, row in plot_df.iterrows():
-                fac_name = row[facility_col]
-                z_days = row['Zero Days']
-                if z_days > 0:
-                    fac_texts = df_texts[df_texts['Facility'] == fac_name]
-                    primary_reason = fac_texts['Raw_Note'].value_counts().idxmax() if not fac_texts.empty else "Unknown / No Note"
-                    offense_data.append({
-                        'Facility': fac_name,
-                        'Uptime %': row['Uptime %'],
-                        'Primary Reason': primary_reason
-                    })
-            if offense_data:
-                offense_df = pd.DataFrame(offense_data).sort_values('Uptime %', ascending=True).reset_index(drop=True)
-                offense_df.insert(0, 'S.No.', [str(i) for i in range(1, len(offense_df) + 1)])
+        with sub_tab2:
+            active_df = plot_df[plot_df['Total Patients'] > 0].copy()
+            if active_df.empty:
+                st.info("No active spokes in this district for the selected time range.")
+            else:
+                active_df['Grade'] = active_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
+                active_df = active_df.sort_values(by=['Grade', 'Uptime %', 'Average Patients'], ascending=[True, False, False]).reset_index(drop=True)
+                active_df.insert(0, 'S.No.', [str(i) for i in range(1, len(active_df) + 1)])
                 
-                styled_offense = offense_df.style.map(style_reason, subset=['Primary Reason'])
+                def style_grade_local(val):
+                    if val in ['A', 'B']: return 'background-color: #CCFBF1; color: #0F766E; font-weight: bold;'
+                    elif val in ['C', 'D']: return 'background-color: #FEF08A; color: #854D0E; font-weight: bold;'
+                    elif val == 'F': return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
+                    return ''
+                    
+                dynamic_total_label = f"Total Patients ({time_filter})"
+                if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
+                
+                display_active = active_df[['S.No.', facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Last Sample Date', 'Total Patients']].copy()
+                display_active = display_active.rename(columns={facility_col: 'Facility', 'Average Patients': 'Avg / Day', 'Total Patients': dynamic_total_label})
+                display_active['Grade'] = display_active['Grade'].apply(grade_emoji)
+                
+                styled_active = display_active.style.map(style_grade_local, subset=['Grade'])
+                
                 st.dataframe(
-                    styled_offense, 
-                    use_container_width=True, 
-                    hide_index=True,
+                    styled_active, use_container_width=True, hide_index=True,
                     column_config={
                         "S.No.": st.column_config.TextColumn("S.No.", width="small"),
-                        "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%")
+                        "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
+                        "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
+                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                        dynamic_total_label: st.column_config.NumberColumn(dynamic_total_label, format="%d")
                     }
                 )
-            else:
-                st.info("No facilities had zero days in this period.")
 
-    with d_tab7:
+        with sub_tab3:
+            inactive_df = plot_df[plot_df['Total Patients'] == 0].copy()
+            if inactive_df.empty:
+                st.success("✅ No inactive spokes in this district! All facilities are reporting.")
+            else:
+                is_pending = stats['num_days'] == 0
+                inactive_df['Status'] = 'Pending Launch' if is_pending else 'Operational'
+                
+                text_records = stats.get('text_records', [])
+                def get_reason(row):
+                    if is_pending: return "Awaiting Launch"
+                    fac_texts = [t for t in text_records if t['Facility'] == row[facility_col]]
+                    if fac_texts: return fac_texts[-1]['Raw_Note']
+                    return "Unknown / No Note"
+                    
+                inactive_df['Primary Reason'] = inactive_df.apply(get_reason, axis=1)
+                inactive_df['Primary Reason'] = inactive_df['Primary Reason'].apply(format_reason)
+                
+                inactive_df = inactive_df.sort_values(by=['Status', facility_col]).reset_index(drop=True)
+                inactive_df.insert(0, 'S.No.', [str(i) for i in range(1, len(inactive_df) + 1)])
+                
+                display_inactive = inactive_df[['S.No.', facility_col, 'Status', 'Last Sample Date', 'Primary Reason']].copy()
+                display_inactive = display_inactive.rename(columns={facility_col: 'Facility'})
+                
+                styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
+                
+                st.dataframe(
+                    styled_inactive, use_container_width=True, hide_index=True,
+                    column_config={
+                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
+                        "Facility": st.column_config.TextColumn("Facility", width="large"),
+                        "Status": st.column_config.TextColumn("Status", width="small"),
+                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                        "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                    }
+                )
+                st.info("💡 Tip: 'Pending Launch' means the facility infrastructure isn't ready. 'Operational' means the facility exists but failed to report patients.")
+
+    with d_tab4:
         st.markdown("<h4 style='color:#0F172A; margin-bottom:10px;'>📍 Hub Logistics & Distance Mapping</h4>", unsafe_allow_html=True)
         
         dist_col = find_distance_column(df_raw)
@@ -1336,6 +1284,7 @@ elif view_mode == "State View":
     
     with st.spinner("Loading State Data..."):
         state_df, anchor_date = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not state_df.empty:
         total_active = state_df['Active Spokes'].sum()
@@ -1360,13 +1309,12 @@ elif view_mode == "State View":
         </div>
         ''', unsafe_allow_html=True)
         
-        s_tab1, s_tab2 = st.tabs(["Leaderboard", "District vs District"])
+        s_tab1, s_tab2, s_tab3 = st.tabs(["District Leaderboard", "ZM Leaderboard", "District vs District"])
+        
         with s_tab1:
             c1, c2 = st.columns(2)
-            with c1:
-                state_metric_label = st.radio("Rank & Compare by:", ["Total Patient Count", "Weighted Avg", "Uptime %"], horizontal=True)
-            with c2:
-                state_sort_order = st.radio("Sort Order:", ["Descending", "Ascending"], horizontal=True)
+            with c1: state_metric_label = st.radio("Rank & Compare by:", ["Total Patient Count", "Weighted Avg", "Uptime %"], horizontal=True)
+            with c2: state_sort_order = st.radio("Sort Order:", ["Descending", "Ascending"], horizontal=True)
                 
             state_metric_col = {"Total Patient Count": "Total Patients", "Weighted Avg": "Weighted Avg", "Uptime %": "Uptime %"}[state_metric_label]
             
@@ -1385,14 +1333,7 @@ elif view_mode == "State View":
                 lb_df['District'] = lb_df.apply(lambda row: f"{medal(row['Rank'])} {row['District']}".strip(), axis=1)
                 
             total_row = pd.DataFrame([{
-                'Rank': '', 
-                'District': '🏆 TOTAL', 
-                'Total Patients': lb_df['Total Patients'].sum(), 
-                'Weighted Avg': '', 
-                'Uptime %': None, 
-                'Facilities': TOTAL_SPOKES, 
-                'Active Spokes': lb_df['Active Spokes'].sum(),
-                'Days Reported': None
+                'Rank': '', 'District': '🏆 TOTAL', 'Total Patients': lb_df['Total Patients'].sum(), 'Weighted Avg': '', 'Uptime %': None, 'Facilities': TOTAL_SPOKES, 'Active Spokes': lb_df['Active Spokes'].sum(), 'Days Reported': None
             }])
             
             lb_df = pd.concat([lb_df, total_row], ignore_index=True)
@@ -1400,40 +1341,45 @@ elif view_mode == "State View":
             display_cols = ['Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
             st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
             
-            st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:10px;'>District Performance Highlights (Ranked by {state_metric_label})</h4>", unsafe_allow_html=True)
-            
-            col_chart_ctrl, _ = st.columns([1.5, 3.5])
-            with col_chart_ctrl:
-                chart_view = st.selectbox("Chart View:", ["Top 5 Districts", "Bottom 5 Districts"], label_visibility="collapsed")
-
-            chart_base = state_df.copy()
-            if state_metric_col == "Weighted Avg":
-                chart_base = chart_base[chart_base['Days Reported'] >= 7]
-
-            if chart_view == "Top 5 Districts":
-                chart_df = chart_base.nlargest(5, state_metric_col)
-                chart_df = chart_df.sort_values(by=state_metric_col, ascending=True)
-            else:
-                chart_df = chart_base.nsmallest(5, state_metric_col)
-                chart_df = chart_df.sort_values(by=state_metric_col, ascending=False)
-
-            fig_lb = px.bar(chart_df, x=state_metric_col, y='District', orientation='h', color='Uptime %', color_continuous_scale='Teal')
-            
-            avg_val = round(chart_base[state_metric_col].mean(), 1)
-            if state_metric_col != 'Uptime %':
-                fig_lb.add_vline(x=avg_val, line_dash="dash", line_color="#64748B", line_width=2, annotation_text=f"Avg: {avg_val}", annotation_position="bottom right", annotation_font_color="#64748B", annotation_font_weight="bold", annotation_bgcolor="rgba(255,255,255,0.9)", annotation_bordercolor="#64748B", annotation_borderwidth=1, annotation_borderpad=4)
-
-            lb_layout = PLOTLY_LAYOUT.copy()
-            lb_layout.update(dict(
-                yaxis=dict(showgrid=False, tickfont=dict(size=13, color="#1E293B", weight="bold")), 
-                height=300,
-                title=None,
-                margin=dict(l=10, r=60, t=40, b=10)
-            ))
-            fig_lb.update_layout(**lb_layout)
-            st.plotly_chart(fig_lb, use_container_width=True)
+            # State Export
+            buf_state = io.BytesIO()
+            with pd.ExcelWriter(buf_state, engine='openpyxl') as writer:
+                lb_df.to_excel(writer, index=False, sheet_name='Leaderboard')
+            st.download_button("📥 Download Leaderboard", data=buf_state.getvalue(), file_name="State_Leaderboard.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
             
         with s_tab2:
+            # --- NEW ZM LEADERBOARD ---
+            zm_summary = []
+            for zm, dists in ZM_DATA.items():
+                dist_names = list(dists.keys())
+                zm_subset = state_df[state_df['District'].isin(dist_names)]
+                if not zm_subset.empty:
+                    zm_tot_pat = zm_subset['Total Patients'].sum()
+                    zm_facs = zm_subset['Facilities'].sum()
+                    zm_active = zm_subset['Active Spokes'].sum()
+                    zm_days = zm_subset['Days Reported'].max()
+                    zm_avg = round(zm_tot_pat / (zm_facs * zm_days), 1) if zm_facs > 0 and zm_days > 0 else 0
+                    zm_uptime = round(zm_subset['Uptime %'].mean(), 1)
+                    
+                    zm_summary.append({
+                        'ZM': zm,
+                        'Districts': len(dist_names),
+                        'Total Patients': zm_tot_pat,
+                        'Weighted Avg': zm_avg,
+                        'Uptime %': zm_uptime,
+                        'Active Spokes': zm_active,
+                        'Total Spokes': zm_facs
+                    })
+            
+            if zm_summary:
+                zm_lb = pd.DataFrame(zm_summary)
+                zm_metric = st.radio("Rank ZMs by:", ["Uptime %", "Weighted Avg", "Total Patients"], horizontal=True, key="zm_lb_metric")
+                zm_lb = zm_lb.sort_values(zm_metric, ascending=False).reset_index(drop=True)
+                zm_lb['Rank'] = zm_lb.index + 1
+                
+                st.dataframe(zm_lb[['Rank', 'ZM', 'Districts', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Active Spokes', 'Total Spokes']], use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
+
+        with s_tab3:
             col_empty1, ca, cb, col_empty2 = st.columns([1, 2, 2, 1])
             with ca: district_a = st.selectbox("District A", sorted(available_sheets), index=0, key='cmp_a')
             with cb: district_b = st.selectbox("District B", sorted(available_sheets), index=min(1, len(sorted(available_sheets)) - 1), key='cmp_b')
@@ -1504,14 +1450,10 @@ elif view_mode == "State View":
                         height=350,
                         margin=dict(l=10, r=10, t=40, b=40),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                        xaxis=dict(
-                            showgrid=True, gridwidth=1, gridcolor='#CBD5E1',
-                            tickformat="%d %b"
-                        ), 
+                        xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickformat="%d %b"), 
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1')
                     ))
                     fig_c.update_layout(**cmp_layout)
-                    
                     st.plotly_chart(fig_c, use_container_width=True)
     else:
         st.warning("No district data available for the selected time range.")
@@ -1523,10 +1465,7 @@ elif view_mode == "ZM View":
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container page-icon-zm">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                <path d="M9 12l2 2 4-4"></path>
-            </svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="page-icon"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>
         </div>
         <div>
             <div class="page-title-text">Zone Manager View</div>
@@ -1535,7 +1474,16 @@ elif view_mode == "ZM View":
     </div>
     """, unsafe_allow_html=True)
     
-    selected_zm = st.selectbox("Select Zone Manager", sorted(ZM_DATA.keys()))
+    # Handle Workflow Disconnect Click
+    default_zm_index = 0
+    if 'zm_view_target' in st.session_state:
+        target_zm = st.session_state.zm_view_target
+        zm_list = sorted(ZM_DATA.keys())
+        if target_zm in zm_list:
+            default_zm_index = zm_list.index(target_zm)
+        del st.session_state.zm_view_target # clear it
+        
+    selected_zm = st.selectbox("Select Zone Manager", sorted(ZM_DATA.keys()), index=default_zm_index)
     zm_districts = list(ZM_DATA[selected_zm].keys())
     
     with st.spinner(f"Loading data for {selected_zm}..."):
@@ -1692,6 +1640,18 @@ elif view_mode == "ZM View":
                             "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                         }
                     )
+                    
+                    # Actionable Export
+                    buf = io.BytesIO()
+                    with pd.ExcelWriter(buf, engine='openpyxl') as writer:
+                        display_inactive.to_excel(writer, index=False, sheet_name='Follow-Up List')
+                    st.download_button(
+                        label="🚨 Download ZM Follow-up List",
+                        data=buf.getvalue(),
+                        file_name=f"{selected_zm}_Followup.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
 
             with zm_tab4:
                 if pending_zm.empty:
@@ -1777,9 +1737,7 @@ elif view_mode == "Active Spokes":
         st.markdown("<br>", unsafe_allow_html=True)
         
         st.dataframe(
-            styled_active, 
-            use_container_width=True, 
-            hide_index=True,
+            styled_active, use_container_width=True, hide_index=True,
             column_config={
                 "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                 "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
@@ -1855,13 +1813,7 @@ else:
             fig_off.update_traces(marker_color='#F43F5E', textposition='outside')
             
             off_layout = PLOTLY_LAYOUT.copy()
-            off_layout.update(dict(
-                height=250, 
-                showlegend=False, 
-                xaxis_title="Number of Facilities", 
-                yaxis_title="",
-                margin=dict(l=10, r=20, t=20, b=10)
-            ))
+            off_layout.update(dict(height=250, showlegend=False, xaxis_title="Number of Facilities", yaxis_title="", margin=dict(l=10, r=20, t=20, b=10)))
             fig_off.update_layout(**off_layout)
             st.plotly_chart(fig_off, use_container_width=True)
 
