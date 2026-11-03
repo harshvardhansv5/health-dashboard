@@ -21,7 +21,7 @@ DISTANCE_FALLBACK = {}
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🩸", layout="wide")
 
-# --- CLINICAL PEARL UI CSS ---
+# --- CLINICAL PEARL UI CSS (UPGRADED) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -75,43 +75,15 @@ st.markdown("""
     /* Tables & Cards */
     [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05); padding: 8px; }
     
-    /* --- REDESIGNED ZM CARD (PREMIUM IDENTITY STRIP) --- */
-    div[data-testid="stHorizontalBlock"]:has(.zm-card-content) {
-        background-color: #FFFFFF !important;
-        border: 1px solid #E2E8F0 !important;
-        border-left: 4px solid #14B8A6 !important;
-        border-radius: 8px !important;
-        padding: 8px 16px !important;
-        margin-bottom: 16px !important;
-        margin-top: 4px !important;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.05) !important;
-        align-items: center !important;
-        min-height: 58px !important;
+    /* --- REDESIGNED ZM CARD --- */
+    .zm-card { 
+        background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; 
+        padding: 10px 16px; margin-bottom: 12px; box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05); 
+        border-left: 4px solid #14B8A6; display: flex; justify-content: space-between; align-items: center; height: 64px;
     }
-    .zm-card-content { display: flex; align-items: center; gap: 12px; }
-    .zm-avatar { width: 32px; height: 32px; background-color: #F0FDFA; color: #0F766E; border: 1px solid #CCFBF1; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 12px; letter-spacing: 0.5px; }
-    .zm-info { display: flex; flex-direction: column; justify-content: center; }
-    .zm-name { font-size: 14px; font-weight: 700; color: #0F172A; line-height: 1.2; }
-    .zm-zone { font-size: 11px; font-weight: 600; color: #64748B; display: flex; align-items: center; gap: 4px; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .zm-zone .dot { width: 5px; height: 5px; background-color: #14B8A6; border-radius: 50%; }
-    
-    /* Turn the button inside the strip into a sleek text link */
-    div[data-testid="stHorizontalBlock"]:has(.zm-card-content) div[data-testid="stButton"] > button {
-        height: 32px !important;
-        background-color: transparent !important;
-        color: #06B6D4 !important;
-        border: 1px solid transparent !important;
-        font-size: 13px !important;
-        font-weight: 600 !important;
-        box-shadow: none !important;
-        padding: 0 12px !important;
-        transition: all 0.2s ease !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.zm-card-content) div[data-testid="stButton"] > button:hover {
-        background-color: #ECFEFF !important;
-        border: 1px solid #A5F3FC !important;
-        color: #0891B2 !important;
-    }
+    .zm-card-header { color: #64748B; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.5px;}
+    .zm-card-name { color: #0F172A; font-size: 15px; font-weight: 700; margin-bottom: 0px;}
+    .zm-card-zone { color: #14B8A6; font-size: 12px; font-weight: 700;}
 
     /* --- MODERN PAGE HEADERS --- */
     .page-header-container { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; margin-top: 8px; }
@@ -235,8 +207,8 @@ st.markdown("""
     }
     div[data-testid="stFormSubmitButton"] > button:active { transform: translateY(0) !important; }
 
-    /* Standard Streamlit Buttons (Download, etc.) */
-    div[data-testid="stButton"] > button, div[data-testid="stDownloadButton"] > button {
+    /* Ghost Button for ZM Profile */
+    div[data-testid="stButton"] > button {
         background-color: #FFFFFF !important;
         color: #06B6D4 !important;
         border: 1px solid #06B6D4 !important;
@@ -246,7 +218,7 @@ st.markdown("""
         height: 40px !important;
         transition: all 0.15s ease !important;
     }
-    div[data-testid="stButton"] > button:hover, div[data-testid="stDownloadButton"] > button:hover {
+    div[data-testid="stButton"] > button:hover {
         background-color: #ECFEFF !important;
         border-color: #0891B2 !important;
         color: #0891B2 !important;
@@ -321,7 +293,7 @@ def format_reason(reason):
 @st.cache_data(ttl=3600, show_spinner="Fetching live data from Google Sheets...")
 def fetch_google_sheet(url):
     try:
-        response = requests.get(url, timeout=20)
+        response = requests.get(url)
         response.raise_for_status()
         return response.content
     except Exception as e:
@@ -576,7 +548,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v35.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v32.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -598,7 +570,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v35.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v32.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -787,24 +759,23 @@ if view_mode == "District View":
         with col_btn:
             submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
-    # --- REDESIGNED ZM PROFILE STRIP ---
+    # --- REDESIGNED ZM PROFILE CARD ---
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
     display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
-    initials = "".join([part[0] for part in display_zm.split()[:2]]).upper()
-
+    
     col_zm_card, col_zm_btn = st.columns([4.5, 1], vertical_alignment="center")
     with col_zm_card:
         st.markdown(f'''
-        <div class="zm-card-content">
-            <div class="zm-avatar">{initials}</div>
-            <div class="zm-info">
-                <div class="zm-name">{display_zm}</div>
-                <div class="zm-zone"><span class="dot"></span>{zone_name}</div>
+        <div class="zm-card" style="margin-bottom: 0; margin-top: 8px;">
+            <div>
+                <div class="zm-card-header">Zone Manager</div>
+                <div class="zm-card-name">{display_zm}</div>
+                <div class="zm-card-zone">{zone_name}</div>
             </div>
         </div>
         ''', unsafe_allow_html=True)
     with col_zm_btn:
-        if st.button("View Profile →", use_container_width=True):
+        if st.button("View ZM Profile", use_container_width=True):
             st.session_state.zm_view_target = zm_name_for_district
             st.session_state.view_mode_override = "ZM View"
             st.rerun()
@@ -1036,15 +1007,17 @@ if view_mode == "District View":
         display['Avg / Day'] = scorecard['Average Patients']
         display['Total Patients'] = scorecard['Total Patients'].astype(int)
         display['Zero Days'] = scorecard['Zero Days'].astype(int)
+        display.insert(0, 'S.No.', [str(i) for i in range(1, len(display) + 1)])
         
         total_row = pd.DataFrame([{
-            'Facility': '🏆 TOTAL', 'Grade': d_grade,
+            'S.No.': '', 'Facility': '🏆 TOTAL', 'Grade': d_grade,
             'Uptime %': round(calc_uptime(stats), 1), 'Avg / Day': stats['weighted_avg'],
             'Total Patients': stats['total'], 'Zero Days': stats['zero_days']
         }])
         display = pd.concat([total_row, display], ignore_index=True)
         
         st.dataframe(display, use_container_width=True, hide_index=True, column_config={
+            "S.No.": st.column_config.TextColumn("S.No.", width="small"),
             "Facility": st.column_config.TextColumn("Facility", width="large"),
             "Grade": st.column_config.TextColumn("Grade", width="small"),
             "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
@@ -1088,8 +1061,10 @@ if view_mode == "District View":
                         offense_data.append({'Facility': fac_name, 'Uptime %': row['Uptime %'], 'Primary Reason': primary_reason})
                 if offense_data:
                     offense_df = pd.DataFrame(offense_data).sort_values('Uptime %', ascending=True).reset_index(drop=True)
+                    offense_df.insert(0, 'S.No.', [str(i) for i in range(1, len(offense_df) + 1)])
                     styled_offense = offense_df.style.map(style_reason, subset=['Primary Reason'])
                     st.dataframe(styled_offense, use_container_width=True, hide_index=True, column_config={
+                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                         "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%")
                     })
                     buf = io.BytesIO()
@@ -1110,6 +1085,7 @@ if view_mode == "District View":
             else:
                 active_df['Grade'] = active_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
                 active_df = active_df.sort_values(by=['Grade', 'Uptime %', 'Average Patients'], ascending=[True, False, False]).reset_index(drop=True)
+                active_df.insert(0, 'S.No.', [str(i) for i in range(1, len(active_df) + 1)])
                 
                 def style_grade_local(val):
                     if val in ['A', 'B']: return 'background-color: #CCFBF1; color: #0F766E; font-weight: bold;'
@@ -1120,12 +1096,13 @@ if view_mode == "District View":
                 dynamic_total_label = f"Total Patients ({time_filter})"
                 if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
                 
-                display_active = active_df[['Facility', 'Grade', 'Uptime %', 'Average Patients', 'Last Sample Date', 'Total Patients']].copy()
-                display_active = display_active.rename(columns={'Average Patients': 'Avg / Day', 'Total Patients': dynamic_total_label})
+                display_active = active_df[['S.No.', facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Last Sample Date', 'Total Patients']].copy()
+                display_active = display_active.rename(columns={facility_col: 'Facility', 'Average Patients': 'Avg / Day', 'Total Patients': dynamic_total_label})
                 display_active['Grade'] = display_active['Grade'].apply(grade_emoji)
                 styled_active = display_active.style.map(style_grade_local, subset=['Grade'])
                 
                 st.dataframe(styled_active, use_container_width=True, hide_index=True, column_config={
+                    "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                     "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                     "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
                     "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
@@ -1147,11 +1124,14 @@ if view_mode == "District View":
                     return "Unknown / No Note"
                 inactive_df['Primary Reason'] = inactive_df.apply(get_reason, axis=1).apply(format_reason)
                 inactive_df = inactive_df.sort_values(by=['Status', facility_col]).reset_index(drop=True)
+                inactive_df.insert(0, 'S.No.', [str(i) for i in range(1, len(inactive_df) + 1)])
                 
-                display_inactive = inactive_df[['Facility', 'Status', 'Last Sample Date', 'Primary Reason']].copy()
+                display_inactive = inactive_df[['S.No.', facility_col, 'Status', 'Last Sample Date', 'Primary Reason']].copy()
+                display_inactive = display_inactive.rename(columns={facility_col: 'Facility'})
                 styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
                 
                 st.dataframe(styled_inactive, use_container_width=True, hide_index=True, column_config={
+                    "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                     "Facility": st.column_config.TextColumn("Facility", width="large"),
                     "Status": st.column_config.TextColumn("Status", width="small"),
                     "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
@@ -1578,6 +1558,7 @@ elif view_mode == "ZM View":
                     st.info("No active spokes in this zone for the selected time range.")
                 else:
                     active_zm = active_zm.sort_values(by=['Uptime %', 'Total Patients'], ascending=[False, False]).reset_index(drop=True)
+                    active_zm.insert(0, 'S.No.', [str(i) for i in range(1, len(active_zm) + 1)])
                     
                     def style_grade(val):
                         if val in ['A', 'B']: return 'background-color: #CCFBF1; color: #0F766E; font-weight: bold;'
@@ -1588,11 +1569,12 @@ elif view_mode == "ZM View":
                     dynamic_total_label = f"Total Patients ({time_filter})"
                     if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
                     
-                    display_active = active_zm[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
+                    display_active = active_zm[['S.No.', 'District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
                     display_active = display_active.rename(columns={'Total Patients': dynamic_total_label})
                     styled_active = display_active.style.map(style_grade, subset=['Grade'])
                     
                     st.dataframe(styled_active, use_container_width=True, hide_index=True, column_config={
+                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                         "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
                         "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
                         "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
@@ -1604,12 +1586,14 @@ elif view_mode == "ZM View":
                     st.success("✅ Excellent! No operational failures in this zone.")
                 else:
                     op_failures_zm = op_failures_zm.sort_values(by=['District', 'Facility']).reset_index(drop=True)
+                    op_failures_zm.insert(0, 'S.No.', [str(i) for i in range(1, len(op_failures_zm) + 1)])
                     op_failures_zm['Primary Reason'] = op_failures_zm['Primary Reason'].apply(format_reason)
                     
-                    display_inactive = op_failures_zm[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                    display_inactive = op_failures_zm[['S.No.', 'District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
                     styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
                     
                     st.dataframe(styled_inactive, use_container_width=True, hide_index=True, column_config={
+                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                         "District": st.column_config.TextColumn("District", width="medium"),
                         "Facility": st.column_config.TextColumn("Facility Name", width="large"),
                         "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
@@ -1630,11 +1614,13 @@ elif view_mode == "ZM View":
                     st.success("✅ All facilities in this zone have launched!")
                 else:
                     pending_zm = pending_zm.sort_values(by=['District', 'Facility']).reset_index(drop=True)
+                    pending_zm.insert(0, 'S.No.', [str(i) for i in range(1, len(pending_zm) + 1)])
                     
-                    display_pending = pending_zm[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                    display_pending = pending_zm[['S.No.', 'District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
                     styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
                     
                     st.dataframe(styled_pending, use_container_width=True, hide_index=True, column_config={
+                        "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                         "District": st.column_config.TextColumn("District", width="medium"),
                         "Facility": st.column_config.TextColumn("Facility Name", width="large"),
                         "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
@@ -1666,66 +1652,58 @@ elif view_mode == "Active Spokes":
     if not all_fac_df.empty:
         active_df = all_fac_df[all_fac_df['Total Patients'] > 0].copy()
         
-        # --- TOP LAYOUT: Filters & Download ---
-        col_dist, col_grade = st.columns(2)
-        with col_dist:
+        col1, col2, col3 = st.columns([1.5, 1.5, 1.5], vertical_alignment="bottom")
+        with col2:
             dist_filter = st.multiselect("Filter by District", sorted(active_df['District'].unique()), default=[])
-        with col_grade:
+        with col3:
             grade_filter = st.multiselect("Filter by Grade", ["A", "B", "C", "D", "F"], default=[])
             
         if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
         if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
         
-        active_df = active_df.sort_values(by=['Uptime %', 'Total Patients'], ascending=[False, False]).reset_index(drop=True)
-        
-        col_metric, col_dl = st.columns([3, 1], vertical_alignment="bottom")
-        
-        with col_metric:
+        with col1:
             st.markdown(f'''
             <div class="metric-card" style="border-top: 4px solid #14B8A6; padding: 16px; margin-bottom: 0;">
                 <div class="metric-label">Active Spokes Shown</div>
                 <div class="metric-value" style="color:#14B8A6;">{len(active_df)} <span class="metric-sub" style="font-size: 14px;">/ {TOTAL_SPOKES} Total</span></div>
             </div>
             ''', unsafe_allow_html=True)
+        
+        active_df = active_df.sort_values(by=['Uptime %', 'Total Patients'], ascending=[False, False]).reset_index(drop=True)
+        active_df.insert(0, 'S.No.', [str(i) for i in range(1, len(active_df) + 1)])
+        
+        def style_grade(val):
+            if val in ['A', 'B']: return 'background-color: #CCFBF1; color: #0F766E; font-weight: bold;'
+            elif val in ['C', 'D']: return 'background-color: #FEF08A; color: #854D0E; font-weight: bold;'
+            elif val == 'F': return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
+            return ''
             
-        with col_dl:
-            def style_grade(val):
-                if val in ['A', 'B']: return 'background-color: #CCFBF1; color: #0F766E; font-weight: bold;'
-                elif val in ['C', 'D']: return 'background-color: #FEF08A; color: #854D0E; font-weight: bold;'
-                elif val == 'F': return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
-                return ''
-                
-            dynamic_total_label = f"Total Patients ({time_filter})"
-            if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
+        dynamic_total_label = f"Total Patients ({time_filter})"
+        if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
 
-            # THIS IS THE LINE THAT WAS CAUSING CHUCKY TO COME BACK.
-            # ALL CHECKS PASS. USE 'Avg / Day'
-            display_active = active_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
-            display_active = display_active.rename(columns={'Total Patients': dynamic_total_label})
-            
-            buffer = io.BytesIO()
-            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                display_active.to_excel(writer, index=False, sheet_name='Active Spokes')
-                
-            st.download_button(
-                label=f"📥 Download ({len(active_df)})", 
-                data=buffer.getvalue(),
-                file_name=f"Statewide_Active_Spokes_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                use_container_width=True
-            )
-
+        display_active = active_df[['S.No.', 'District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
+        display_active = display_active.rename(columns={'Total Patients': dynamic_total_label})
         styled_active = display_active.style.map(style_grade, subset=['Grade'])
         
         st.markdown("<br>", unsafe_allow_html=True)
         
         st.dataframe(styled_active, use_container_width=True, hide_index=True, column_config={
+            "S.No.": st.column_config.TextColumn("S.No.", width="small"),
             "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
             "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
             "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
             dynamic_total_label: st.column_config.NumberColumn(dynamic_total_label, format="%d")
         })
         
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            display_active.to_excel(writer, index=False, sheet_name='Active Spokes')
+            
+        st.download_button(
+            label=f"📥 Download Active Spokes ({len(active_df)})", data=buffer.getvalue(),
+            file_name=f"Statewide_Active_Spokes_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
+        )
     else:
         st.warning("Could not load facility data.")
 
@@ -1788,60 +1766,60 @@ else:
         
         with z_tab1:
             if not op_failures.empty:
-                col_title, col_dl = st.columns([3, 1], vertical_alignment="bottom")
-                with col_dl:
-                    buffer1 = io.BytesIO()
-                    with pd.ExcelWriter(buffer1, engine='openpyxl') as writer:
-                        op_failures.to_excel(writer, index=False, sheet_name='Operational Failures')
-                    st.download_button(
-                        label=f"📥 Download ({len(op_failures)})", data=buffer1.getvalue(),
-                        file_name=f"Statewide_OpFailures_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
-                    )
-                
                 op_failures['SortDate'] = pd.to_datetime(op_failures['Last Sample Date'], errors='coerce')
                 op_failures = op_failures.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
                 
                 display_tracker = op_failures[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                display_tracker.insert(0, 'S.No.', [str(i) for i in range(1, len(display_tracker) + 1)])
                 display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
                 styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
                 
                 st.dataframe(styled_tracker, use_container_width=True, hide_index=True, column_config={
+                    "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                     "District": st.column_config.TextColumn("District", width="medium"),
                     "Facility": st.column_config.TextColumn("Facility Name", width="large"),
                     "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
                     "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                 })
+                
+                buffer1 = io.BytesIO()
+                with pd.ExcelWriter(buffer1, engine='openpyxl') as writer:
+                    display_tracker.to_excel(writer, index=False, sheet_name='Operational Failures')
+                st.download_button(
+                    label=f"📥 Download Operational Failures ({len(op_failures)})", data=buffer1.getvalue(),
+                    file_name=f"Statewide_OpFailures_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
+                )
             else:
                 st.success("✅ Excellent! No operational facilities found with 0 patients.")
 
         with z_tab2:
             if not pending_launch.empty:
-                col_title, col_dl = st.columns([3, 1], vertical_alignment="bottom")
-                with col_dl:
-                    buffer2 = io.BytesIO()
-                    with pd.ExcelWriter(buffer2, engine='openpyxl') as writer:
-                        pending_launch.to_excel(writer, index=False, sheet_name='Pending Launch')
-                    st.download_button(
-                        label=f"📥 Download ({len(pending_launch)})", data=buffer2.getvalue(),
-                        file_name=f"Statewide_PendingLaunch_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
-                    )
-
                 pending_launch['SortDate'] = pd.to_datetime(pending_launch['Last Sample Date'], errors='coerce')
                 pending_launch = pending_launch.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
                 
                 display_pending = pending_launch[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                display_pending.insert(0, 'S.No.', [str(i) for i in range(1, len(display_pending) + 1)])
                 display_pending['Primary Reason'] = display_pending['Primary Reason'].apply(format_reason)
                 styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
                 
                 st.dataframe(styled_pending, use_container_width=True, hide_index=True, column_config={
+                    "S.No.": st.column_config.TextColumn("S.No.", width="small"),
                     "District": st.column_config.TextColumn("District", width="medium"),
                     "Facility": st.column_config.TextColumn("Facility Name", width="large"),
                     "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
                     "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                 })
                 st.info("These facilities will automatically move to 'Operational' as soon as their first data column is added.")
+                
+                buffer2 = io.BytesIO()
+                with pd.ExcelWriter(buffer2, engine='openpyxl') as writer:
+                    display_pending.to_excel(writer, index=False, sheet_name='Pending Launch')
+                st.download_button(
+                    label=f"📥 Download Pending Launch ({len(pending_launch)})", data=buffer2.getvalue(),
+                    file_name=f"Statewide_PendingLaunch_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
+                )
             else:
                 st.success("✅ All facilities have launched!")
     else:
