@@ -177,9 +177,6 @@ st.markdown("""
     /* Date Picker */
     div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; box-shadow: 0 0 0 1px #06B6D4 !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
-    
-    /* Auth Box */
-    .auth-box { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 30px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); text-align: center; max-width: 400px; margin: 100px auto; }
 </style>
 """, unsafe_allow_html=True)
 
