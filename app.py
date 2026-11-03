@@ -177,8 +177,34 @@ st.markdown("""
     /* Date Picker */
     div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; box-shadow: 0 0 0 1px #06B6D4 !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
+    
+    /* Auth Box */
+    .auth-box { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 30px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); text-align: center; max-width: 400px; margin: 100px auto; }
 </style>
 """, unsafe_allow_html=True)
+
+# --- AUTHENTICATION GATE ---
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown("""
+    <div class="auth-box">
+        <h2 style="color:#0F172A; margin-bottom: 8px;">🔒 Secure Login</h2>
+        <p style="color:#64748B; font-size: 14px; margin-bottom: 20px;">Enter the password to access the Bihar Health Dashboard.</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        pwd = st.text_input("Password", type="password", label_visibility="collapsed")
+        if st.button("Login", use_container_width=True):
+            if pwd == "BiharHealth2026!": # Change this to your desired password
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect Password. Please try again.")
+    st.stop() # Stop the rest of the app from loading until authenticated
 
 # --- DATA & HELPERS ---
 ZM_DATA = {
@@ -223,7 +249,7 @@ def format_reason(reason):
     return ' '.join([w if w.upper() in acronyms else w.capitalize() for w in words])
 
 # --- CACHED GOOGLE SHEETS FETCHER ---
-@st.cache_data(ttl=900, show_spinner="Fetching live data from Google Sheets...")
+@st.cache_data(ttl=3600, show_spinner="Fetching live data from Google Sheets...")
 def fetch_google_sheet(url):
     try:
         response = requests.get(url)
@@ -266,6 +292,7 @@ def find_distance_column(df):
             return c
     return None
 
+@st.cache_data(show_spinner=False)
 def extract_date(col_name):
     dt = pd.NaT
     
@@ -682,12 +709,17 @@ PLOTLY_LAYOUT = dict(
 # VIEW: DISTRICT VIEW
 # ==============================================================================
 if view_mode == "District View":
-    col_d, col_h = st.columns(2)
-    with col_d: selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
-    with col_h:
-        zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
-        selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[zm_name_for_district][selected_district_zm]))
+    # --- st.form FOR SPEED ---
+    with st.form("district_filters"):
+        col_d, col_h = st.columns(2)
+        with col_d: selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
+        with col_h:
+            zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
+            selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[zm_name_for_district][selected_district_zm]))
+        
+        submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
+    # The rest of the code uses the variables selected in the form
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
     display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
     
