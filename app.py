@@ -177,6 +177,36 @@ st.markdown("""
     /* Date Picker */
     div[data-testid="stDateInput"] div[data-baseweb="input"] { border: 2px solid #06B6D4 !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; box-shadow: 0 0 0 1px #06B6D4 !important; }
     div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { border-color: #0891B2 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2) !important; }
+
+    /* Style the Form Submit Button */
+    div[data-testid="stFormSubmitButton"] > button {
+        background-color: #06B6D4 !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 700 !important;
+        padding: 10px 24px !important;
+        transition: all 0.2s ease !important;
+        box-shadow: 0 4px 6px -1px rgba(6, 182, 212, 0.2) !important;
+        height: 42px !important;
+    }
+    div[data-testid="stFormSubmitButton"] > button:hover {
+        background-color: #0891B2 !important;
+        box-shadow: 0 10px 15px -3px rgba(6, 182, 212, 0.3) !important;
+        transform: translateY(-2px) !important;
+    }
+    div[data-testid="stFormSubmitButton"] > button:active {
+        transform: translateY(0) !important;
+    }
+    /* Style the form container itself */
+    div[data-testid="stForm"] {
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
+        margin-bottom: 20px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -706,17 +736,15 @@ PLOTLY_LAYOUT = dict(
 # VIEW: DISTRICT VIEW
 # ==============================================================================
 if view_mode == "District View":
-    # --- st.form FOR SPEED ---
     with st.form("district_filters"):
-        col_d, col_h = st.columns(2)
+        col_d, col_h, col_btn = st.columns([2, 2, 1], vertical_alignment="bottom")
         with col_d: selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
         with col_h:
             zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
             selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[zm_name_for_district][selected_district_zm]))
-        
-        submitted = st.form_submit_button("Apply Filters", use_container_width=True)
+        with col_btn:
+            submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
-    # The rest of the code uses the variables selected in the form
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
     display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
     
@@ -738,7 +766,6 @@ if view_mode == "District View":
 
     target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
     
-    # --- ROBUST SHEET LOOKUP FIX ---
     sheet_to_load = next((s for s in available_sheets if s.lower() == selected_district_zm.lower() or s.lower() == target_district.lower()), None)
     if not sheet_to_load:
         sheet_to_load = next((s for s in available_sheets if selected_district_zm.lower() in s.lower() or s.lower() in selected_district_zm.lower() or target_district.lower() in s.lower() or s.lower() in target_district.lower()), None)
@@ -751,7 +778,6 @@ if view_mode == "District View":
     if plot_df is None: st.error(f"Could not process data."); st.stop()
     facility_col = stats['facility_col']
 
-    # --- DYNAMIC TAB COUNTS ---
     total_active = stats['active_facilities']
     total_inactive = stats['num_facilities'] - total_active
     active_icon = "🟢" if total_active > 0 else "🔴"
@@ -768,7 +794,6 @@ if view_mode == "District View":
     ])
 
     with d_tab1:
-        # --- THE MATH FIX: Checkbox now affects the cards and math ---
         active_only = st.checkbox("Exclude Inactive Facilities from Math", value=False, key="d1")
         
         filtered_base = plot_df.copy()
@@ -1459,7 +1484,6 @@ elif view_mode == "State View":
                     
                     st.markdown("#### Daily Patient Trend — Overlaid")
                     
-                    # --- THE FIX: Continuous Date Range for both districts to break gaps ---
                     dates_a = [pd.to_datetime(c + " 2026", format='%d %b %Y') for c in sa['active_date_cols']]
                     dates_b = [pd.to_datetime(c + " 2026", format='%d %b %Y') for c in sb['active_date_cols']]
                     all_dates = sorted(list(set(dates_a + dates_b)))
@@ -1471,7 +1495,7 @@ elif view_mode == "State View":
                             if col_name in cols:
                                 t = pd.to_numeric(p[col_name], errors='coerce').fillna(0).sum()
                             else:
-                                t = None # Break the line on missing dates
+                                t = None
                             d.append({'Date': dt, 'Patients': t, 'District': name})
                         return pd.DataFrame(d)
                         
@@ -1535,12 +1559,10 @@ elif view_mode == "ZM View":
             total_active = zm_df['Active Spokes'].sum()
             total_facilities = zm_df['Facilities'].sum()
             
-            # --- THE MATH FIX: Exclude Pending Launch from denominator ---
             pending_zm = zm_fac_df[zm_fac_df['Status'] == 'Pending Launch']
             total_pending = len(pending_zm)
             total_operational = total_facilities - total_pending
             
-            # Calculate the true Zone Weighted Avg
             zm_days = zm_df['Days Reported'].max() if not zm_df.empty else 0
             zone_weighted_avg = round(total_patients / (total_facilities * zm_days), 1) if total_facilities > 0 and zm_days > 0 else 0.0
             
@@ -1577,7 +1599,6 @@ elif view_mode == "ZM View":
             </div>
             ''', unsafe_allow_html=True)
             
-            # --- THE TAB FIX: 4 distinct tabs ---
             op_failures_zm = zm_fac_df[(zm_fac_df['Total Patients'] == 0) & (zm_fac_df['Status'] == 'Operational')]
             
             zm_tab1, zm_tab2, zm_tab3, zm_tab4 = st.tabs([
@@ -1597,7 +1618,6 @@ elif view_mode == "ZM View":
                 display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
                 is_ascending = (zm_sort_order == "Ascending")
                 
-                # --- THE SORT FIX: Highest Uptime, then Weighted Avg ---
                 display_df = zm_df[display_cols].sort_values(by=['Uptime %', 'Weighted Avg'], ascending=[is_ascending, is_ascending]).reset_index(drop=True)
                 
                 st.dataframe(
@@ -1751,7 +1771,6 @@ elif view_mode == "Active Spokes":
                 return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
             return ''
             
-        # --- DYNAMIC COLUMN NAME FIX ---
         dynamic_total_label = f"Total Patients ({time_filter})"
         if time_filter == "Select Dates...":
             dynamic_total_label = f"Total Patients ({date_range_str})"
@@ -1833,7 +1852,6 @@ else:
             </div>
             ''', unsafe_allow_html=True)
 
-        # --- NEW CHART: Top Offending Districts ---
         if not op_failures.empty:
             st.markdown("<h4 style='color:#0F172A; margin-top:10px; margin-bottom:10px;'>Top Offending Districts (Operational Failures)</h4>", unsafe_allow_html=True)
             district_counts = op_failures['District'].value_counts().head(5).reset_index()
