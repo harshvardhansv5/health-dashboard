@@ -21,7 +21,7 @@ DISTANCE_FALLBACK = {}
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🩸", layout="wide")
 
-# --- CLINICAL PEARL UI CSS ---
+# --- CLINICAL PEARL UI CSS (UPGRADED) ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -45,7 +45,7 @@ st.markdown("""
     /* --- FORCE TEAL PROGRESS BARS --- */
     div[data-testid="stProgress"] > div > div > div { background-color: #06B6D4 !important; }
 
-    /* --- AUTH BOX [FIX G] --- */
+    /* --- AUTH BOX --- */
     .auth-box {
         background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px;
         padding: 24px 24px 16px 24px; max-width: 520px; margin: 60px auto 20px auto;
@@ -54,52 +54,55 @@ st.markdown("""
     }
 
     /* Metric Cards (Floating Glass) */
-    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 12px; }
     .metric-card {
         background-color: #FFFFFF !important; border: 1px solid #E2E8F0 !important; border-radius: 12px !important;
-        padding: 20px !important; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important; 
+        padding: 16px !important; box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.05) !important; 
         display: flex; flex-direction: column; transition: transform 0.2s ease; border-top: 4px solid #06B6D4;
     }
-    .metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-    .metric-label { color: #0F172A; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; cursor: help; }
-    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-    .metric-sub { font-size: 14px; font-weight: 600; color: #64748B; }
-    .trend-up { color: #14B8A6; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 2px; }
-    .trend-down { color: #F43F5E; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 2px; }
+    .metric-card:hover { transform: translateY(-1px); box-shadow: 0 6px 10px -3px rgba(0, 0, 0, 0.1); }
+    .metric-label { color: #0F172A; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; cursor: help; }
+    .metric-value { color: #0F172A; font-size: 28px; font-weight: 800; line-height: 1; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    .metric-sub { font-size: 13px; font-weight: 600; color: #64748B; }
 
-    /* Mini Grade Badges for Best Spoke Card */
-    .mini-badge-A { background-color: #CCFBF1; color: #0F766E; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #5EEAD4; }
-    .mini-badge-B { background-color: #D9F99D; color: #4D7C0F; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #BEF264; }
-    .mini-badge-C { background-color: #FEF08A; color: #854D0E; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #FDE047; }
-    .mini-badge-D { background-color: #FED7AA; color: #9A3412; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #FDBA74; }
-    .mini-badge-F { background-color: #FECDD3; color: #991B1B; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 13px; border: 1px solid #FDA4AF; }
+    /* Mini Grade Badges */
+    .mini-badge-A { background-color: #CCFBF1; color: #0F766E; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px; border: 1px solid #5EEAD4; }
+    .mini-badge-B { background-color: #D9F99D; color: #4D7C0F; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px; border: 1px solid #BEF264; }
+    .mini-badge-C { background-color: #FEF08A; color: #854D0E; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px; border: 1px solid #FDE047; }
+    .mini-badge-D { background-color: #FED7AA; color: #9A3412; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px; border: 1px solid #FDBA74; }
+    .mini-badge-F { background-color: #FECDD3; color: #991B1B; padding: 2px 8px; border-radius: 4px; font-weight: 700; font-size: 12px; border: 1px solid #FDA4AF; }
 
     /* Tables & Cards */
-    [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); padding: 8px; }
-    .zm-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); border-left: 4px solid #06B6D4; display: flex; justify-content: space-between; align-items: center; }
-    .zm-card-header { color: #64748B; font-size: 11px; font-weight: 700; text-transform: uppercase; margin-bottom: 2px;}
-    .zm-card-name { color: #0F172A; font-size: 16px; font-weight: 700; margin-bottom: 2px;}
-    .zm-card-zone { color: #06B6D4; font-size: 13px; font-weight: 600;}
-    .zm-card-right { text-align: right; }
+    [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05); padding: 8px; }
+    
+    /* --- REDESIGNED ZM CARD --- */
+    .zm-card { 
+        background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; 
+        padding: 10px 16px; margin-bottom: 12px; box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05); 
+        border-left: 4px solid #14B8A6; display: flex; justify-content: space-between; align-items: center; height: 64px;
+    }
+    .zm-card-header { color: #64748B; font-size: 10px; font-weight: 800; text-transform: uppercase; margin-bottom: 2px; letter-spacing: 0.5px;}
+    .zm-card-name { color: #0F172A; font-size: 15px; font-weight: 700; margin-bottom: 0px;}
+    .zm-card-zone { color: #14B8A6; font-size: 12px; font-weight: 700;}
 
     /* --- MODERN PAGE HEADERS --- */
-    .page-header-container { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; margin-top: 10px; }
-    .page-icon-container { display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; color: #FFFFFF; }
+    .page-header-container { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; margin-top: 8px; }
+    .page-icon-container { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 10px; color: #FFFFFF; }
     .page-icon-active { background-color: #14B8A6; box-shadow: 0 4px 10px rgba(20, 184, 166, 0.3); }
     .page-icon-warning { background-color: #DC2626; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); }
     .page-icon-state { background-color: #3B82F6; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
     .page-icon-zm { background-color: #4F46E5; box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3); }
-    .page-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; }
-    .page-title-text { font-size: 24px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.2; }
-    .page-subtitle-text { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 2px; }
+    .page-icon svg { width: 20px; height: 20px; stroke: #FFFFFF; }
+    .page-title-text { font-size: 22px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.2; }
+    .page-subtitle-text { font-size: 13px; font-weight: 500; color: #64748B; margin-top: 2px; }
 
     /* Report Header */
-    .report-header { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-    .report-title { color: #0F172A; font-size: 22px; font-weight: 800; margin-bottom: 6px; }
-    .report-meta { color: #475569; font-size: 13px; line-height: 1.5; font-weight: 500; }
+    .report-header { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05); }
+    .report-title { color: #0F172A; font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+    .report-meta { color: #475569; font-size: 12px; line-height: 1.5; font-weight: 500; }
     
     /* Grades */
-    .grade-badge { display: inline-block; padding: 6px 16px; border-radius: 8px; font-size: 24px; font-weight: 800; }
+    .grade-badge { display: inline-block; padding: 4px 12px; border-radius: 6px; font-size: 20px; font-weight: 800; }
     .grade-A { background-color: #CCFBF1; color: #0F766E; border: 1px solid #5EEAD4; }
     .grade-B { background-color: #D9F99D; color: #4D7C0F; border: 1px solid #BEF264; }
     .grade-C { background-color: #FEF08A; color: #854D0E; border: 1px solid #FDE047; }
@@ -112,79 +115,113 @@ st.markdown("""
         border: 1px solid #E2E8F0 !important;
         border-bottom: 3px solid #06B6D4 !important;
         border-radius: 12px !important;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
-        padding: 10px 20px !important;
-        margin-bottom: 12px !important;
+        box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05) !important;
+        padding: 6px 16px !important;
+        margin-bottom: 8px !important;
         align-items: center !important;
+        height: 56px !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) .app-header {
         border: none !important; box-shadow: none !important; background: transparent !important; padding: 0 !important; margin: 0 !important;
     }
+    
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
-        background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; border-radius: 8px !important; padding: 3px !important; gap: 4px !important;
+        background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; border-radius: 8px !important; padding: 2px !important; gap: 2px !important;
         flex-wrap: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 6px 12px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important;
+        padding: 4px 10px !important; font-size: 12px !important; margin: 0 !important; white-space: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-        background-color: #FFFFFF !important; 
-        border-radius: 6px !important; 
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; 
-        color: #0F172A !important; 
-        font-weight: 700 !important;
+        background-color: #FFFFFF !important; border-radius: 6px !important; box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; color: #0F172A !important; font-weight: 700 !important;
     }
 
     /* Header Details */
-    .header-left { display: flex; align-items: center; gap: 12px; }
-    .header-icon { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; background-color: #DC2626; border-radius: 10px; color: #FFFFFF; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3); }
-    .header-icon svg { width: 20px; height: 20px; stroke: #FFFFFF; }
-    .header-title { font-size: 17px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; margin-bottom: 2px; }
-    .header-subtitle { font-size: 12px; font-weight: 500; color: #64748B; margin-top: 0; }
+    .header-left { display: flex; align-items: center; gap: 10px; }
+    .header-icon { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; background-color: #DC2626; border-radius: 8px; color: #FFFFFF; box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3); }
+    .header-icon svg { width: 16px; height: 16px; stroke: #FFFFFF; }
+    .header-title { font-size: 15px; font-weight: 800; color: #0F172A; letter-spacing: -0.3px; line-height: 1.1; margin-bottom: 0px; }
+    .header-subtitle { font-size: 11px; font-weight: 500; color: #64748B; margin-top: 0; }
     
     /* Blinking Radar Dot */
-    .status-dot { width: 8px; height: 8px; background-color: #14B8A6; border-radius: 50%; animation: pulse-cyan 2s infinite; display: inline-block; }
+    .status-dot { width: 6px; height: 6px; background-color: #14B8A6; border-radius: 50%; animation: pulse-cyan 2s infinite; display: inline-block; margin-right: 4px; }
     @keyframes pulse-cyan {
         0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(20, 184, 166, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(20, 184, 166, 0); }
+        70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(20, 184, 166, 0); }
         100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(20, 184, 166, 0); }
     }
 
     /* Compare Battle Cards */
-    .battle-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 16px; }
+    .battle-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05); margin-bottom: 12px; }
     .battle-card-blue { border-top: 4px solid #06B6D4; }
     .battle-card-red { border-top: 4px solid #F43F5E; }
-    .battle-title { font-size: 18px; font-weight: 800; margin-bottom: 12px; }
-    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding: 10px 0; font-size: 14px; color: #475569; font-weight: 500;}
+    .battle-title { font-size: 16px; font-weight: 800; margin-bottom: 10px; }
+    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding: 8px 0; font-size: 13px; color: #475569; font-weight: 500;}
     .battle-row:last-child { border-bottom: none; }
     .battle-val { font-weight: 700; color: #0F172A; }
 
-    /* --- DROPDOWN & INPUT STYLING --- */
+    /* --- PREMIUM INPUTS & DROPDOWNS --- */
     div[data-testid="stSelectbox"] { margin-bottom: 0px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
-        background-color: #FFFFFF !important; border: none !important; box-shadow: 0 0 0 2px #06B6D4 inset !important; border-radius: 8px !important; 
-        transition: all 0.2s ease-in-out !important; min-height: 40px !important; 
+        background-color: #FFFFFF !important; border: none !important; box-shadow: 0 0 0 1px #CBD5E1 inset !important; border-radius: 6px !important; 
+        transition: all 0.2s ease-in-out !important; min-height: 36px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover { background-color: #F8FAFC !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { box-shadow: 0 0 0 3px #0891B2 inset !important; background-color: #FFFFFF !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; font-size: 13px !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #06B6D4 !important; }
-    label[data-testid="stWidgetLabel"] p { color: #1E293B !important; font-weight: 700 !important; font-size: 12px !important; text-transform: uppercase; letter-spacing: 0.5px; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { background-color: #F8FAFC !important; box-shadow: 0 0 0 1px #94A3B8 inset !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { box-shadow: 0 0 0 2px #06B6D4 inset !important; background-color: #FFFFFF !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 500 !important; font-size: 13px !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #64748B !important; width: 16px !important; height: 16px !important;}
+    
+    label[data-testid="stWidgetLabel"] p { color: #475569 !important; font-weight: 600 !important; font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px !important;}
 
-    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: none !important; box-shadow: 0 0 0 2px #06B6D4 inset !important; border-radius: 8px !important; background-color: #FFFFFF !important; min-height: 40px !important; }
-    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { box-shadow: 0 0 0 3px #0891B2 inset !important; background-color: #FFFFFF !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"] { border: none !important; box-shadow: 0 0 0 1px #CBD5E1 inset !important; border-radius: 6px !important; background-color: #FFFFFF !important; min-height: 36px !important; }
+    div[data-testid="stDateInput"] div[data-baseweb="input"]:focus-within { box-shadow: 0 0 0 2px #06B6D4 inset !important; background-color: #FFFFFF !important; }
 
-    div[data-testid="stFormSubmitButton"] > button {
-        background-color: #06B6D4 !important; color: #FFFFFF !important; border: none !important; border-radius: 8px !important;
-        font-weight: 700 !important; padding: 10px 24px !important; transition: all 0.2s ease !important;
-        box-shadow: 0 4px 6px -1px rgba(6, 182, 212, 0.2) !important; height: 42px !important;
-    }
-    div[data-testid="stFormSubmitButton"] > button:hover { background-color: #0891B2 !important; box-shadow: 0 10px 15px -3px rgba(6, 182, 212, 0.3) !important; transform: translateY(-2px) !important; }
-    div[data-testid="stFormSubmitButton"] > button:active { transform: translateY(0) !important; }
+    /* --- TIGHTENED FORM & PREMIUM BUTTONS --- */
     div[data-testid="stForm"] {
-        border: none !important; border-radius: 12px !important; padding: 16px 20px !important; background-color: #FFFFFF !important;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03) !important; margin-bottom: 20px !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 12px !important;
+        padding: 12px 16px !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05) !important;
+        margin-bottom: 12px !important;
+    }
+    
+    /* The Apply Filters Button (Primary) */
+    div[data-testid="stFormSubmitButton"] > button {
+        background-color: #0891B2 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #0E7490 !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        padding: 0px 16px !important;
+        transition: all 0.15s ease !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
+        height: 36px !important;
+    }
+    div[data-testid="stFormSubmitButton"] > button:hover {
+        background-color: #0E7490 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1) !important;
+    }
+    div[data-testid="stFormSubmitButton"] > button:active { transform: translateY(0) !important; }
+
+    /* Ghost Button for ZM Profile */
+    div[data-testid="stButton"] > button {
+        background-color: #FFFFFF !important;
+        color: #06B6D4 !important;
+        border: 1px solid #06B6D4 !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        height: 40px !important;
+        transition: all 0.15s ease !important;
+    }
+    div[data-testid="stButton"] > button:hover {
+        background-color: #ECFEFF !important;
+        border-color: #0891B2 !important;
+        color: #0891B2 !important;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -344,7 +381,6 @@ def get_facility_mask(df, facility_col):
     mask &= ~df[facility_col].astype(str).str.lower().str.contains('prepared|signature|verified|report', na=False)
     return mask
 
-# [FIX 5] anchor_date removed, window_offset added, active_date_map added
 def process_district_df(df, time_filter, start_date=None, end_date=None, window_offset=0):
     if df is None: return None, None, None
     facility_col = find_facility_column(df)
@@ -406,7 +442,6 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
             'total_absolute_facilities': total_absolute_facilities
         }
 
-    # [FIX 5 / FEATURE 6] Window slicing with offset support
     active_dates = sorted_dates
     if time_filter == "Select Dates..." and start_date and end_date:
         active_dates = [d for d in sorted_dates if start_date <= d.date() <= end_date]
@@ -420,7 +455,6 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
         
     if not active_dates:
         if window_offset > 0:
-            # No previous-window data — return zeroed stats so comparison sees "no prior"
             plot_df = df[[facility_col]].copy()
             plot_df['Total Patients'] = 0
             plot_df['Average Patients'] = 0.0
@@ -513,9 +547,6 @@ def district_grade(plot_df):
 
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
-# [FIX 5] find_global_latest_date deleted entirely (was a no-op costing ~15s per Full History cache miss).
-
-# [FIX 2 / FIX 5] Cache buster bumped, anchor removed, window_offset added
 @st.cache_data(show_spinner=False)
 def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v32.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
@@ -600,7 +631,6 @@ def get_district_monthly_trend(df_raw, facility_col):
     trend_df = trend_df.dropna(subset=['Sort_Date']).sort_values('Sort_Date')
     return trend_df
 
-# [FEATURE 6] ZM aggregation helper with proper facility-day weighting (fix B)
 def _zm_aggregates(state_df):
     out = {}
     for zm, dists in ZM_DATA.items():
@@ -650,12 +680,11 @@ for s in xls.sheet_names:
     if any(kw.lower() in s_lower or s_lower in kw.lower() for kw in valid_keywords):
         available_sheets.append(s)
 
-# [FIX 4] Sheet-name → display-name lookup used everywhere user-facing
 _DISPLAY_TO_SHEET = {REVERSE_DISTRICT_MAP.get(s, s): s for s in available_sheets}
 _DISPLAY_DISTRICTS = sorted(_DISPLAY_TO_SHEET.keys())
 
 # --- UNIFIED COMMAND BAR ---
-col_title, col_nav, col_time_ctrl = st.columns([2.2, 5.0, 1.8])
+col_title, col_nav, col_time_ctrl = st.columns([2.5, 4.5, 2.0])
 
 with col_title:
     st.markdown("""
@@ -677,7 +706,6 @@ with col_title:
     """, unsafe_allow_html=True)
 
 with col_nav:
-    # [FIX 1] view_mode_override now actually navigates via key-based state injection
     _NAV_OPTS = ["District View", "State View", "ZM View", "Active Spokes", "Zero-Sample Tracker"]
     if 'view_mode_override' in st.session_state:
         _override = st.session_state.pop('view_mode_override')
@@ -686,10 +714,10 @@ with col_nav:
     view_mode = st.radio("Navigation", _NAV_OPTS, key='nav_radio', horizontal=True, label_visibility="collapsed")
 
 with col_time_ctrl:
-    st.markdown(f"""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;">
+    st.markdown("""
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0px; padding-bottom: 2px;">
         <div style="font-size: 10px; font-weight: 700; color: #64748B; letter-spacing: 0.5px;">TIME RANGE</div>
-        <div style="font-size: 10px; font-weight: 700; color: #0F766E; display: flex; align-items: center; gap: 3px;">
+        <div style="font-size: 10px; font-weight: 700; color: #14B8A6; display: flex; align-items: center;">
             <div class="status-dot"></div> Live
         </div>
     </div>
@@ -717,26 +745,28 @@ PLOTLY_LAYOUT = dict(
 # VIEW: DISTRICT VIEW
 # ==============================================================================
 if view_mode == "District View":
-    with st.form("district_filters"):
-        col_d, col_h = st.columns(2)
-        with col_d: selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
+    # --- UNIFIED SINGLE-ROW CONTROL STRIP ---
+    with st.form("district_filters", clear_on_submit=False):
+        col_d, col_h, col_chk, col_btn = st.columns([2.5, 2.5, 1.5, 1], vertical_alignment="bottom")
+        
+        with col_d: 
+            selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
         with col_h:
             zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
             selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[zm_name_for_district][selected_district_zm]))
-        
-        col_chk, col_btn = st.columns([3, 1], vertical_alignment="bottom")
         with col_chk:
-            active_only = st.checkbox("Exclude Inactive Facilities from Math", value=False)
+            active_only = st.checkbox("Exclude Inactive", value=False)
         with col_btn:
             submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
+    # --- REDESIGNED ZM PROFILE CARD ---
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
     display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
     
-    col_zm_card, col_zm_btn = st.columns([4, 1], vertical_alignment="center")
+    col_zm_card, col_zm_btn = st.columns([4.5, 1], vertical_alignment="center")
     with col_zm_card:
         st.markdown(f'''
-        <div class="zm-card" style="margin-bottom: 0;">
+        <div class="zm-card" style="margin-bottom: 0; margin-top: 8px;">
             <div>
                 <div class="zm-card-header">Zone Manager</div>
                 <div class="zm-card-name">{display_zm}</div>
@@ -750,6 +780,7 @@ if view_mode == "District View":
             st.session_state.view_mode_override = "ZM View"
             st.rerun()
 
+    # --- DATA LOADING ---
     target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
     sheet_to_load = next((s for s in available_sheets if s.lower() == selected_district_zm.lower() or s.lower() == target_district.lower()), None)
     if not sheet_to_load:
@@ -877,7 +908,6 @@ if view_mode == "District View":
                 m2.markdown(f"<div class='metric-card'><div class='metric-label'>Uptime</div><div class='metric-value'>{fac_row['Uptime %']}%</div></div>", unsafe_allow_html=True)
                 m3.markdown(f"<div class='metric-card'><div class='metric-label'>Zero Days</div><div class='metric-value'>{fac_row['Zero Days']}</div></div>", unsafe_allow_html=True)
                 
-                # [FIX 3] Use real datetime objects from active_date_map (was hardcoded 2026)
                 drill_trend = [{'Date': stats['active_date_map'][c], 'Patients': fac_row[c]} for c in stats['active_date_cols']]
                 if drill_trend:
                     dt_df = pd.DataFrame(drill_trend).sort_values('Date')
@@ -1013,7 +1043,6 @@ if view_mode == "District View":
         st.caption("The Excel file contains two sheets: one for the District Summary and one for the full Spoke Scorecard.")
 
     with d_tab3:
-        # [FIX H] Count shown in Failures tab for consistency
         sub_tab1, sub_tab2, sub_tab3 = st.tabs([f"🔴 Failures ({zero_day_facilities})", f"{active_icon} Active ({total_active})", f"{inactive_icon} Inactive ({total_inactive})"])
         
         with sub_tab1:
@@ -1183,7 +1212,6 @@ elif view_mode == "State View":
     """, unsafe_allow_html=True)
     
     with st.spinner("Loading State Data..."):
-        # [FIX A] all_fac_df no longer loaded here (was unused)
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not state_df.empty:
@@ -1227,7 +1255,6 @@ elif view_mode == "State View":
             if not is_ascending:
                 lb_df['District'] = lb_df.apply(lambda row: f"{medal(row['Rank'])} {row['District']}".strip(), axis=1)
             
-            # [FIX C] TOTAL row computed from unfiltered state_df
             total_row = pd.DataFrame([{
                 'Rank': '', 'District': '🏆 STATE TOTAL', 'Total Patients': state_df['Total Patients'].sum(),
                 'Weighted Avg': '', 'Uptime %': None, 'Facilities': TOTAL_SPOKES,
@@ -1244,12 +1271,9 @@ elif view_mode == "State View":
             st.download_button("📥 Download Leaderboard", data=buf_state.getvalue(), file_name="State_Leaderboard.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
             
         with s_tab2:
-            # [FEATURE 6] ZM Leaderboard with trend arrows (current vs previous window)
             zm_metric = st.radio("Rank ZMs by:", ["Uptime %", "Weighted Avg", "Total Patients"], horizontal=True, key="zm_lb_metric")
-            
             cur_zm = _zm_aggregates(state_df)
             
-            # Compute previous window
             prev_zm = None
             if time_filter != "Full History":
                 try:
@@ -1273,7 +1297,6 @@ elif view_mode == "State View":
             if not cur_zm:
                 st.info("No ZM data available for the selected period.")
             else:
-                # Rank current & previous
                 cur_sorted = sorted(cur_zm.items(), key=lambda kv: kv[1][zm_metric], reverse=True)
                 cur_rank = {zm: i+1 for i, (zm, _) in enumerate(cur_sorted)}
                 prev_rank = {}
@@ -1286,14 +1309,12 @@ elif view_mode == "State View":
                     cur_v = m[zm_metric]
                     prev_v = prev_zm.get(zm, {}).get(zm_metric) if prev_zm else None
                     
-                    # Rank delta
                     if prev_rank.get(zm):
                         rd = prev_rank[zm] - cur_rank[zm]
                         rank_delta = f"↑{rd}" if rd > 0 else (f"↓{abs(rd)}" if rd < 0 else "—")
                     else:
                         rank_delta = "—"
                     
-                    # Value trend
                     if prev_v is None:
                         trend = "—"
                     elif prev_v == 0 and cur_v == 0:
@@ -1337,7 +1358,6 @@ elif view_mode == "State View":
 
         with s_tab3:
             col_empty1, ca, cb, col_empty2 = st.columns([1, 2, 2, 1])
-            # [FIX 4] Use friendly display names; resolve back to sheet names
             with ca: district_a_display = st.selectbox("District A", _DISPLAY_DISTRICTS, index=0, key='cmp_a')
             with cb: district_b_display = st.selectbox("District B", _DISPLAY_DISTRICTS, index=min(1, len(_DISPLAY_DISTRICTS) - 1), key='cmp_b')
             
@@ -1346,7 +1366,6 @@ elif view_mode == "State View":
             
             if district_a_sheet and district_b_sheet:
                 df_a = read_sheet_robust(xls, district_a_sheet); df_b = read_sheet_robust(xls, district_b_sheet)
-                # [FIX 5] anchor_date removed from process_district_df
                 pa, ra, sa = process_district_df(df_a, time_filter, start_date, end_date)
                 pb, rb, sb = process_district_df(df_b, time_filter, start_date, end_date)
                 
@@ -1384,7 +1403,6 @@ elif view_mode == "State View":
                     
                     st.markdown("#### Daily Patient Trend — Overlaid")
                     
-                    # [FIX 3] Use active_date_map (real datetime objects) instead of hardcoded 2026
                     a_obj_to_col = {v: k for k, v in sa.get('active_date_map', {}).items()}
                     b_obj_to_col = {v: k for k, v in sb.get('active_date_map', {}).items()}
                     all_dates_objs = sorted(set(a_obj_to_col.keys()) | set(b_obj_to_col.keys()))
@@ -1434,7 +1452,6 @@ elif view_mode == "ZM View":
     </div>
     """, unsafe_allow_html=True)
     
-    # [FIX 1] Inject target as widget state so the selectbox follows the button click
     _zm_opts = sorted(ZM_DATA.keys())
     if 'zm_view_target' in st.session_state:
         _target = st.session_state.pop('zm_view_target')
@@ -1462,7 +1479,6 @@ elif view_mode == "ZM View":
             total_pending = len(pending_zm)
             total_operational = total_facilities - total_pending
             
-            # [FIX B] Proper facility-day weighting (was max(days) dilution)
             zone_fac_days = int((zm_df['Facilities'] * zm_df['Days Reported']).sum())
             zone_weighted_avg = round(total_patients / zone_fac_days, 1) if zone_fac_days > 0 else 0.0
             
@@ -1471,7 +1487,6 @@ elif view_mode == "ZM View":
             sub_districts = ['Barh', 'Danapur']
             sub_count = len([d for d in zm_districts if d in sub_districts])
             dist_count = len(zm_districts) - sub_count
-            # [FIX E] Simplify — total_units is just len(zm_districts)
             total_units = len(zm_districts)
             breakdown_text = f"{dist_count} Districts"
             if sub_count > 0:
@@ -1613,7 +1628,6 @@ elif view_mode == "ZM View":
                     })
                     st.info("These facilities will automatically move to 'Operational' as soon as their first data column is added.")
     else:
-        # [FIX F] Fallback when statewide data is empty
         st.warning("Could not load statewide or facility data. Try refreshing, or check the Google Sheet connection.")
 
 # ==============================================================================
@@ -1647,7 +1661,6 @@ elif view_mode == "Active Spokes":
         if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
         if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
         
-        # [FIX D] Metric card now uses post-filter count — matches download button
         with col1:
             st.markdown(f'''
             <div class="metric-card" style="border-top: 4px solid #14B8A6; padding: 16px; margin-bottom: 0;">
