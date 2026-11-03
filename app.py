@@ -1786,6 +1786,17 @@ else:
         
         with z_tab1:
             if not op_failures.empty:
+                col_title, col_dl = st.columns([3, 1], vertical_alignment="bottom")
+                with col_dl:
+                    buffer1 = io.BytesIO()
+                    with pd.ExcelWriter(buffer1, engine='openpyxl') as writer:
+                        op_failures.to_excel(writer, index=False, sheet_name='Operational Failures')
+                    st.download_button(
+                        label=f"📥 Download ({len(op_failures)})", data=buffer1.getvalue(),
+                        file_name=f"Statewide_OpFailures_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
+                    )
+                
                 op_failures['SortDate'] = pd.to_datetime(op_failures['Last Sample Date'], errors='coerce')
                 op_failures = op_failures.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
                 
@@ -1799,20 +1810,22 @@ else:
                     "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
                     "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                 })
-                
-                buffer1 = io.BytesIO()
-                with pd.ExcelWriter(buffer1, engine='openpyxl') as writer:
-                    display_tracker.to_excel(writer, index=False, sheet_name='Operational Failures')
-                st.download_button(
-                    label=f"📥 Download Operational Failures ({len(op_failures)})", data=buffer1.getvalue(),
-                    file_name=f"Statewide_OpFailures_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
-                )
             else:
                 st.success("✅ Excellent! No operational facilities found with 0 patients.")
 
         with z_tab2:
             if not pending_launch.empty:
+                col_title, col_dl = st.columns([3, 1], vertical_alignment="bottom")
+                with col_dl:
+                    buffer2 = io.BytesIO()
+                    with pd.ExcelWriter(buffer2, engine='openpyxl') as writer:
+                        pending_launch.to_excel(writer, index=False, sheet_name='Pending Launch')
+                    st.download_button(
+                        label=f"📥 Download ({len(pending_launch)})", data=buffer2.getvalue(),
+                        file_name=f"Statewide_PendingLaunch_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
+                    )
+
                 pending_launch['SortDate'] = pd.to_datetime(pending_launch['Last Sample Date'], errors='coerce')
                 pending_launch = pending_launch.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
                 
@@ -1827,15 +1840,6 @@ else:
                     "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                 })
                 st.info("These facilities will automatically move to 'Operational' as soon as their first data column is added.")
-                
-                buffer2 = io.BytesIO()
-                with pd.ExcelWriter(buffer2, engine='openpyxl') as writer:
-                    display_pending.to_excel(writer, index=False, sheet_name='Pending Launch')
-                st.download_button(
-                    label=f"📥 Download Pending Launch ({len(pending_launch)})", data=buffer2.getvalue(),
-                    file_name=f"Statewide_PendingLaunch_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
-                )
             else:
                 st.success("✅ All facilities have launched!")
     else:
