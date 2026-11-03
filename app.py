@@ -200,11 +200,11 @@ st.markdown("""
     }
     /* Style the form container itself */
     div[data-testid="stForm"] {
-        border: 1px solid #E2E8F0 !important;
+        border: none !important;
         border-radius: 12px !important;
-        padding: 20px !important;
+        padding: 16px 20px !important;
         background-color: #FFFFFF !important;
-        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03) !important;
         margin-bottom: 20px !important;
     }
 </style>
@@ -737,11 +737,15 @@ PLOTLY_LAYOUT = dict(
 # ==============================================================================
 if view_mode == "District View":
     with st.form("district_filters"):
-        col_d, col_h, col_btn = st.columns([2, 2, 1], vertical_alignment="bottom")
+        col_d, col_h = st.columns(2)
         with col_d: selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
         with col_h:
             zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
             selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[zm_name_for_district][selected_district_zm]))
+        
+        col_chk, col_btn = st.columns([3, 1], vertical_alignment="bottom")
+        with col_chk:
+            active_only = st.checkbox("Exclude Inactive Facilities from Math", value=False)
         with col_btn:
             submitted = st.form_submit_button("Apply Filters", use_container_width=True)
 
@@ -794,8 +798,6 @@ if view_mode == "District View":
     ])
 
     with d_tab1:
-        active_only = st.checkbox("Exclude Inactive Facilities from Math", value=False, key="d1")
-        
         filtered_base = plot_df.copy()
         if active_only: filtered_base = filtered_base[filtered_base['Total Patients'] > 0]
         
@@ -877,21 +879,13 @@ if view_mode == "District View":
             
             if metric_col == 'Average Patients':
                 current_avg = new_weighted_avg
-                avg_label = f"Weighted Avg: {current_avg}"
             elif metric_col == 'Total Patients':
                 current_avg = round(filtered['Total Patients'].mean(), 1)
-                avg_label = f"Normal Avg: {current_avg}"
             else:
                 current_avg = round(filtered['Uptime %'].mean(), 1)
-                avg_label = f"Avg Uptime: {current_avg}%"
                 
+            # Just draw the line, no floating box
             fig.add_vline(x=current_avg, line_dash="dash", line_color="#06B6D4", line_width=2)
-            fig.add_annotation(
-                x=current_avg, y=1.05, yref="paper", 
-                text=avg_label, showarrow=False, 
-                font=dict(color="#06B6D4", weight="bold", size=12),
-                bgcolor="rgba(255,255,255,0.9)", bordercolor="#06B6D4", borderwidth=1, borderpad=4
-            )
             
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
@@ -901,7 +895,7 @@ if view_mode == "District View":
                 showlegend=False,
                 xaxis_title=metric_option,
                 yaxis_title="",
-                margin=dict(l=40, r=80, t=90, b=10),
+                margin=dict(l=40, r=80, t=80, b=10), # Increased top margin
                 coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
