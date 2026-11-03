@@ -75,14 +75,20 @@ st.markdown("""
     /* Tables & Cards */
     [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05); padding: 8px; }
     
-    /* --- SPLIT RIBBON ZM CARD --- */
-    .zm-ribbon {
-        background-color: #1E293B; border-radius: 8px; padding: 8px 16px;
-        display: flex; align-items: center; height: 42px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    /* --- SPLIT RIBBON ZM CARD (UNIFIED ROW) --- */
+    /* Target the specific Streamlit block that holds the ZM text and button */
+    div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) {
+        background-color: #1E293B !important;
+        border-radius: 8px !important;
+        padding: 4px 16px !important;
+        align-items: center !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        margin-bottom: 12px !important;
+        height: 48px !important;
     }
-    .zm-label { color: #94A3B8; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-right: 12px; }
-    .zm-name { color: #FFFFFF; font-size: 14px; font-weight: 700; margin-right: 8px; }
-    .zm-zone { color: #14B8A6; font-size: 13px; font-weight: 600; }
+    .zm-ribbon-text { color: #FFFFFF; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .zm-label { color: #94A3B8; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+    .zm-zone { color: #14B8A6; font-weight: 700; }
 
     /* --- MODERN PAGE HEADERS --- */
     .page-header-container { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; margin-top: 8px; }
@@ -198,6 +204,7 @@ st.markdown("""
         transition: all 0.15s ease !important;
         box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important;
         height: 36px !important;
+        width: auto !important; /* Forces it to not stretch */
     }
     div[data-testid="stFormSubmitButton"] > button:hover {
         background-color: #0E7490 !important;
@@ -206,21 +213,22 @@ st.markdown("""
     }
     div[data-testid="stFormSubmitButton"] > button:active { transform: translateY(0) !important; }
 
-    /* Ghost Button for ZM Profile */
-    div[data-testid="stButton"] > button {
+    /* Ghost Button for ZM Profile (Inside the Dark Ribbon) */
+    div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button {
         background-color: transparent !important;
-        color: #0F172A !important;
-        border: 1px solid #CBD5E1 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #475569 !important;
         border-radius: 6px !important;
         font-weight: 600 !important;
         font-size: 12px !important;
-        height: 32px !important;
+        height: 30px !important;
         transition: all 0.15s ease !important;
+        padding: 0px 12px !important;
     }
-    div[data-testid="stButton"] > button:hover {
-        background-color: #F8FAFC !important;
-        border-color: #94A3B8 !important;
-        color: #0F172A !important;
+    div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button:hover {
+        background-color: #334155 !important;
+        border-color: #64748B !important;
+        color: #FFFFFF !important;
     }
 
     /* Compact Download Buttons */
@@ -773,18 +781,20 @@ if view_mode == "District View":
         with col_chk:
             active_only = st.checkbox("Exclude Inactive", value=False)
         with col_btn:
-            submitted = st.form_submit_button("Apply Filters", use_container_width=True)
+            # use_container_width=False is key here so it doesn't stretch
+            submitted = st.form_submit_button("Apply", use_container_width=False)
 
     # --- SPLIT RIBBON ZM PROFILE ---
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
     display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
     
+    # We use a streamlit columns block, but apply CSS to the row itself based on the custom class inside
     col_ribbon, col_btn = st.columns([4.5, 1], vertical_alignment="center")
     with col_ribbon:
         st.markdown(f'''
-        <div class="zm-ribbon">
+        <div class="zm-ribbon-text">
             <span class="zm-label">ZONE MANAGER</span>
-            <span class="zm-name">{display_zm}</span>
+            <span>{display_zm}</span>
             <span class="zm-zone">({zone_name})</span>
         </div>
         ''', unsafe_allow_html=True)
@@ -1029,7 +1039,6 @@ if view_mode == "District View":
         }])
         display = pd.concat([total_row, display], ignore_index=True)
         
-        # S.No. Removed
         st.dataframe(display, use_container_width=True, hide_index=True, column_config={
             "Facility": st.column_config.TextColumn("Facility", width="large"),
             "Grade": st.column_config.TextColumn("Grade", width="small"),
