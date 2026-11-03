@@ -21,7 +21,7 @@ DISTANCE_FALLBACK = {}
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🩸", layout="wide")
 
-# --- CLINICAL PEARL UI CSS (UPGRADED) ---
+# --- CLINICAL PEARL UI CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -75,20 +75,21 @@ st.markdown("""
     /* Tables & Cards */
     [data-testid="stDataFrame"] { background-color: #FFFFFF !important; border-radius: 12px; border: 1px solid #E2E8F0; box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05); padding: 8px; }
     
-    /* --- SPLIT RIBBON ZM CARD (UNIFIED ROW) --- */
-    /* Target the specific Streamlit block that holds the ZM text and button */
+    /* --- SEAMLESS WHITE ZM RIBBON --- */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) {
-        background-color: #1E293B !important;
-        border-radius: 8px !important;
-        padding: 4px 16px !important;
-        align-items: center !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-left: 4px solid #06B6D4 !important;
+        border-radius: 12px !important;
+        padding: 10px 20px !important;
         margin-bottom: 12px !important;
-        height: 48px !important;
+        box-shadow: 0 2px 4px -1px rgba(0,0,0,0.05) !important;
+        align-items: center !important;
+        height: 56px !important;
     }
-    .zm-ribbon-text { color: #FFFFFF; font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-    .zm-label { color: #94A3B8; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
-    .zm-zone { color: #14B8A6; font-weight: 700; }
+    .zm-label { color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 12px; }
+    .zm-name { color: #0F172A; font-size: 15px; font-weight: 700; margin-right: 8px; }
+    .zm-zone { color: #14B8A6; font-size: 13px; font-weight: 600; }
 
     /* --- MODERN PAGE HEADERS --- */
     .page-header-container { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; margin-top: 8px; }
@@ -213,22 +214,22 @@ st.markdown("""
     }
     div[data-testid="stFormSubmitButton"] > button:active { transform: translateY(0) !important; }
 
-    /* Ghost Button for ZM Profile (Inside the Dark Ribbon) */
+    /* Ghost Button for ZM Profile */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button {
-        background-color: transparent !important;
-        color: #FFFFFF !important;
-        border: 1px solid #475569 !important;
+        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        border: 1px solid #CBD5E1 !important;
         border-radius: 6px !important;
         font-weight: 600 !important;
         font-size: 12px !important;
-        height: 30px !important;
+        height: 32px !important;
         transition: all 0.15s ease !important;
         padding: 0px 12px !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button:hover {
-        background-color: #334155 !important;
-        border-color: #64748B !important;
-        color: #FFFFFF !important;
+        background-color: #F8FAFC !important;
+        border-color: #06B6D4 !important;
+        color: #06B6D4 !important;
     }
 
     /* Compact Download Buttons */
@@ -282,7 +283,7 @@ ZM_DATA = {
     "Narendra Kumar Pal (Gaya)": {"Aurangabad": ["DH Aurangabad"], "Gaya": ["Prabhawati Hospital Gaya"], "Nawada": ["DH Nawada"], "Arwal": ["DH Arwal"], "Jehanabad": ["DH Jehanabad"]},
     "Santosh Kumar (Khagaria)": {"Begusarai": ["DH Begusarai"], "Khagaria": ["DH Khagaria"], "Lakhisarai": ["DH Lakhisarai"], "Sheikhpura": ["DH Sheikhpura"]},
     "Rupesh Kumar (Muzaffarpur)": {"Muzaffarpur": ["DH Muzaffarpur"], "Sheohar": ["Saroja Sitaram Sadar Hospital Sheohar"], "Vaishali": ["DH Hajipur"]},
-    "Paras kumar Jaiswal (Purnia)": {"Araria": ["DH Araria"], "Katihar": ["DH Katihar"], "Kishanganj": ["DH Kishanganj"], "Purnia": ["CHC Krityanand Nagar"]},
+    "Paras Kumar Jaiswal (Purnia)": {"Araria": ["DH Araria"], "Katihar": ["DH Katihar"], "Kishanganj": ["DH Kishanganj"], "Purnia": ["CHC Krityanand Nagar"]},
     "Umesh Tiwari (Rohtas)": {"Buxar": ["DH Buxar"], "Kaimur": ["DH Kaimur"], "Rohtas": ["DH Sasaram"]},
     "Anant Kumar Ray (Saharsa)": {"Madhepura": ["DH Madhepura"], "Saharsa": ["DH Saharsa"], "Supaul": ["DH Supaul"]},
     "Krishna Prakash (Saran)": {"Gopalganj": ["DH Gopalganj"], "Saran": ["DH Saran"], "Siwan": ["DH Siwan"]}
@@ -572,7 +573,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v33.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v34.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -594,7 +595,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v33.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v34.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -781,20 +782,18 @@ if view_mode == "District View":
         with col_chk:
             active_only = st.checkbox("Exclude Inactive", value=False)
         with col_btn:
-            # use_container_width=False is key here so it doesn't stretch
             submitted = st.form_submit_button("Apply", use_container_width=False)
 
-    # --- SPLIT RIBBON ZM PROFILE ---
+    # --- SEAMLESS WHITE ZM RIBBON ---
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
     display_zm = zm_name_for_district.split("(")[0].strip() if "(" in zm_name_for_district else zm_name_for_district
     
-    # We use a streamlit columns block, but apply CSS to the row itself based on the custom class inside
     col_ribbon, col_btn = st.columns([4.5, 1], vertical_alignment="center")
     with col_ribbon:
         st.markdown(f'''
         <div class="zm-ribbon-text">
             <span class="zm-label">ZONE MANAGER</span>
-            <span>{display_zm}</span>
+            <span class="zm-name">{display_zm}</span>
             <span class="zm-zone">({zone_name})</span>
         </div>
         ''', unsafe_allow_html=True)
