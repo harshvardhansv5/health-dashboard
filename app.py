@@ -61,20 +61,20 @@ st.markdown("""
         border: none !important; 
         border-radius: 20px !important;
         padding: 24px !important; 
-        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06) !important; 
+        box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important; 
         display: flex; flex-direction: column; 
         transition: transform 0.2s ease, box-shadow 0.2s ease; 
     }
     .metric-card:hover { 
         transform: translateY(-4px); 
-        box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.1); 
+        box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.08); 
     }
     .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .metric-label { color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-    .metric-icon { width: 36px; height: 36px; border-radius: 10px; background-color: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center; }
-    .metric-icon svg { width: 20px; height: 20px; fill: currentColor; }
+    .metric-label { color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center; }
+    .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
     .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; }
-    .metric-trend { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+    .metric-trend { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: auto; }
     .trend-up { color: #10B981; }
     .trend-down { color: #F43F5E; }
     .trend-neutral { color: #64748B; }
@@ -87,9 +87,10 @@ st.markdown("""
         border-radius: 16px !important;
         padding: 12px 24px !important;
         margin-bottom: 24px !important;
-        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06) !important;
+        box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important;
         align-items: center !important;
         height: 64px !important;
+        overflow: hidden !important;
     }
     .zm-label { color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-right: 12px; }
     .zm-name { color: #064E3B; font-size: 16px; font-weight: 800; margin-right: 8px; }
@@ -103,7 +104,7 @@ st.markdown("""
     .page-subtitle-text { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 4px; }
 
     /* Report Header */
-    .report-header { background-color: #FFFFFF; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06); border-left: 6px solid #10B981; }
+    .report-header { background-color: #FFFFFF; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04); border-left: 6px solid #10B981; }
     .report-title { color: #064E3B; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
     .report-meta { color: #64748B; font-size: 13px; line-height: 1.5; font-weight: 500; }
     
@@ -120,7 +121,7 @@ st.markdown("""
         background-color: #FFFFFF !important;
         border: none !important;
         border-radius: 20px !important;
-        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06) !important;
+        box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important;
         padding: 8px 24px !important;
         margin-bottom: 24px !important;
         align-items: center !important;
@@ -132,7 +133,7 @@ st.markdown("""
         flex-wrap: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 6px 14px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important; border-radius: 8px !important; color: #64748B !important; transition: all 0.2s;
+        padding: 4px 10px !important; font-size: 12px !important; margin: 0 !important; white-space: nowrap !important; border-radius: 8px !important; color: #64748B !important; transition: all 0.2s;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
         background-color: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; color: #064E3B !important; font-weight: 700 !important;
@@ -154,7 +155,7 @@ st.markdown("""
     }
 
     /* Compare Battle Cards */
-    .battle-card { background-color: #FFFFFF; border-radius: 20px; padding: 24px; box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06); margin-bottom: 16px; }
+    .battle-card { background-color: #FFFFFF; border-radius: 20px; padding: 24px; box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04); margin-bottom: 16px; }
     .battle-card-green { border-top: 6px solid #10B981; }
     .battle-card-red { border-top: 6px solid #F43F5E; }
     .battle-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: #064E3B; }
@@ -181,7 +182,7 @@ st.markdown("""
         border-radius: 20px !important;
         padding: 20px !important;
         background-color: #FFFFFF !important;
-        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06) !important;
+        box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important;
         margin-bottom: 24px !important;
     }
     
@@ -195,14 +196,14 @@ st.markdown("""
         font-size: 14px !important;
         padding: 0px 24px !important;
         transition: all 0.2s ease !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
         height: 42px !important;
         width: 100% !important;
     }
     div[data-testid="stFormSubmitButton"] > button:hover {
         background-color: #059669 !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4) !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
     }
 
     /* Ghost Button for ZM Profile */
@@ -241,6 +242,18 @@ st.markdown("""
         border-color: #10B981 !important;
         color: #10B981 !important;
     }
+
+    /* --- TAB OVERRIDES (Kill the Blue) --- */
+    button[data-baseweb="tab"] {
+        color: #64748B !important;
+        font-weight: 600 !important;
+        font-size: 14px !important;
+    }
+    button[data-baseweb="tab"] p { font-weight: 600 !important; }
+    button[aria-selected="true"] { color: #064E3B !important; }
+    button[aria-selected="true"] p { color: #064E3B !important; font-weight: 800 !important; }
+    div[data-baseweb="tab-highlight"] { background-color: #10B981 !important; height: 3px !important; border-radius: 3px !important; }
+    div[data-baseweb="tab-border"] { background-color: #F1F5F9 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -566,7 +579,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v37.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v39.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -588,7 +601,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v37.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v39.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -691,7 +704,7 @@ _DISPLAY_TO_SHEET = {REVERSE_DISTRICT_MAP.get(s, s): s for s in available_sheets
 _DISPLAY_DISTRICTS = sorted(_DISPLAY_TO_SHEET.keys())
 
 # --- UNIFIED COMMAND BAR ---
-col_title, col_nav, col_time_ctrl = st.columns([2.3, 5.0, 2.2])
+col_title, col_nav, col_time_ctrl = st.columns([2.0, 5.8, 2.2])
 
 with col_title:
     st.markdown("""
@@ -713,7 +726,6 @@ with col_title:
     """, unsafe_allow_html=True)
 
 with col_nav:
-    # Shortened labels and consistent Active/Inactive wording
     _NAV_OPTS = ["District View", "State View", "ZM View", "Active Spokes", "Inactive Spokes"]
     if 'view_mode_override' in st.session_state:
         _override = st.session_state.pop('view_mode_override')
@@ -754,7 +766,7 @@ PLOTLY_LAYOUT = dict(
 # ==============================================================================
 if view_mode == "District View":
     with st.form("district_filters", clear_on_submit=False):
-        col_d, col_h, col_chk, col_btn = st.columns([2.5, 2.5, 1.5, 1], vertical_alignment="bottom")
+        col_d, col_h, col_chk, col_btn = st.columns([2.5, 2.5, 1.5, 1.5], vertical_alignment="bottom")
         
         with col_d: 
             selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
@@ -846,7 +858,7 @@ if view_mode == "District View":
                     <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
                 </div>
                 <div class="metric-value">{num_facs}</div>
-                <div class="metric-trend trend-neutral">Reporting Facilities</div>
+                <div class="metric-trend trend-neutral">Facilities</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
@@ -862,7 +874,7 @@ if view_mode == "District View":
                     <div class="metric-icon"><span class="material-symbols-rounded">groups</span></div>
                 </div>
                 <div class="metric-value">{dist_total:,}</div>
-                <div class="metric-trend trend-neutral">Across selected period</div>
+                <div class="metric-trend trend-neutral">Across {date_range_str}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
@@ -870,7 +882,6 @@ if view_mode == "District View":
                     <div class="metric-icon"><span class="material-symbols-rounded">speed</span></div>
                 </div>
                 <div class="metric-value">{new_weighted_avg}</div>
-                <div class="metric-trend trend-neutral">Facilities × Days</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
@@ -928,7 +939,6 @@ if view_mode == "District View":
                 margin=dict(l=20, r=40, t=80, b=10), coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
-            # Use textposition='auto' to prevent the 0 values from floating off the axis
             fig.update_traces(textposition='auto', textfont=dict(color="#064E3B", size=12, weight=700), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
 
@@ -966,7 +976,6 @@ if view_mode == "District View":
         monthly_df = get_district_monthly_trend(df_raw, facility_col)
         
         if not monthly_df.empty:
-            # Removed duplicate Plotly title, using HTML header only
             fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
             fig_m.update_traces(marker_color='#10B981', texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#FFFFFF', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
@@ -989,7 +998,7 @@ if view_mode == "District View":
                 yaxis=dict(tickfont=dict(size=12, color="#064E3B", weight=600)),
                 xaxis=dict(tickfont=dict(size=11, color="#64748B"), tickangle=-45),
                 coloraxis_colorbar=dict(title="Patients", thickness=20),
-                margin=dict(l=10, r=10, t=10, b=60) # Increased bottom margin
+                margin=dict(l=10, r=10, t=10, b=60)
             ))
             fig_h.update_layout(**hm_layout)
             st.plotly_chart(fig_h, use_container_width=True)
@@ -1083,7 +1092,6 @@ if view_mode == "District View":
         st.caption("The Excel file contains two sheets: one for the District Summary and one for the full Spoke Scorecard.")
 
     with d_tab3:
-        # RESTRUCTURED DIAGNOSIS & TRACKING
         sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
             f"🔴 Inactive ({true_inactive_count})", 
             f"{active_icon} Active ({total_active})", 
@@ -1091,7 +1099,6 @@ if view_mode == "District View":
             "📝 Text Log"
         ])
         
-        # 1. Inactive (0 Patients across entire period)
         with sub_tab1:
             if is_pending:
                 st.info("All facilities in this district are currently Pending Launch.")
@@ -1118,7 +1125,6 @@ if view_mode == "District View":
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                     })
         
-        # 2. Active (Reporting)
         with sub_tab2:
             active_df = plot_df[plot_df['Total Patients'] > 0].copy()
             if active_df.empty:
@@ -1148,7 +1154,6 @@ if view_mode == "District View":
                     dynamic_total_label: st.column_config.NumberColumn(dynamic_total_label, format="%d")
                 })
 
-        # 3. Pending Launch
         with sub_tab3:
             if not is_pending:
                 st.success("✅ All facilities in this district have launched!")
@@ -1163,7 +1168,6 @@ if view_mode == "District View":
                 })
                 st.info("These facilities will automatically move to 'Active' as soon as their first data column is added.")
 
-        # 4. Text Log (Zero-Day context)
         with sub_tab4:
             text_records = stats.get('text_records', [])
             if not text_records:
@@ -1173,7 +1177,6 @@ if view_mode == "District View":
                 df_texts['Date'] = df_texts['Date'].dt.strftime('%d %b %Y')
                 df_texts['Raw_Note'] = df_texts['Raw_Note'].apply(format_reason)
                 
-                # Sort by Date descending, then Facility
                 df_texts['SortDate'] = pd.to_datetime(df_texts['Date'], format='%d %b %Y', errors='coerce')
                 df_texts = df_texts.sort_values(by=['SortDate', 'Facility'], ascending=[False, True]).drop(columns=['SortDate'])
                 
@@ -1557,7 +1560,6 @@ elif view_mode == "ZM View":
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Weighted Avg / Day</div><div class="metric-icon"><span class="material-symbols-rounded">speed</span></div></div>
                     <div class="metric-value">{zone_weighted_avg}</div>
-                    <div class="metric-trend trend-neutral">Facilities × Days</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">hub</span></div></div>
@@ -1887,12 +1889,14 @@ elif view_mode == "Inactive Spokes":
 st.markdown("<br><hr style='border-color: #E2E8F0; margin: 20px 0 20px 0;'><br>", unsafe_allow_html=True)
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
-    **📊 Weighted Avg / Day** — *The efficiency score.*
-    Total patients divided by *(Total Facilities × Total Days)*. 
-    *Why use this?* It prevents a facility that was only open for 1 day with 50 patients from artificially inflating the district's average. It accounts for every facility-day equally.
+    **📊 Weighted Avg / Day**
+    Total patients divided by total facility-days (Total Facilities × Total Days). This is the truest measure of daily efficiency, as it prevents a facility that was only open for 1 day with 50 patients from skewing the district's average.
     
-    **⏱️ Uptime %** — *The reliability score.*
-    The percentage of days a facility reported more than 0 patients.
+    **⏱️ Uptime %**
+    The percentage of possible facility-days where the patient count was greater than zero. A higher percentage means the facility is consistently operational.
+    
+    **🔴 Inactive vs 🟢 Active**
+    A facility is marked **Inactive** if it reported 0 patients across the *entire* selected time range. If it reported patients on even a single day, it is **Active**.
     """)
     
     st.info("""
