@@ -132,7 +132,7 @@ st.markdown("""
         flex-wrap: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 6px 16px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important; border-radius: 8px !important; color: #64748B !important; transition: all 0.2s;
+        padding: 6px 12px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important; border-radius: 8px !important; color: #64748B !important; transition: all 0.2s;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
         background-color: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; color: #064E3B !important; font-weight: 700 !important;
@@ -566,7 +566,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v35.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v36.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -588,7 +588,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v35.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v36.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -691,7 +691,7 @@ _DISPLAY_TO_SHEET = {REVERSE_DISTRICT_MAP.get(s, s): s for s in available_sheets
 _DISPLAY_DISTRICTS = sorted(_DISPLAY_TO_SHEET.keys())
 
 # --- UNIFIED COMMAND BAR ---
-col_title, col_nav, col_time_ctrl = st.columns([2.5, 4.5, 2.0])
+col_title, col_nav, col_time_ctrl = st.columns([2.3, 5.0, 2.2])
 
 with col_title:
     st.markdown("""
@@ -713,7 +713,8 @@ with col_title:
     """, unsafe_allow_html=True)
 
 with col_nav:
-    _NAV_OPTS = ["District View", "State View", "ZM View", "Active Spokes", "Zero-Sample Tracker"]
+    # Shortened "Zero-Sample Tracker" to "Zero-Sample" to prevent overlap
+    _NAV_OPTS = ["District View", "State View", "ZM View", "Active Spokes", "Zero-Sample"]
     if 'view_mode_override' in st.session_state:
         _override = st.session_state.pop('view_mode_override')
         if _override in _NAV_OPTS:
@@ -799,10 +800,15 @@ if view_mode == "District View":
 
     total_active = stats['active_facilities']
     total_inactive = stats['num_facilities'] - total_active
-    zero_day_facilities = int((plot_df['Zero Days'] > 0).sum())
+    
+    # TRUE failures vs Partial failures
+    is_pending = stats['num_days'] == 0
+    inactive_facilities = plot_df[plot_df['Total Patients'] == 0]
+    true_inactive_count = len(inactive_facilities) if not is_pending else 0
+    pending_count = len(inactive_facilities) if is_pending else 0
+    
     active_icon = "🟢" if total_active > 0 else "🔴"
-    inactive_icon = "🔴" if total_inactive > 0 else "🟢"
-
+    
     d_tab1, d_tab2, d_tab3, d_tab4 = st.tabs([":material/dashboard: Dashboard", ":material/receipt_long: Report Card", ":material/diagnosis: Diagnosis & Tracking", ":material/map: Logistics"])
 
     with d_tab1:
@@ -942,7 +948,7 @@ if view_mode == "District View":
                 drill_trend = [{'Date': stats['active_date_map'][c], 'Patients': fac_row[c]} for c in stats['active_date_cols']]
                 if drill_trend:
                     dt_df = pd.DataFrame(drill_trend).sort_values('Date')
-                    fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True, line_shape='spline')
+                    fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True, line_shape='spline', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
                     fig_dt.update_traces(line_color='#10B981', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#10B981')), fillcolor='rgba(16, 185, 129, 0.1)')
                     
                     dt_layout = PLOTLY_LAYOUT.copy()
@@ -950,7 +956,7 @@ if view_mode == "District View":
                         height=300,
                         xaxis=dict(showgrid=False, tickformat="%d %b", range=[dt_df['Date'].min(), dt_df['Date'].max()]),
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9'),
-                        margin=dict(l=10, r=10, t=20, b=10)
+                        margin=dict(l=10, r=10, t=40, b=10)
                     ))
                     fig_dt.update_layout(**dt_layout)
                     st.plotly_chart(fig_dt, use_container_width=True)
@@ -959,10 +965,10 @@ if view_mode == "District View":
         monthly_df = get_district_monthly_trend(df_raw, facility_col)
         
         if not monthly_df.empty:
-            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
+            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients', title="<b>Monthly Patient Volume</b>")
             fig_m.update_traces(marker_color='#10B981', texttemplate='%{text:,}', textposition='outside')
             m_layout = PLOTLY_LAYOUT.copy()
-            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients")))
+            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients"), margin=dict(l=10, r=10, t=60, b=10)))
             fig_m.update_layout(**m_layout)
             st.plotly_chart(fig_m, use_container_width=True)
 
@@ -1074,44 +1080,42 @@ if view_mode == "District View":
         st.caption("The Excel file contains two sheets: one for the District Summary and one for the full Spoke Scorecard.")
 
     with d_tab3:
-        sub_tab1, sub_tab2, sub_tab3 = st.tabs([f"🔴 Failures ({zero_day_facilities})", f"{active_icon} Active ({total_active})", f"{inactive_icon} Inactive ({total_inactive})"])
+        # RESTRUCTURED DIAGNOSIS & TRACKING
+        sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
+            f"🔴 Inactive ({true_inactive_count})", 
+            f"{active_icon} Active ({total_active})", 
+            f"🚧 Pending ({pending_count})",
+            "📝 Text Log"
+        ])
         
+        # 1. Inactive (0 Patients across entire period)
         with sub_tab1:
-            text_records = stats.get('text_records', [])
-            if not text_records:
-                st.success("✅ No text notes (reasons) were found for this district in the selected time range. All zero days are pure numerical zeroes.")
+            if is_pending:
+                st.info("All facilities in this district are currently Pending Launch.")
             else:
-                df_texts = pd.DataFrame(text_records)
-                offense_data = []
-                for _, row in plot_df.iterrows():
-                    fac_name = row[facility_col]
-                    z_days = row['Zero Days']
-                    if z_days > 0:
-                        fac_texts = df_texts[df_texts['Facility'] == fac_name]
-                        primary_reason = fac_texts['Raw_Note'].value_counts().idxmax() if not fac_texts.empty else "Unknown / No Note"
-                        offense_data.append({'Facility': fac_name, 'Uptime %': row['Uptime %'], 'Primary Reason': primary_reason})
-                if offense_data:
-                    offense_df = pd.DataFrame(offense_data).sort_values('Uptime %', ascending=True).reset_index(drop=True)
-                    styled_offense = offense_df.style.map(style_reason, subset=['Primary Reason'])
-                    
-                    st.dataframe(styled_offense, use_container_width=True, hide_index=True, column_config={
-                        "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%")
-                    })
-                    
-                    buf = io.BytesIO()
-                    with pd.ExcelWriter(buf, engine='openpyxl') as writer:
-                        offense_df.to_excel(writer, index=False, sheet_name='Follow-Up List')
-                    
-                    col_dl1, col_dl2 = st.columns([8, 2])
-                    with col_dl2:
-                        st.download_button(
-                            label="🚨 Download Follow-up", data=buf.getvalue(),
-                            file_name=f"{selected_district_zm}_Followup.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
-                        )
+                inactive_df = plot_df[plot_df['Total Patients'] == 0].copy()
+                if inactive_df.empty:
+                    st.success("✅ Excellent! All operational facilities reported patients in this period.")
                 else:
-                    st.info("No facilities had zero days in this period.")
+                    text_records = stats.get('text_records', [])
+                    def get_reason(row):
+                        fac_texts = [t for t in text_records if t['Facility'] == row[facility_col]]
+                        if fac_texts: return fac_texts[-1]['Raw_Note']
+                        return "Unknown / No Note"
+                    inactive_df['Primary Reason'] = inactive_df.apply(get_reason, axis=1).apply(format_reason)
+                    inactive_df = inactive_df.sort_values(by=[facility_col]).reset_index(drop=True)
+                    
+                    display_inactive = inactive_df[[facility_col, 'Last Sample Date', 'Primary Reason']].copy()
+                    display_inactive = display_inactive.rename(columns={facility_col: 'Facility'})
+                    styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
+                    
+                    st.dataframe(styled_inactive, use_container_width=True, hide_index=True, column_config={
+                        "Facility": st.column_config.TextColumn("Facility", width="large"),
+                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                        "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                    })
         
+        # 2. Active (Reporting)
         with sub_tab2:
             active_df = plot_df[plot_df['Total Patients'] > 0].copy()
             if active_df.empty:
@@ -1141,33 +1145,42 @@ if view_mode == "District View":
                     dynamic_total_label: st.column_config.NumberColumn(dynamic_total_label, format="%d")
                 })
 
+        # 3. Pending Launch
         with sub_tab3:
-            inactive_df = plot_df[plot_df['Total Patients'] == 0].copy()
-            if inactive_df.empty:
-                st.success("✅ No inactive spokes in this district! All facilities are reporting.")
+            if not is_pending:
+                st.success("✅ All facilities in this district have launched!")
             else:
-                is_pending = stats['num_days'] == 0
-                inactive_df['Status'] = 'Pending Launch' if is_pending else 'Operational'
-                text_records = stats.get('text_records', [])
-                def get_reason(row):
-                    if is_pending: return "Awaiting Launch"
-                    fac_texts = [t for t in text_records if t['Facility'] == row[facility_col]]
-                    if fac_texts: return fac_texts[-1]['Raw_Note']
-                    return "Unknown / No Note"
-                inactive_df['Primary Reason'] = inactive_df.apply(get_reason, axis=1).apply(format_reason)
-                inactive_df = inactive_df.sort_values(by=['Status', facility_col]).reset_index(drop=True)
+                pending_df = plot_df.copy()
+                display_pending = pending_df[[facility_col]].copy().rename(columns={facility_col: 'Facility'})
+                display_pending['Status'] = 'Awaiting Infrastructure'
                 
-                display_inactive = inactive_df[[facility_col, 'Status', 'Last Sample Date', 'Primary Reason']].copy()
-                display_inactive = display_inactive.rename(columns={facility_col: 'Facility'})
-                styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
-                
-                st.dataframe(styled_inactive, use_container_width=True, hide_index=True, column_config={
+                st.dataframe(display_pending, use_container_width=True, hide_index=True, column_config={
                     "Facility": st.column_config.TextColumn("Facility", width="large"),
-                    "Status": st.column_config.TextColumn("Status", width="small"),
-                    "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
-                    "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                    "Status": st.column_config.TextColumn("Status", width="medium")
                 })
-                st.info("💡 Tip: 'Pending Launch' means the facility infrastructure isn't ready. 'Operational' means the facility exists but failed to report patients.")
+                st.info("These facilities will automatically move to 'Active' as soon as their first data column is added.")
+
+        # 4. Text Log (Zero-Day context)
+        with sub_tab4:
+            text_records = stats.get('text_records', [])
+            if not text_records:
+                st.success("✅ No text notes (reasons) were found for this district in the selected time range.")
+            else:
+                df_texts = pd.DataFrame(text_records)
+                df_texts['Date'] = df_texts['Date'].dt.strftime('%d %b %Y')
+                df_texts['Raw_Note'] = df_texts['Raw_Note'].apply(format_reason)
+                
+                # Sort by Date descending, then Facility
+                df_texts['SortDate'] = pd.to_datetime(df_texts['Date'], format='%d %b %Y', errors='coerce')
+                df_texts = df_texts.sort_values(by=['SortDate', 'Facility'], ascending=[False, True]).drop(columns=['SortDate'])
+                
+                styled_texts = df_texts.style.map(style_reason, subset=['Raw_Note'])
+                st.dataframe(styled_texts, use_container_width=True, hide_index=True, column_config={
+                    "Facility": st.column_config.TextColumn("Facility", width="large"),
+                    "Date": st.column_config.TextColumn("Date", width="medium"),
+                    "Raw_Note": st.column_config.TextColumn("Reason", width="large"),
+                })
+                st.info("This log captures text notes for facilities even if they reported patients on other days.")
 
     with d_tab4:
         st.markdown("<h4 style='color:#064E3B; margin-bottom:16px; font-weight:800;'>Hub Logistics & Distance Mapping</h4>", unsafe_allow_html=True)
@@ -1582,14 +1595,15 @@ elif view_mode == "ZM View":
                 })
                 
                 st.markdown(f"<h4 style='color:#064E3B; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
-                fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients')
+                fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients', title="<b>Total Patients by District</b>")
                 fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside')
                 
                 zm_layout = PLOTLY_LAYOUT.copy()
                 zm_layout.update(dict(
                     height=400,
                     xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#064E3B", weight=700)),
-                    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients")
+                    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients"),
+                    margin=dict(l=10, r=10, t=60, b=10)
                 ))
                 fig_zm.update_layout(**zm_layout)
                 st.plotly_chart(fig_zm, use_container_width=True)
@@ -1793,11 +1807,11 @@ else:
             district_counts = op_failures['District'].value_counts().head(5).reset_index()
             district_counts.columns = ['District', 'Failures']
             
-            fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures')
+            fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures', title="<b>Top 5 Districts by Operational Failures</b>")
             fig_off.update_traces(marker_color='#F43F5E', textposition='outside')
             
             off_layout = PLOTLY_LAYOUT.copy()
-            off_layout.update(dict(height=300, showlegend=False, xaxis_title="Number of Facilities", yaxis_title="", margin=dict(l=10, r=20, t=20, b=10)))
+            off_layout.update(dict(height=300, showlegend=False, xaxis_title="Number of Facilities", yaxis_title="", margin=dict(l=10, r=20, t=60, b=10)))
             fig_off.update_layout(**off_layout)
             st.plotly_chart(fig_off, use_container_width=True)
 
