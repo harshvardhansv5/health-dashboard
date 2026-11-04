@@ -741,7 +741,7 @@ with col_time_ctrl:
 PLOTLY_LAYOUT = dict(
     template="plotly_white", 
     font=dict(family="Inter, sans-serif", size=13, color="#475569"), 
-    title_font=dict(size=16, color="#064E3B", family="Inter, sans-serif", weight="bold"), 
+    title_font=dict(size=16, color="#064E3B", family="Inter, sans-serif", weight=700), 
     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
     margin=dict(l=10, r=10, t=60, b=10),
     xaxis=dict(showgrid=False, linecolor='#E2E8F0'),
@@ -903,7 +903,6 @@ if view_mode == "District View":
             elif metric_col == 'Total Patients': current_avg = round(filtered['Total Patients'].mean(), 1)
             else: current_avg = round(filtered['Uptime %'].mean(), 1)
                 
-            # Annotated Average Line
             fig.add_vline(
                 x=current_avg, 
                 line_dash="dash", 
@@ -911,19 +910,19 @@ if view_mode == "District View":
                 line_width=2,
                 annotation_text=f" Avg: {current_avg}", 
                 annotation_position="top right",
-                annotation_font=dict(size=12, color="#064E3B", weight="bold")
+                annotation_font=dict(size=12, color="#064E3B", weight=700)
             )
             
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
                 height=max(500, len(sorted_df) * 30),
-                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#064E3B", weight="600")),
+                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#064E3B", weight=600)),
                 xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', tickfont=dict(size=12, color="#64748B")),
                 showlegend=False, xaxis_title=metric_option, yaxis_title="",
                 margin=dict(l=40, r=80, t=80, b=10), coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
-            fig.update_traces(textposition='outside', textfont=dict(color="#064E3B", size=12, weight="bold"), cliponaxis=False, marker=dict(cornerradius=6))
+            fig.update_traces(textposition='outside', textfont=dict(color="#064E3B", size=12, weight=700), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
 
             st.markdown("<hr style='margin: 24px 0; border-color: #F1F5F9;'>", unsafe_allow_html=True)
@@ -961,7 +960,7 @@ if view_mode == "District View":
         
         if not monthly_df.empty:
             fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
-            fig_m.update_traces(marker_color='#10B981', texttemplate='%{text:,}', textposition='outside', marker=dict(cornerradius=6))
+            fig_m.update_traces(marker_color='#10B981', texttemplate='%{text:,}', textposition='outside')
             m_layout = PLOTLY_LAYOUT.copy()
             m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients")))
             fig_m.update_layout(**m_layout)
@@ -979,7 +978,7 @@ if view_mode == "District View":
             hm_layout = PLOTLY_LAYOUT.copy()
             hm_layout.update(dict(
                 height=max(400, len(heatmap_df) * 35),
-                yaxis=dict(tickfont=dict(size=12, color="#064E3B", weight="600")),
+                yaxis=dict(tickfont=dict(size=12, color="#064E3B", weight=600)),
                 xaxis=dict(tickfont=dict(size=11, color="#64748B"), tickangle=-45),
                 coloraxis_colorbar=dict(title="Patients", thickness=15)
             ))
@@ -1208,7 +1207,7 @@ if view_mode == "District View":
                     template="plotly_white", height=750, showlegend=False,
                     margin=dict(l=40, r=40, t=80, b=40),
                     polar=dict(bargap=0.5, radialaxis=dict(visible=False, range=[0, valid_polar_df['Distance'].max() + 5], gridcolor='#F1F5F9'),
-                               angularaxis=dict(gridcolor='#F1F5F9', tickfont=dict(size=11, color="#064E3B", weight="bold")),
+                               angularaxis=dict(gridcolor='#F1F5F9', tickfont=dict(size=11, color="#064E3B", weight=700)),
                                bgcolor='rgba(248, 250, 252, 0.5)')
                 ))
                 fig_polar.update_layout(**polar_layout)
@@ -1584,12 +1583,12 @@ elif view_mode == "ZM View":
                 
                 st.markdown(f"<h4 style='color:#064E3B; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
                 fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients')
-                fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside', marker=dict(cornerradius=6))
+                fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside')
                 
                 zm_layout = PLOTLY_LAYOUT.copy()
                 zm_layout.update(dict(
                     height=400,
-                    xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#064E3B", weight="bold")),
+                    xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#064E3B", weight=700)),
                     yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients")
                 ))
                 fig_zm.update_layout(**zm_layout)
@@ -1795,7 +1794,7 @@ else:
             district_counts.columns = ['District', 'Failures']
             
             fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures')
-            fig_off.update_traces(marker_color='#F43F5E', textposition='outside', marker=dict(cornerradius=6))
+            fig_off.update_traces(marker_color='#F43F5E', textposition='outside')
             
             off_layout = PLOTLY_LAYOUT.copy()
             off_layout.update(dict(height=300, showlegend=False, xaxis_title="Number of Facilities", yaxis_title="", margin=dict(l=10, r=20, t=20, b=10)))
