@@ -50,7 +50,7 @@ st.markdown("""
     .auth-box {
         background-color: #FFFFFF; border: none; border-radius: 24px;
         padding: 40px; max-width: 480px; margin: 80px auto 20px auto;
-        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06);
         text-align: center;
     }
 
@@ -61,13 +61,13 @@ st.markdown("""
         border: none !important; 
         border-radius: 20px !important;
         padding: 24px !important; 
-        box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.04) !important; 
+        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06) !important; 
         display: flex; flex-direction: column; 
         transition: transform 0.2s ease, box-shadow 0.2s ease; 
     }
     .metric-card:hover { 
         transform: translateY(-4px); 
-        box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.08); 
+        box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.1); 
     }
     .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .metric-label { color: #64748B; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -87,7 +87,7 @@ st.markdown("""
         border-radius: 16px !important;
         padding: 12px 24px !important;
         margin-bottom: 24px !important;
-        box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.04) !important;
+        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06) !important;
         align-items: center !important;
         height: 64px !important;
     }
@@ -103,7 +103,7 @@ st.markdown("""
     .page-subtitle-text { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 4px; }
 
     /* Report Header */
-    .report-header { background-color: #FFFFFF; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.04); border-left: 6px solid #10B981; }
+    .report-header { background-color: #FFFFFF; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06); border-left: 6px solid #10B981; }
     .report-title { color: #064E3B; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
     .report-meta { color: #64748B; font-size: 13px; line-height: 1.5; font-weight: 500; }
     
@@ -120,7 +120,7 @@ st.markdown("""
         background-color: #FFFFFF !important;
         border: none !important;
         border-radius: 20px !important;
-        box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.04) !important;
+        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06) !important;
         padding: 8px 24px !important;
         margin-bottom: 24px !important;
         align-items: center !important;
@@ -132,7 +132,7 @@ st.markdown("""
         flex-wrap: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 6px 12px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important; border-radius: 8px !important; color: #64748B !important; transition: all 0.2s;
+        padding: 6px 14px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important; border-radius: 8px !important; color: #64748B !important; transition: all 0.2s;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
         background-color: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; color: #064E3B !important; font-weight: 700 !important;
@@ -154,7 +154,7 @@ st.markdown("""
     }
 
     /* Compare Battle Cards */
-    .battle-card { background-color: #FFFFFF; border-radius: 20px; padding: 24px; box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.04); margin-bottom: 16px; }
+    .battle-card { background-color: #FFFFFF; border-radius: 20px; padding: 24px; box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06); margin-bottom: 16px; }
     .battle-card-green { border-top: 6px solid #10B981; }
     .battle-card-red { border-top: 6px solid #F43F5E; }
     .battle-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: #064E3B; }
@@ -181,7 +181,7 @@ st.markdown("""
         border-radius: 20px !important;
         padding: 20px !important;
         background-color: #FFFFFF !important;
-        box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.04) !important;
+        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06) !important;
         margin-bottom: 24px !important;
     }
     
@@ -566,7 +566,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v36.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v37.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -588,7 +588,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v36.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v37.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -713,8 +713,8 @@ with col_title:
     """, unsafe_allow_html=True)
 
 with col_nav:
-    # Shortened "Zero-Sample Tracker" to "Zero-Sample" to prevent overlap
-    _NAV_OPTS = ["District View", "State View", "ZM View", "Active Spokes", "Zero-Sample"]
+    # Shortened labels and consistent Active/Inactive wording
+    _NAV_OPTS = ["District View", "State View", "ZM View", "Active Spokes", "Inactive Spokes"]
     if 'view_mode_override' in st.session_state:
         _override = st.session_state.pop('view_mode_override')
         if _override in _NAV_OPTS:
@@ -853,7 +853,7 @@ if view_mode == "District View":
                     <div class="metric-label">Best Spoke</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">star</span></div>
                 </div>
-                <div class="metric-value" style="font-size: 20px; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{best_name}">{best_name}</div>
+                <div class="metric-value" style="font-size: 18px; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{best_name}">{best_name}</div>
                 <div class="metric-trend trend-up">↗ {best_avg} Avg / Day</div>
             </div>
             <div class="metric-card">
@@ -915,20 +915,21 @@ if view_mode == "District View":
                 line_color="#064E3B", 
                 line_width=2,
                 annotation_text=f" Avg: {current_avg}", 
-                annotation_position="top right",
+                annotation_position="top left",
                 annotation_font=dict(size=12, color="#064E3B", weight=700)
             )
             
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
                 height=max(500, len(sorted_df) * 30),
-                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#064E3B", weight=600)),
+                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#064E3B", weight=600), automargin=True),
                 xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', tickfont=dict(size=12, color="#64748B")),
                 showlegend=False, xaxis_title=metric_option, yaxis_title="",
-                margin=dict(l=40, r=80, t=80, b=10), coloraxis_showscale=False
+                margin=dict(l=20, r=40, t=80, b=10), coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
-            fig.update_traces(textposition='outside', textfont=dict(color="#064E3B", size=12, weight=700), cliponaxis=False)
+            # Use textposition='auto' to prevent the 0 values from floating off the axis
+            fig.update_traces(textposition='auto', textfont=dict(color="#064E3B", size=12, weight=700), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
 
             st.markdown("<hr style='margin: 24px 0; border-color: #F1F5F9;'>", unsafe_allow_html=True)
@@ -949,14 +950,14 @@ if view_mode == "District View":
                 if drill_trend:
                     dt_df = pd.DataFrame(drill_trend).sort_values('Date')
                     fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True, line_shape='spline', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
-                    fig_dt.update_traces(line_color='#10B981', line_width=3, marker=dict(size=6, color='#FFFFFF', line=dict(width=2, color='#10B981')), fillcolor='rgba(16, 185, 129, 0.1)')
+                    fig_dt.update_traces(line_color='#10B981', line_width=3, marker=dict(size=8, color='#FFFFFF', line=dict(width=2, color='#10B981')), fillcolor='rgba(16, 185, 129, 0.1)')
                     
                     dt_layout = PLOTLY_LAYOUT.copy()
                     dt_layout.update(dict(
                         height=300,
                         xaxis=dict(showgrid=False, tickformat="%d %b", range=[dt_df['Date'].min(), dt_df['Date'].max()]),
                         yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9'),
-                        margin=dict(l=10, r=10, t=40, b=10)
+                        margin=dict(l=10, r=10, t=50, b=10)
                     ))
                     fig_dt.update_layout(**dt_layout)
                     st.plotly_chart(fig_dt, use_container_width=True)
@@ -965,10 +966,11 @@ if view_mode == "District View":
         monthly_df = get_district_monthly_trend(df_raw, facility_col)
         
         if not monthly_df.empty:
-            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients', title="<b>Monthly Patient Volume</b>")
-            fig_m.update_traces(marker_color='#10B981', texttemplate='%{text:,}', textposition='outside')
+            # Removed duplicate Plotly title, using HTML header only
+            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
+            fig_m.update_traces(marker_color='#10B981', texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#FFFFFF', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
-            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients"), margin=dict(l=10, r=10, t=60, b=10)))
+            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
             fig_m.update_layout(**m_layout)
             st.plotly_chart(fig_m, use_container_width=True)
 
@@ -986,7 +988,8 @@ if view_mode == "District View":
                 height=max(400, len(heatmap_df) * 35),
                 yaxis=dict(tickfont=dict(size=12, color="#064E3B", weight=600)),
                 xaxis=dict(tickfont=dict(size=11, color="#64748B"), tickangle=-45),
-                coloraxis_colorbar=dict(title="Patients", thickness=15)
+                coloraxis_colorbar=dict(title="Patients", thickness=20),
+                margin=dict(l=10, r=10, t=10, b=60) # Increased bottom margin
             ))
             fig_h.update_layout(**hm_layout)
             st.plotly_chart(fig_h, use_container_width=True)
@@ -1574,7 +1577,7 @@ elif view_mode == "ZM View":
             zm_tab1, zm_tab2, zm_tab3, zm_tab4 = st.tabs([
                 "Zone Summary", 
                 f"🟢 Active Spokes ({total_active})", 
-                f"🔴 Operational Failures ({len(op_failures_zm)})",
+                f"🔴 Inactive Spokes ({len(op_failures_zm)})",
                 f"🚧 Pending Launch ({total_pending})"
             ])
             
@@ -1596,7 +1599,7 @@ elif view_mode == "ZM View":
                 
                 st.markdown(f"<h4 style='color:#064E3B; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
                 fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients', title="<b>Total Patients by District</b>")
-                fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside')
+                fig_zm.update_traces(texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#FFFFFF', weight=700))
                 
                 zm_layout = PLOTLY_LAYOUT.copy()
                 zm_layout.update(dict(
@@ -1637,7 +1640,7 @@ elif view_mode == "ZM View":
 
             with zm_tab3:
                 if op_failures_zm.empty:
-                    st.success("✅ Excellent! No operational failures in this zone.")
+                    st.success("✅ Excellent! No inactive spokes in this zone.")
                 else:
                     op_failures_zm = op_failures_zm.sort_values(by=['District', 'Facility']).reset_index(drop=True)
                     op_failures_zm['Primary Reason'] = op_failures_zm['Primary Reason'].apply(format_reason)
@@ -1761,16 +1764,16 @@ elif view_mode == "Active Spokes":
         st.warning("Could not load facility data.")
 
 # ==============================================================================
-# VIEW: ZERO-SAMPLE TRACKER
+# VIEW: INACTIVE SPOKES
 # ==============================================================================
-else:
+elif view_mode == "Inactive Spokes":
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container">
             <span class="material-symbols-rounded" style="font-size:28px;">warning</span>
         </div>
         <div>
-            <div class="page-title-text">Statewide Zero-Sample Tracker</div>
+            <div class="page-title-text">Inactive Spokes Tracker</div>
             <div class="page-subtitle-text">Operational failures and pending infrastructure launches</div>
         </div>
     </div>
@@ -1808,7 +1811,7 @@ else:
             district_counts.columns = ['District', 'Failures']
             
             fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures', title="<b>Top 5 Districts by Operational Failures</b>")
-            fig_off.update_traces(marker_color='#F43F5E', textposition='outside')
+            fig_off.update_traces(marker_color='#F43F5E', textposition='auto', textfont=dict(color='#FFFFFF', weight=700))
             
             off_layout = PLOTLY_LAYOUT.copy()
             off_layout.update(dict(height=300, showlegend=False, xaxis_title="Number of Facilities", yaxis_title="", margin=dict(l=10, r=20, t=60, b=10)))
@@ -1881,7 +1884,7 @@ else:
         st.warning("Could not load facility data.")
 
 # --- GLOBAL DEFINITIONS EXPANDER ---
-st.markdown("<br><hr style='border-color: #E2E8F0; margin: 40px 0 20px 0;'><br>", unsafe_allow_html=True)
+st.markdown("<br><hr style='border-color: #E2E8F0; margin: 20px 0 20px 0;'><br>", unsafe_allow_html=True)
 with st.expander("ℹ️ Metric Definitions & Grading System"):
     st.markdown("""
     **📊 Weighted Avg / Day** — *The efficiency score.*
