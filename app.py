@@ -579,7 +579,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v39.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v40.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -601,7 +601,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v39.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v40.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -865,8 +865,8 @@ if view_mode == "District View":
                     <div class="metric-label">Best Spoke</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">star</span></div>
                 </div>
-                <div class="metric-value" style="font-size: 18px; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{best_name}">{best_name}</div>
-                <div class="metric-trend trend-up">↗ {best_avg} Avg / Day</div>
+                <div class="metric-value" style="font-size: 16px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{best_name}">{best_name}</div>
+                <div class="metric-trend trend-up" style="font-size: 12px;">↗ {best_avg} Avg / Day</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
