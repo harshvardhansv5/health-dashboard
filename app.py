@@ -9,7 +9,7 @@ import requests
 import unicodedata
 
 # --- CONSTANTS ---
-TOTAL_SPOKES = 701 
+TOTAL_SPOKES = 702 
 available_sheets = [] 
 
 # --- GOOGLE SHEETS INTEGRATION ---
@@ -19,7 +19,7 @@ SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRwjDNp1zjbEX
 DISTANCE_FALLBACK = {}
 
 # --- PAGE SETUP ---
-st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🌿", layout="wide")
+st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🩸", layout="wide")
 
 # --- PINE & MINT SOFT UI CSS ---
 st.markdown("""
@@ -46,12 +46,44 @@ st.markdown("""
     /* --- FORCE EMERALD PROGRESS BARS --- */
     div[data-testid="stProgress"] > div > div > div { background-color: #10B981 !important; }
 
-    /* --- AUTH BOX --- */
-    .auth-box {
-        background-color: #FFFFFF; border: none; border-radius: 24px;
-        padding: 40px; max-width: 480px; margin: 80px auto 20px auto;
-        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.06);
-        text-align: center;
+    /* --- LOGIN SPECIFIC CSS --- */
+    div[data-testid="stHorizontalBlock"]:has(> div > div[data-testid="stForm"]) {
+        margin-top: 10vh;
+    }
+    div[data-testid="stForm"] {
+        background-color: #FFFFFF !important;
+        border-radius: 24px !important;
+        padding: 48px 40px !important;
+        box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.08) !important;
+        border: none !important;
+    }
+    div[data-testid="stTextInput"] input {
+        background-color: #F8FAFC !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 10px !important;
+        padding: 12px 16px !important;
+        color: #0F172A !important;
+        font-size: 14px !important;
+    }
+    div[data-testid="stTextInput"] input:focus {
+        border-color: #10B981 !important;
+        box-shadow: 0 0 0 1px #10B981 !important;
+    }
+    div[data-testid="stFormSubmitButton"] > button {
+        background-color: #10B981 !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        font-size: 15px !important;
+        height: 48px !important;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
+        margin-top: 16px !important;
+    }
+    div[data-testid="stFormSubmitButton"] > button:hover {
+        background-color: #059669 !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3) !important;
     }
 
     /* --- HERO DECK CARDS --- */
@@ -71,12 +103,11 @@ st.markdown("""
     }
     .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .metric-label { color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-    /* NEUTRAL ICONS */
     .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #F1F5F9; color: #475569; display: flex; align-items: center; justify-content: center; }
     .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
     .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; }
     .metric-trend { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: auto; }
-    .trend-up { color: #475569; } /* Changed to neutral slate */
+    .trend-up { color: #475569; } 
     .trend-down { color: #F43F5E; }
     .trend-neutral { color: #64748B; }
 
@@ -294,17 +325,23 @@ if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    st.markdown("""
-    <div class="auth-box">
-        <h2 style="color:#064E3B; margin-bottom: 8px;">🌿 Secure Login</h2>
-        <p style="color:#64748B; font-size: 14px; margin-bottom: 24px;">Enter the password to access the Bihar Health Dashboard.</p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns([1, 1, 1])
+    col1, col2, col3 = st.columns([1, 1.2, 1])
     with col2:
-        pwd = st.text_input("Password", type="password", label_visibility="collapsed")
-        if st.button("Login", use_container_width=True):
+        with st.form("login_form"):
+            st.markdown("""
+            <div style="text-align: center; margin-bottom: 32px;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background-color: #ECFDF5; border-radius: 16px; margin-bottom: 16px;">
+                    <span class="material-symbols-rounded" style="font-size: 32px; color: #10B981;">health_and_safety</span>
+                </div>
+                <h2 style="color:#064E3B; font-size: 28px; font-weight: 800; margin-bottom: 8px;">Secure Login</h2>
+                <p style="color:#64748B; font-size: 14px; margin: 0;">Enter the password to access the Bihar Health Dashboard.</p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            pwd = st.text_input("Password", type="password", label_visibility="collapsed")
+            submit = st.form_submit_button("Login", use_container_width=True)
+            
+        if submit:
             if pwd == "BiharHealth2026!":
                 st.session_state.authenticated = True
                 st.rerun()
@@ -611,7 +648,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v41.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v42.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -633,7 +670,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v41.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v42.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -939,7 +976,6 @@ if view_mode == "District View":
             sorted_df['Grade'] = sorted_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
-            # Muted color map for bars to prevent "wall of green"
             grade_color_map = {'A': '#14B8A6', 'B': '#5EEAD4', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
             
             fig = px.bar(
@@ -1022,7 +1058,6 @@ if view_mode == "District View":
             heatmap_df['Total'] = heatmap_df.sum(axis=1)
             heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
             
-            # Changed to Ice Blue scale
             fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F0F9FF'], [0.1, '#BAE6FD'], [1, '#0284C7']], labels=dict(x="Date", y="", color="Patients"))
             fig_h.update_traces(xgap=2, ygap=2)
             
