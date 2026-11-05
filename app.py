@@ -71,11 +71,12 @@ st.markdown("""
     }
     .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
     .metric-label { color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-    .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #ECFDF5; color: #10B981; display: flex; align-items: center; justify-content: center; }
+    /* NEUTRAL ICONS */
+    .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #F1F5F9; color: #475569; display: flex; align-items: center; justify-content: center; }
     .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
     .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; }
     .metric-trend { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: auto; }
-    .trend-up { color: #10B981; }
+    .trend-up { color: #475569; } /* Changed to neutral slate */
     .trend-down { color: #F43F5E; }
     .trend-neutral { color: #64748B; }
 
@@ -98,7 +99,7 @@ st.markdown("""
 
     /* --- MODERN PAGE HEADERS --- */
     .page-header-container { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; margin-top: 8px; }
-    .page-icon-container { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 14px; background-color: #ECFDF5; color: #10B981; }
+    .page-icon-container { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 14px; background-color: #F1F5F9; color: #475569; }
     .page-icon svg { width: 24px; height: 24px; fill: currentColor; }
     .page-title-text { font-size: 26px; font-weight: 800; color: #064E3B; letter-spacing: -0.5px; line-height: 1.1; }
     .page-subtitle-text { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 4px; }
@@ -254,6 +255,37 @@ st.markdown("""
     button[aria-selected="true"] p { color: #064E3B !important; font-weight: 800 !important; }
     div[data-baseweb="tab-highlight"] { background-color: #10B981 !important; height: 3px !important; border-radius: 3px !important; }
     div[data-baseweb="tab-border"] { background-color: #F1F5F9 !important; }
+
+    /* --- STYLE THE EXPANDER (SOFT UI CARD) --- */
+    div[data-testid="stExpander"] {
+        background-color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 16px !important;
+        box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important;
+        margin-bottom: 24px !important;
+        overflow: hidden !important;
+    }
+    div[data-testid="stExpander"] details {
+        border: none !important;
+    }
+    div[data-testid="stExpander"] summary {
+        padding: 16px 24px !important;
+        font-weight: 700 !important;
+        font-size: 14px !important;
+        color: #064E3B !important;
+        background-color: #FFFFFF !important;
+        transition: background-color 0.2s ease !important;
+    }
+    div[data-testid="stExpander"] summary:hover {
+        background-color: #F8FAFC !important;
+    }
+    div[data-testid="stExpander"] summary svg {
+        fill: #10B981 !important;
+        color: #10B981 !important;
+    }
+    div[data-testid="stExpander"] > details > div {
+        padding: 0px 24px 24px 24px !important;
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -579,7 +611,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v40.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v41.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -601,7 +633,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v40.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v41.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -907,7 +939,8 @@ if view_mode == "District View":
             sorted_df['Grade'] = sorted_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
             text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
-            grade_color_map = {'A': '#10B981', 'B': '#34D399', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
+            # Muted color map for bars to prevent "wall of green"
+            grade_color_map = {'A': '#14B8A6', 'B': '#5EEAD4', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
             
             fig = px.bar(
                 sorted_df, y=facility_col, x=metric_col, orientation='h', color='Grade', 
@@ -977,7 +1010,7 @@ if view_mode == "District View":
         
         if not monthly_df.empty:
             fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
-            fig_m.update_traces(marker_color='#10B981', texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#FFFFFF', weight=700))
+            fig_m.update_traces(marker_color='#1E293B', texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#FFFFFF', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
             m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
             fig_m.update_layout(**m_layout)
@@ -989,7 +1022,8 @@ if view_mode == "District View":
             heatmap_df['Total'] = heatmap_df.sum(axis=1)
             heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
             
-            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#ECFDF5'], [0.1, '#A7F3D0'], [1, '#047857']], labels=dict(x="Date", y="", color="Patients"))
+            # Changed to Ice Blue scale
+            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F0F9FF'], [0.1, '#BAE6FD'], [1, '#0284C7']], labels=dict(x="Date", y="", color="Patients"))
             fig_h.update_traces(xgap=2, ygap=2)
             
             hm_layout = PLOTLY_LAYOUT.copy()
@@ -1886,8 +1920,8 @@ elif view_mode == "Inactive Spokes":
         st.warning("Could not load facility data.")
 
 # --- GLOBAL DEFINITIONS EXPANDER ---
-st.markdown("<br><hr style='border-color: #E2E8F0; margin: 20px 0 20px 0;'><br>", unsafe_allow_html=True)
-with st.expander("ℹ️ Metric Definitions & Grading System"):
+st.markdown("<br>", unsafe_allow_html=True)
+with st.expander(":material/info: Metric Definitions & Grading System"):
     st.markdown("""
     **📊 Weighted Avg / Day**
     Total patients divided by total facility-days (Total Facilities × Total Days). This is the truest measure of daily efficiency, as it prevents a facility that was only open for 1 day with 50 patients from skewing the district's average.
