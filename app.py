@@ -43,8 +43,10 @@ st.markdown("""
     [data-testid="stDataFrameColumnMenu"] { display: none !important; }
     [data-testid="stDataFrame"] div[role="columnheader"] { cursor: pointer !important; }
 
-    /* --- FORCE EMERALD PROGRESS BARS --- */
+    /* --- FORCE EMERALD PROGRESS BARS (EVERYWHERE) --- */
     div[data-testid="stProgress"] > div > div > div { background-color: #10B981 !important; }
+    div[data-testid="stDataFrame"] div[role="progressbar"] > div { background-color: #10B981 !important; }
+    div[data-testid="stDataFrame"] div[role="progressbar"] > div > div { background-color: #10B981 !important; }
 
     /* --- LOGIN SPECIFIC CSS --- */
     div[data-testid="stHorizontalBlock"]:has(> div > div[data-testid="stForm"]) {
@@ -704,7 +706,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v46.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v47.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -726,7 +728,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v46.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v47.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1692,7 +1694,7 @@ elif view_mode == "ZM View":
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Coverage</div><div class="metric-icon"><span class="material-symbols-rounded">map</span></div></div>
                     <div class="metric-value">{total_units}</div>
-                    <div class="metric-trend trend-neutral">{breakdown_text}</div>
+                    <div class="metric-trend trend-neutral">Total Units</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Weighted Avg / Day</div><div class="metric-icon"><span class="material-symbols-rounded">speed</span></div></div>
