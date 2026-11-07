@@ -374,15 +374,19 @@ DISTRICT_MAP = {
 REVERSE_DISTRICT_MAP = {v: k for k, v in DISTRICT_MAP.items()}
 
 def style_reason(val):
-    if pd.isna(val): return ''
+    if pd.isna(val) or str(val).strip() == '' or str(val) == '-': return 'color: #64748B;'
     val_str = str(val).lower()
-    if any(w in val_str for w in ['operational', 'no lt', 'no runner', 'strike', 'breakdown', 'not available']):
+    # Critical Operational Failures
+    if any(w in val_str for w in ['operational', 'no lt', 'no runner', 'strike', 'breakdown', 'not available', 'locked', 'no sample']):
         return 'background-color: #FEE2E2; color: #991B1B; font-weight: 600; border-radius: 6px; padding: 4px 10px; display: inline-block;'
-    elif any(w in val_str for w in ['low opd', 'low footfall']):
+    # Warnings / Minor issues
+    elif any(w in val_str for w in ['low opd', 'low footfall', 'training', 'come after', 'delay']):
         return 'background-color: #FEF08A; color: #854D0E; font-weight: 600; border-radius: 6px; padding: 4px 10px; display: inline-block;'
+    # Neutral / Unknown
     elif 'never reported' in val_str or 'unknown' in val_str or 'awaiting launch' in val_str:
         return 'background-color: #F1F5F9; color: #475569; font-weight: 600; border-radius: 6px; padding: 4px 10px; display: inline-block;'
-    return 'background-color: #ECFDF5; color: #047857; font-weight: 600; border-radius: 6px; padding: 4px 10px; display: inline-block;'
+    # Default for any other custom text (assume it's a problem)
+    return 'background-color: #FED7AA; color: #9A3412; font-weight: 600; border-radius: 6px; padding: 4px 10px; display: inline-block;'
 
 def format_reason(reason):
     if pd.isna(reason): return reason
@@ -648,7 +652,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v42.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v43.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -670,7 +674,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v42.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v43.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1182,17 +1186,37 @@ if view_mode == "District View":
                         if fac_texts: return fac_texts[-1]['Raw_Note']
                         return "Unknown / No Note"
                     inactive_df['Primary Reason'] = inactive_df.apply(get_reason, axis=1).apply(format_reason)
+                    
+                    # Calculate Days Inactive
+                    inactive_df['Days Inactive'] = inactive_df['Last Sample Date'].apply(
+                        lambda x: (pd.Timestamp.now().normalize() - pd.to_datetime(x, format='%d %b %Y')).days if x != "Never Reported" else "-"
+                    )
+                    
                     inactive_df = inactive_df.sort_values(by=[facility_col]).reset_index(drop=True)
                     
-                    display_inactive = inactive_df[[facility_col, 'Last Sample Date', 'Primary Reason']].copy()
+                    display_inactive = inactive_df[[facility_col, 'Last Sample Date', 'Days Inactive', 'Primary Reason']].copy()
                     display_inactive = display_inactive.rename(columns={facility_col: 'Facility'})
                     styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
                     
                     st.dataframe(styled_inactive, use_container_width=True, hide_index=True, column_config={
                         "Facility": st.column_config.TextColumn("Facility", width="large"),
                         "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                        "Days Inactive": st.column_config.TextColumn("Days Inactive", width="small"),
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                     })
+                    
+                    # Actionable Export
+                    buf = io.BytesIO()
+                    with pd.ExcelWriter(buf, engine='openpyxl') as writer:
+                        display_inactive.to_excel(buf, index=False, sheet_name='Inactive List')
+                        
+                    col_dl1, col_dl2 = st.columns([8, 2])
+                    with col_dl2:
+                        st.download_button(
+                            label="📥 Download Inactive List", data=buf.getvalue(),
+                            file_name=f"{selected_district_zm}_Inactive_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
+                        )
         
         with sub_tab2:
             active_df = plot_df[plot_df['Total Patients'] > 0].copy()
@@ -1287,21 +1311,21 @@ if view_mode == "District View":
                 
                 fig_polar = px.bar_polar(valid_polar_df, r="Distance", theta="Display_Name", 
                                          color_discrete_sequence=['#10B981'],
-                                         hover_data={"Distance": ":.1f", "Uptime %": ":.1f", "Average Patients": ":.1f", "Grade": True, facility_col: True, "Display_Name": False})
+                                         hover_data={"Distance": ":.1f km", "Uptime %": ":.1f", "Average Patients": ":.1f", "Grade": True, facility_col: True, "Display_Name": False})
                 fig_polar.update_traces(marker_line_color='#064E3B', marker_line_width=1, opacity=0.9)
                 
                 polar_layout = PLOTLY_LAYOUT.copy()
                 polar_layout.update(dict(
                     template="plotly_white", height=750, showlegend=False,
                     margin=dict(l=40, r=40, t=80, b=40),
-                    polar=dict(bargap=0.5, radialaxis=dict(visible=False, range=[0, valid_polar_df['Distance'].max() + 5], gridcolor='#F1F5F9'),
-                               angularaxis=dict(gridcolor='#F1F5F9', tickfont=dict(size=11, color="#064E3B", weight=700)),
+                    polar=dict(bargap=0.4, radialaxis=dict(visible=True, range=[0, valid_polar_df['Distance'].max() + 5], gridcolor='#F1F5F9', tickfont=dict(size=10, color="#64748B")),
+                               angularaxis=dict(gridcolor='#F1F5F9', tickfont=dict(size=11, color="#064E3B", weight=700), direction="clockwise"),
                                bgcolor='rgba(248, 250, 252, 0.5)')
                 ))
                 fig_polar.update_layout(**polar_layout)
                 fig_polar.add_annotation(x=0.5, y=0.5, text="<b>HUB</b>", showarrow=False,
-                                         font=dict(size=14, color="#FFFFFF"), bgcolor="#10B981",
-                                         borderpad=8, bordercolor="#FFFFFF", borderwidth=2)
+                                         font=dict(size=12, color="#FFFFFF"), bgcolor="#10B981",
+                                         borderpad=6, bordercolor="#FFFFFF", borderwidth=2, opacity=0.9)
                 st.plotly_chart(fig_polar, use_container_width=True)
             else:
                 st.warning("⚠️ No valid distance data available for this district.")
@@ -1520,7 +1544,7 @@ elif view_mode == "State View":
                     with col2: 
                         st.markdown(f'''
                         <div class="battle-card battle-card-red">
-                            <div class="battle-title" style="color: #F43F5E;">{district_b_display}</div>
+                            <div class="battle-title" style="color: #4F46E5;">{district_b_display}</div>
                             <div class="battle-row"><span>Total Patients</span> <span style="{get_style(sb['total'], sa['total'])}">{sb['total']:,}</span></div>
                             <div class="battle-row"><span>Weighted Avg / Day</span> <span style="{get_style(sb['weighted_avg'], sa['weighted_avg'])}">{sb['weighted_avg']}</span></div>
                             <div class="battle-row"><span>Facility Uptime</span> <span style="{get_style(b_uptime, a_uptime)}">{b_uptime}%</span></div>
@@ -1549,7 +1573,11 @@ elif view_mode == "State View":
                         get_trend(pa, a_obj_to_col, district_a_display, all_dates_objs),
                         get_trend(pb, b_obj_to_col, district_b_display, all_dates_objs)
                     ])
-                    fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, line_shape='spline', color_discrete_map={district_a_display: '#10B981', district_b_display: '#F43F5E'})
+                    
+                    # Fixed: Indigo instead of Red, connectgaps=True, larger markers
+                    fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, line_shape='spline', 
+                                    color_discrete_map={district_a_display: '#10B981', district_b_display: '#4F46E5'})
+                    fig_c.update_traces(connectgaps=True, marker=dict(size=8))
                     
                     cmp_layout = PLOTLY_LAYOUT.copy()
                     cmp_layout.update(dict(
