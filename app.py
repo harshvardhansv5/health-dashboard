@@ -154,10 +154,10 @@ st.markdown("""
         border: none !important;
         border-radius: 20px !important;
         box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important;
-        padding: 8px 24px !important;
+        padding: 12px 24px !important;
         margin-bottom: 24px !important;
         align-items: center !important;
-        height: 64px !important;
+        min-height: 72px !important;
     }
     
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
@@ -165,20 +165,53 @@ st.markdown("""
         flex-wrap: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 4px 10px !important; font-size: 12px !important; margin: 0 !important; white-space: nowrap !important; border-radius: 8px !important; color: #64748B !important; transition: all 0.2s;
+        padding: 6px 14px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important; border-radius: 8px !important; color: #475569 !important; transition: all 0.2s;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
         background-color: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; color: #064E3B !important; font-weight: 700 !important;
     }
+    /* KILL THE BLUE DOT */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child {
+        border-color: #10B981 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child > div {
+        background-color: #10B981 !important;
+    }
 
-    /* Header Details */
+    /* Header Details (Light Logo) */
     .header-left { display: flex; align-items: center; gap: 12px; }
-    .header-icon { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background-color: #064E3B; border-radius: 12px; color: #FFFFFF; box-shadow: 0 4px 12px rgba(6, 78, 59, 0.2); }
-    .header-icon svg { width: 20px; height: 20px; stroke: #FFFFFF; }
+    .header-icon { 
+        display: flex; align-items: center; justify-content: center; 
+        width: 42px; height: 42px; 
+        background-color: #ECFDF5; 
+        border-radius: 50%; 
+        border: 1.5px solid #A7F3D0;
+        color: #10B981; 
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15); 
+    }
+    .header-icon svg { width: 20px; height: 20px; stroke: #10B981; }
     .header-title { font-size: 16px; font-weight: 800; color: #064E3B; letter-spacing: -0.3px; line-height: 1.1; margin-bottom: 2px; }
     .header-subtitle { font-size: 12px; font-weight: 500; color: #64748B; margin-top: 0; }
     
-    /* Blinking Radar Dot */
+    /* Time Range Selectbox Styling */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] { margin-bottom: 0px; }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"] {
+        border-radius: 10px !important; min-height: 44px !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] label p {
+        display: flex; align-items: center; gap: 6px;
+    }
+    /* Live Dot inside Label */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] label p::after {
+        content: "";
+        display: inline-block;
+        width: 6px; height: 6px;
+        background-color: #10B981;
+        border-radius: 50%;
+        animation: pulse-emerald 2s infinite;
+    }
+
+    /* Blinking Radar Dot (Kept for other uses) */
     .status-dot { width: 8px; height: 8px; background-color: #10B981; border-radius: 50%; animation: pulse-emerald 2s infinite; display: inline-block; margin-right: 6px; }
     @keyframes pulse-emerald {
         0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
@@ -652,7 +685,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v44.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v45.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -674,7 +707,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v44.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v45.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -777,7 +810,7 @@ _DISPLAY_TO_SHEET = {REVERSE_DISTRICT_MAP.get(s, s): s for s in available_sheets
 _DISPLAY_DISTRICTS = sorted(_DISPLAY_TO_SHEET.keys())
 
 # --- UNIFIED COMMAND BAR ---
-col_title, col_nav, col_time_ctrl = st.columns([2.0, 5.8, 2.2])
+col_title, col_nav, col_time_ctrl = st.columns([2.5, 5.0, 2.5], vertical_alignment="center")
 
 with col_title:
     st.markdown("""
@@ -807,15 +840,7 @@ with col_nav:
     view_mode = st.radio("Navigation", _NAV_OPTS, key='nav_radio', horizontal=True, label_visibility="collapsed")
 
 with col_time_ctrl:
-    st.markdown("""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0px; padding-bottom: 2px;">
-        <div style="font-size: 10px; font-weight: 800; color: #64748B; letter-spacing: 0.5px;">TIME RANGE</div>
-        <div style="font-size: 10px; font-weight: 800; color: #10B981; display: flex; align-items: center;">
-            <div class="status-dot"></div> Live
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    time_filter = st.selectbox("Time Range", ["Full History", "Past Week", "Past 2 Weeks", "Past Month", "Select Dates..."], label_visibility="collapsed")
+    time_filter = st.selectbox(":green[●] TIME RANGE", ["Full History", "Past Week", "Past 2 Weeks", "Past Month", "Select Dates..."], label_visibility="visible")
     start_date, end_date = None, None
     if time_filter == "Select Dates...":
         start_date = st.date_input("Start Date", value=pd.Timestamp.now() - timedelta(days=30))
@@ -1571,7 +1596,6 @@ elif view_mode == "State View":
                         get_trend(pb, b_obj_to_col, district_b_display, all_dates_objs)
                     ])
                     
-                    # Fixed: Indigo instead of Red, connectgaps=True, larger markers
                     fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, line_shape='spline', 
                                     color_discrete_map={district_a_display: '#10B981', district_b_display: '#4F46E5'})
                     fig_c.update_traces(connectgaps=True, marker=dict(size=8))
