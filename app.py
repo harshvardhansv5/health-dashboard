@@ -195,17 +195,36 @@ st.markdown("""
     
     /* Time Range Selectbox Styling */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] { margin-bottom: 0px; }
+    
+    /* Target the actual select box */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"] {
-        border-radius: 10px !important; min-height: 44px !important;
+        border-radius: 12px !important; 
+        min-height: 44px !important;
+        background-color: #F8FAFC !important;
+        border: 1px solid #E2E8F0 !important;
+        box-shadow: none !important;
+        transition: all 0.2s ease !important;
     }
+    
+    /* Hover and focus states for the select box */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"]:hover {
+        border-color: #10B981 !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"]:focus-within {
+        box-shadow: 0 0 0 2px #10B981 inset !important;
+        background-color: #FFFFFF !important;
+    }
+
+    /* The Label and the Live Dot */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] label p {
-        display: flex; align-items: center; gap: 6px;
+        display: flex; align-items: center; gap: 6px; margin-bottom: 4px !important;
     }
-    /* Live Dot inside Label */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] label p::after {
+    
+    /* Add the Live Dot BEFORE the text */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] label p::before {
         content: "";
         display: inline-block;
-        width: 6px; height: 6px;
+        width: 8px; height: 8px;
         background-color: #10B981;
         border-radius: 50%;
         animation: pulse-emerald 2s infinite;
@@ -685,7 +704,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v45.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v46.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -707,7 +726,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v45.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v46.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -840,7 +859,7 @@ with col_nav:
     view_mode = st.radio("Navigation", _NAV_OPTS, key='nav_radio', horizontal=True, label_visibility="collapsed")
 
 with col_time_ctrl:
-    time_filter = st.selectbox(":green[●] TIME RANGE", ["Full History", "Past Week", "Past 2 Weeks", "Past Month", "Select Dates..."], label_visibility="visible")
+    time_filter = st.selectbox("TIME RANGE", ["Full History", "Past Week", "Past 2 Weeks", "Past Month", "Select Dates..."], label_visibility="visible")
     start_date, end_date = None, None
     if time_filter == "Select Dates...":
         start_date = st.date_input("Start Date", value=pd.Timestamp.now() - timedelta(days=30))
@@ -863,7 +882,7 @@ PLOTLY_LAYOUT = dict(
 # VIEW: DISTRICT VIEW
 # ==============================================================================
 if view_mode == "District View":
-    col_d, col_h, col_chk = st.columns([2.5, 2.5, 1.5], vertical_alignment="bottom")
+    col_d, col_h, col_chk = st.columns([3, 3, 2], vertical_alignment="bottom")
     
     with col_d: 
         selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
@@ -953,7 +972,7 @@ if view_mode == "District View":
                     <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
                 </div>
                 <div class="metric-value">{num_facs}</div>
-                <div class="metric-trend trend-neutral">Facilities</div>
+                <div class="metric-trend trend-neutral">{total_active} Active</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
