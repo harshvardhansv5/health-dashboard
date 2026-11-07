@@ -652,7 +652,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v43.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v44.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -674,7 +674,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v43.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v44.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -838,18 +838,15 @@ PLOTLY_LAYOUT = dict(
 # VIEW: DISTRICT VIEW
 # ==============================================================================
 if view_mode == "District View":
-    with st.form("district_filters", clear_on_submit=False):
-        col_d, col_h, col_chk, col_btn = st.columns([2.5, 2.5, 1.5, 1.5], vertical_alignment="bottom")
-        
-        with col_d: 
-            selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
-        with col_h:
-            zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
-            selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[zm_name_for_district][selected_district_zm]))
-        with col_chk:
-            active_only = st.checkbox("Exclude Inactive", value=False)
-        with col_btn:
-            submitted = st.form_submit_button("Apply Filters", use_container_width=True)
+    col_d, col_h, col_chk = st.columns([2.5, 2.5, 1.5], vertical_alignment="bottom")
+    
+    with col_d: 
+        selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
+    with col_h:
+        zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
+        selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[zm_name_for_district][selected_district_zm]))
+    with col_chk:
+        active_only = st.checkbox("Exclude Inactive", value=False)
 
     # --- PREMIUM ZM RIBBON ---
     zone_name = zm_name_for_district.split("(")[1].replace(")", "").strip() + " Zone" if "(" in zm_name_for_district else "Unknown Zone"
@@ -1205,10 +1202,10 @@ if view_mode == "District View":
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                     })
                     
-                    # Actionable Export
+                    # Actionable Export (FIXED)
                     buf = io.BytesIO()
                     with pd.ExcelWriter(buf, engine='openpyxl') as writer:
-                        display_inactive.to_excel(buf, index=False, sheet_name='Inactive List')
+                        display_inactive.to_excel(writer, index=False, sheet_name='Inactive List')
                         
                     col_dl1, col_dl2 = st.columns([8, 2])
                     with col_dl2:
