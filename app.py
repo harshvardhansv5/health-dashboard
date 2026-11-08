@@ -21,7 +21,7 @@ DISTANCE_FALLBACK = {}
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🩸", layout="wide")
 
-# --- PINE & MINT SOFT UI CSS ---
+# --- SOFT SLATE & MINT UI CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -32,8 +32,8 @@ st.markdown("""
     }
     .material-symbols-rounded, [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
     
-    /* --- THE SOFT MINT CANVAS --- */
-    .stApp { background-color: #F8FAFC !important; } 
+    /* --- THE SOFT SLATE CANVAS (Darker background to reduce glare) --- */
+    .stApp { background-color: #E2E8F0 !important; } 
     
     /* Remove Sidebar entirely */
     [data-testid="stSidebar"] { display: none !important; }
@@ -53,15 +53,15 @@ st.markdown("""
         margin-top: 10vh;
     }
     div[data-testid="stForm"] {
-        background-color: #FFFFFF !important;
+        background-color: #F8FAFC !important;
         border-radius: 24px !important;
         padding: 48px 40px !important;
         box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.08) !important;
-        border: none !important;
+        border: 1px solid #CBD5E1 !important;
     }
     div[data-testid="stTextInput"] input {
-        background-color: #F8FAFC !important;
-        border: 1px solid #E2E8F0 !important;
+        background-color: #E2E8F0 !important;
+        border: 1px solid #CBD5E1 !important;
         border-radius: 10px !important;
         padding: 12px 16px !important;
         color: #0F172A !important;
@@ -70,6 +70,7 @@ st.markdown("""
     div[data-testid="stTextInput"] input:focus {
         border-color: #10B981 !important;
         box-shadow: 0 0 0 1px #10B981 !important;
+        background-color: #F8FAFC !important;
     }
     div[data-testid="stFormSubmitButton"] > button {
         background-color: #10B981 !important;
@@ -88,24 +89,24 @@ st.markdown("""
         box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3) !important;
     }
 
-    /* --- HERO DECK CARDS --- */
+    /* --- HERO DECK CARDS (Soft off-white) --- */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .metric-card {
-        background-color: #FFFFFF !important; 
-        border: none !important; 
+        background-color: #F8FAFC !important; 
+        border: 1px solid #CBD5E1 !important; 
         border-radius: 20px !important;
         padding: 24px !important; 
-        box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important; 
+        box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important; 
         display: flex; flex-direction: column; 
         transition: transform 0.2s ease, box-shadow 0.2s ease; 
     }
     .metric-card:hover { 
         transform: translateY(-4px); 
-        box-shadow: 0 16px 32px -8px rgba(15, 23, 42, 0.08); 
+        box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.1); 
     }
     .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .metric-label { color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-    .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #F1F5F9; color: #475569; display: flex; align-items: center; justify-content: center; }
+    .metric-label { color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #E2E8F0; color: #475569; display: flex; align-items: center; justify-content: center; }
     .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
     .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; }
     .metric-trend { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: auto; }
@@ -115,32 +116,32 @@ st.markdown("""
 
     /* --- PREMIUM ZM RIBBON --- */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) {
-        background-color: #FFFFFF !important;
-        border: none !important;
+        background-color: #F8FAFC !important;
+        border: 1px solid #CBD5E1 !important;
         border-left: 6px solid #10B981 !important;
         border-radius: 16px !important;
         padding: 12px 24px !important;
         margin-bottom: 24px !important;
-        box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important;
+        box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important;
         align-items: center !important;
         height: 64px !important;
         overflow: hidden !important;
     }
     .zm-label { color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-right: 12px; }
-    .zm-name { color: #064E3B; font-size: 16px; font-weight: 800; margin-right: 8px; }
+    .zm-name { color: #0F172A; font-size: 16px; font-weight: 800; margin-right: 8px; }
     .zm-zone { color: #10B981; font-size: 14px; font-weight: 600; }
 
     /* --- MODERN PAGE HEADERS --- */
     .page-header-container { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; margin-top: 8px; }
-    .page-icon-container { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 14px; background-color: #F1F5F9; color: #475569; }
+    .page-icon-container { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 14px; background-color: #F8FAFC; color: #475569; border: 1px solid #CBD5E1; }
     .page-icon svg { width: 24px; height: 24px; fill: currentColor; }
-    .page-title-text { font-size: 26px; font-weight: 800; color: #064E3B; letter-spacing: -0.5px; line-height: 1.1; }
-    .page-subtitle-text { font-size: 14px; font-weight: 500; color: #64748B; margin-top: 4px; }
+    .page-title-text { font-size: 26px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; }
+    .page-subtitle-text { font-size: 14px; font-weight: 500; color: #475569; margin-top: 4px; }
 
     /* Report Header */
-    .report-header { background-color: #FFFFFF; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04); border-left: 6px solid #10B981; }
-    .report-title { color: #064E3B; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
-    .report-meta { color: #64748B; font-size: 13px; line-height: 1.5; font-weight: 500; }
+    .report-header { background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05); border-left: 6px solid #10B981; }
+    .report-title { color: #0F172A; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
+    .report-meta { color: #475569; font-size: 13px; line-height: 1.5; font-weight: 500; }
     
     /* Grades */
     .grade-badge { display: inline-block; padding: 6px 16px; border-radius: 8px; font-size: 20px; font-weight: 800; }
@@ -152,10 +153,10 @@ st.markdown("""
 
     /* --- COMMAND BAR & NAVIGATION --- */
     div[data-testid="stHorizontalBlock"]:has(.app-header) {
-        background-color: #FFFFFF !important;
-        border: none !important;
+        background-color: #F8FAFC !important;
+        border: 1px solid #CBD5E1 !important;
         border-radius: 20px !important;
-        box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important;
+        box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important;
         padding: 12px 24px !important;
         margin-bottom: 24px !important;
         align-items: center !important;
@@ -163,14 +164,14 @@ st.markdown("""
     }
     
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
-        background-color: #F1F5F9 !important; border: none !important; border-radius: 12px !important; padding: 4px !important; gap: 4px !important;
+        background-color: #E2E8F0 !important; border: 1px solid #CBD5E1 !important; border-radius: 12px !important; padding: 4px !important; gap: 4px !important;
         flex-wrap: nowrap !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
         padding: 6px 14px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important; border-radius: 8px !important; color: #475569 !important; transition: all 0.2s;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-        background-color: #FFFFFF !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; color: #064E3B !important; font-weight: 700 !important;
+        background-color: #F8FAFC !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; color: #0F172A !important; font-weight: 700 !important;
     }
     /* KILL THE BLUE DOT */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child {
@@ -192,7 +193,7 @@ st.markdown("""
         box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15); 
     }
     .header-icon svg { width: 20px; height: 20px; stroke: #10B981; }
-    .header-title { font-size: 16px; font-weight: 800; color: #064E3B; letter-spacing: -0.3px; line-height: 1.1; margin-bottom: 2px; }
+    .header-title { font-size: 16px; font-weight: 800; color: #0F172A; letter-spacing: -0.3px; line-height: 1.1; margin-bottom: 2px; }
     .header-subtitle { font-size: 12px; font-weight: 500; color: #64748B; margin-top: 0; }
     
     /* Time Range Selectbox Styling */
@@ -202,8 +203,8 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"] {
         border-radius: 12px !important; 
         min-height: 44px !important;
-        background-color: #F8FAFC !important;
-        border: 1px solid #E2E8F0 !important;
+        background-color: #E2E8F0 !important;
+        border: 1px solid #CBD5E1 !important;
         box-shadow: none !important;
         transition: all 0.2s ease !important;
     }
@@ -214,7 +215,7 @@ st.markdown("""
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"]:focus-within {
         box-shadow: 0 0 0 2px #10B981 inset !important;
-        background-color: #FFFFFF !important;
+        background-color: #F8FAFC !important;
     }
 
     /* The Label and the Live Dot */
@@ -241,34 +242,34 @@ st.markdown("""
     }
 
     /* Compare Battle Cards */
-    .battle-card { background-color: #FFFFFF; border-radius: 20px; padding: 24px; box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04); margin-bottom: 16px; }
+    .battle-card { background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05); margin-bottom: 16px; }
     .battle-card-green { border-top: 6px solid #10B981; }
     .battle-card-red { border-top: 6px solid #F43F5E; }
-    .battle-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: #064E3B; }
-    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #F1F5F9; padding: 12px 0; font-size: 14px; color: #475569; font-weight: 500;}
+    .battle-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: #0F172A; }
+    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #CBD5E1; padding: 12px 0; font-size: 14px; color: #475569; font-weight: 500;}
     .battle-row:last-child { border-bottom: none; }
 
     /* --- PREMIUM INPUTS & DROPDOWNS --- */
     div[data-testid="stSelectbox"] { margin-bottom: 0px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
-        background-color: #F8FAFC !important; border: 1px solid #E2E8F0 !important; border-radius: 10px !important; 
+        background-color: #E2E8F0 !important; border: 1px solid #CBD5E1 !important; border-radius: 10px !important; 
         transition: all 0.2s ease-in-out !important; min-height: 42px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover { background-color: #FFFFFF !important; border-color: #10B981 !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { box-shadow: 0 0 0 2px #10B981 inset !important; background-color: #FFFFFF !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #064E3B !important; font-weight: 600 !important; font-size: 14px !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { background-color: #F8FAFC !important; border-color: #10B981 !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { box-shadow: 0 0 0 2px #10B981 inset !important; background-color: #F8FAFC !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; font-size: 14px !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #10B981 !important; width: 16px !important; height: 16px !important;}
     
     label[data-testid="stWidgetLabel"] p { color: #475569 !important; font-weight: 700 !important; font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px !important;}
 
     /* --- TIGHTENED FORM & PREMIUM BUTTONS --- */
     div[data-testid="stForm"] {
-        border: none !important;
+        border: 1px solid #CBD5E1 !important;
         border-radius: 20px !important;
         padding: 20px !important;
-        background-color: #FFFFFF !important;
-        box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important;
+        background-color: #F8FAFC !important;
+        box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important;
         margin-bottom: 24px !important;
     }
     
@@ -294,9 +295,9 @@ st.markdown("""
 
     /* Ghost Button for ZM Profile */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button {
-        background-color: #FFFFFF !important;
-        color: #064E3B !important;
-        border: 1px solid #E2E8F0 !important;
+        background-color: #F8FAFC !important;
+        color: #0F172A !important;
+        border: 1px solid #CBD5E1 !important;
         border-radius: 10px !important;
         font-weight: 600 !important;
         font-size: 13px !important;
@@ -313,9 +314,9 @@ st.markdown("""
 
     /* Compact Download Buttons */
     div[data-testid="stDownloadButton"] > button {
-        background-color: #FFFFFF !important;
+        background-color: #F8FAFC !important;
         color: #475569 !important;
-        border: 1px solid #E2E8F0 !important;
+        border: 1px solid #CBD5E1 !important;
         border-radius: 10px !important;
         font-weight: 600 !important;
         font-size: 13px !important;
@@ -324,7 +325,7 @@ st.markdown("""
         width: 100% !important;
     }
     div[data-testid="stDownloadButton"] > button:hover {
-        background-color: #F8FAFC !important;
+        background-color: #E2E8F0 !important;
         border-color: #10B981 !important;
         color: #10B981 !important;
     }
@@ -336,17 +337,17 @@ st.markdown("""
         font-size: 14px !important;
     }
     button[data-baseweb="tab"] p { font-weight: 600 !important; }
-    button[aria-selected="true"] { color: #064E3B !important; }
-    button[aria-selected="true"] p { color: #064E3B !important; font-weight: 800 !important; }
+    button[aria-selected="true"] { color: #0F172A !important; }
+    button[aria-selected="true"] p { color: #0F172A !important; font-weight: 800 !important; }
     div[data-baseweb="tab-highlight"] { background-color: #10B981 !important; height: 3px !important; border-radius: 3px !important; }
-    div[data-baseweb="tab-border"] { background-color: #F1F5F9 !important; }
+    div[data-baseweb="tab-border"] { background-color: #CBD5E1 !important; }
 
     /* --- STYLE THE EXPANDER (SOFT UI CARD) --- */
     div[data-testid="stExpander"] {
-        background-color: #FFFFFF !important;
-        border: none !important;
+        background-color: #F8FAFC !important;
+        border: 1px solid #CBD5E1 !important;
         border-radius: 16px !important;
-        box-shadow: 0 8px 24px -6px rgba(15, 23, 42, 0.04) !important;
+        box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important;
         margin-bottom: 24px !important;
         overflow: hidden !important;
     }
@@ -357,12 +358,12 @@ st.markdown("""
         padding: 16px 24px !important;
         font-weight: 700 !important;
         font-size: 14px !important;
-        color: #064E3B !important;
-        background-color: #FFFFFF !important;
+        color: #0F172A !important;
+        background-color: #F8FAFC !important;
         transition: background-color 0.2s ease !important;
     }
     div[data-testid="stExpander"] summary:hover {
-        background-color: #F8FAFC !important;
+        background-color: #E2E8F0 !important;
     }
     div[data-testid="stExpander"] summary svg {
         fill: #10B981 !important;
@@ -384,11 +385,11 @@ if not st.session_state.authenticated:
         with st.form("login_form"):
             st.markdown("""
             <div style="text-align: center; margin-bottom: 32px;">
-                <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background-color: #ECFDF5; border-radius: 16px; margin-bottom: 16px;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background-color: #ECFDF5; border-radius: 16px; margin-bottom: 16px; border: 1px solid #A7F3D0;">
                     <span class="material-symbols-rounded" style="font-size: 32px; color: #10B981;">health_and_safety</span>
                 </div>
-                <h2 style="color:#064E3B; font-size: 28px; font-weight: 800; margin-bottom: 8px;">Secure Login</h2>
-                <p style="color:#64748B; font-size: 14px; margin: 0;">Enter the password to access the Bihar Health Dashboard.</p>
+                <h2 style="color:#0F172A; font-size: 28px; font-weight: 800; margin-bottom: 8px;">Secure Login</h2>
+                <p style="color:#475569; font-size: 14px; margin: 0;">Enter the password to access the Bihar Health Dashboard.</p>
             </div>
             """, unsafe_allow_html=True)
             
@@ -706,7 +707,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v48.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v49.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -728,7 +729,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v48.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v49.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -873,11 +874,11 @@ with col_time_ctrl:
 PLOTLY_LAYOUT = dict(
     template="plotly_white", 
     font=dict(family="Inter, sans-serif", size=13, color="#475569"), 
-    title_font=dict(size=16, color="#064E3B", family="Inter, sans-serif", weight=700), 
+    title_font=dict(size=16, color="#0F172A", family="Inter, sans-serif", weight=700), 
     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
     margin=dict(l=10, r=10, t=60, b=10),
-    xaxis=dict(showgrid=False, linecolor='#E2E8F0'),
-    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', linecolor='#E2E8F0')
+    xaxis=dict(showgrid=False, linecolor='#CBD5E1'),
+    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', linecolor='#CBD5E1')
 )
 
 # ==============================================================================
@@ -890,7 +891,9 @@ if view_mode == "District View":
         selected_district_zm = st.selectbox("Select District", sorted(DISTRICT_TO_ZM.keys()))
     with col_h:
         zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
-        selected_hub_zm = st.selectbox("Select Hub", sorted(ZM_DATA[zm_name_for_district][selected_district_zm]))
+        hub_options = sorted(ZM_DATA[zm_name_for_district][selected_district_zm])
+        # The dynamic key forces the widget to reset when the district changes
+        selected_hub_zm = st.selectbox("Select Hub", hub_options, key=f"hub_select_{selected_district_zm}")
     with col_chk:
         active_only = st.checkbox("Exclude Inactive", value=False)
 
@@ -1029,7 +1032,7 @@ if view_mode == "District View":
                 sorted_df, y=facility_col, x=metric_col, orientation='h', color='Grade', 
                 color_discrete_map=grade_color_map, text=text_labels, 
                 category_orders={facility_col: sorted_df[facility_col].tolist()},
-                title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#64748B;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
+                title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#475569;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
             )
             
             if metric_col == 'Average Patients': current_avg = new_weighted_avg
@@ -1039,27 +1042,27 @@ if view_mode == "District View":
             fig.add_vline(
                 x=current_avg, 
                 line_dash="dash", 
-                line_color="#064E3B", 
+                line_color="#0F172A", 
                 line_width=2,
                 annotation_text=f" Avg: {current_avg}", 
                 annotation_position="top left",
-                annotation_font=dict(size=12, color="#064E3B", weight=700)
+                annotation_font=dict(size=12, color="#0F172A", weight=700)
             )
             
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
                 height=max(500, len(sorted_df) * 30),
-                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#064E3B", weight=600), automargin=True),
-                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', tickfont=dict(size=12, color="#64748B")),
+                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#0F172A", weight=600), automargin=True),
+                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickfont=dict(size=12, color="#475569")),
                 showlegend=False, xaxis_title=metric_option, yaxis_title="",
                 margin=dict(l=20, r=40, t=80, b=10), coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
-            fig.update_traces(textposition='auto', textfont=dict(color="#064E3B", size=12, weight=700), cliponaxis=False)
+            fig.update_traces(textposition='auto', textfont=dict(color="#0F172A", size=12, weight=700), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
 
-            st.markdown("<hr style='margin: 24px 0; border-color: #F1F5F9;'>", unsafe_allow_html=True)
-            st.markdown("<h4 style='color:#064E3B; margin-bottom:16px; font-weight:800;'>Facility Drill-Down</h4>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin: 24px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color:#0F172A; margin-bottom:16px; font-weight:800;'>Facility Drill-Down</h4>", unsafe_allow_html=True)
             
             drill_options = sorted_df[facility_col].tolist()
             selected_drill_facility = st.selectbox("Facility", drill_options, index=0 if drill_options else None, label_visibility="collapsed")
@@ -1076,30 +1079,30 @@ if view_mode == "District View":
                 if drill_trend:
                     dt_df = pd.DataFrame(drill_trend).sort_values('Date')
                     fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True, line_shape='spline', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
-                    fig_dt.update_traces(line_color='#10B981', line_width=3, marker=dict(size=8, color='#FFFFFF', line=dict(width=2, color='#10B981')), fillcolor='rgba(16, 185, 129, 0.1)')
+                    fig_dt.update_traces(line_color='#10B981', line_width=3, marker=dict(size=8, color='#F8FAFC', line=dict(width=2, color='#10B981')), fillcolor='rgba(16, 185, 129, 0.15)')
                     
                     dt_layout = PLOTLY_LAYOUT.copy()
                     dt_layout.update(dict(
                         height=300,
                         xaxis=dict(showgrid=False, tickformat="%d %b", range=[dt_df['Date'].min(), dt_df['Date'].max()]),
-                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9'),
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'),
                         margin=dict(l=10, r=10, t=50, b=10)
                     ))
                     fig_dt.update_layout(**dt_layout)
                     st.plotly_chart(fig_dt, use_container_width=True)
 
-        st.markdown("<h4 style='color:#064E3B; margin-top:24px; margin-bottom:16px; font-weight:800;'>Monthly Patient Volume</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#0F172A; margin-top:24px; margin-bottom:16px; font-weight:800;'>Monthly Patient Volume</h4>", unsafe_allow_html=True)
         monthly_df = get_district_monthly_trend(df_raw, facility_col)
         
         if not monthly_df.empty:
             fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
-            fig_m.update_traces(marker_color='#1E293B', texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#FFFFFF', weight=700))
+            fig_m.update_traces(marker_color='#1E293B', texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#F8FAFC', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
-            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
+            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
             fig_m.update_layout(**m_layout)
             st.plotly_chart(fig_m, use_container_width=True)
 
-        st.markdown("<h4 style='color:#064E3B; margin-top:24px; margin-bottom:16px; font-weight:800;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#0F172A; margin-top:24px; margin-bottom:16px; font-weight:800;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
             heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
             heatmap_df['Total'] = heatmap_df.sum(axis=1)
@@ -1111,8 +1114,8 @@ if view_mode == "District View":
             hm_layout = PLOTLY_LAYOUT.copy()
             hm_layout.update(dict(
                 height=max(400, len(heatmap_df) * 35),
-                yaxis=dict(tickfont=dict(size=12, color="#064E3B", weight=600)),
-                xaxis=dict(tickfont=dict(size=11, color="#64748B"), tickangle=-45),
+                yaxis=dict(tickfont=dict(size=12, color="#0F172A", weight=600)),
+                xaxis=dict(tickfont=dict(size=11, color="#475569"), tickangle=-45),
                 coloraxis_colorbar=dict(title="Patients", thickness=20),
                 margin=dict(l=10, r=10, t=10, b=60)
             ))
@@ -1147,13 +1150,13 @@ if view_mode == "District View":
             <div class="metric-card"><div class="metric-label">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
             <div class="metric-card"><div class="metric-label">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
             <div class="metric-card"><div class="metric-label">Facility Uptime</div><div class="metric-value">{calc_uptime(stats)}%</div></div>
-            <div class="metric-card" style="background-color:#F8FAFC;"><div class="metric-label">District Grade</div><div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div></div>
+            <div class="metric-card" style="background-color:#E2E8F0;"><div class="metric-label">District Grade</div><div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div></div>
         </div>
         ''', unsafe_allow_html=True)
 
         st.markdown("""
         <div style="text-align: center; margin-top: 16px; margin-bottom: 24px;">
-            <div style="display: inline-flex; gap: 20px; font-size: 13px; font-weight: 600; color: #475569; background-color: #FFFFFF; padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 12px rgba(15,23,42,0.04); align-items: center;">
+            <div style="display: inline-flex; gap: 20px; font-size: 13px; font-weight: 600; color: #475569; background-color: #F8FAFC; padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); align-items: center; border: 1px solid #CBD5E1;">
                 <span style="color: #64748B; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Grade Legend:</span>
                 <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#10B981; border-radius:4px;"></span> A</div>
                 <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#34D399; border-radius:4px;"></span> B</div>
@@ -1164,7 +1167,7 @@ if view_mode == "District View":
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<h4 style='color:#064E3B; margin-top:16px; margin-bottom:16px; font-weight:800;'>Spoke Scorecard</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#0F172A; margin-top:16px; margin-bottom:16px; font-weight:800;'>Spoke Scorecard</h4>", unsafe_allow_html=True)
         display = pd.DataFrame()
         display['Facility'] = scorecard[facility_col]
         display['Grade'] = scorecard['Grade'].apply(grade_emoji)
@@ -1248,7 +1251,7 @@ if view_mode == "District View":
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                     })
                     
-                    # Actionable Export (FIXED)
+                    # Actionable Export
                     buf = io.BytesIO()
                     with pd.ExcelWriter(buf, engine='openpyxl') as writer:
                         display_inactive.to_excel(writer, index=False, sheet_name='Inactive List')
@@ -1325,7 +1328,7 @@ if view_mode == "District View":
                 st.info("This log captures text notes for facilities even if they reported patients on other days.")
 
     with d_tab4:
-        st.markdown("<h4 style='color:#064E3B; margin-bottom:16px; font-weight:800;'>Hub Logistics & Distance Mapping</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#0F172A; margin-bottom:16px; font-weight:800;'>Hub Logistics & Distance Mapping</h4>", unsafe_allow_html=True)
         dist_col = find_distance_column(df_raw)
         
         if dist_col:
@@ -1353,7 +1356,7 @@ if view_mode == "District View":
                 st.markdown(f"**Hub Center:** {selected_hub_zm}")
                 st.caption("Bar length represents distance from Hub (km). Colors indicate the facility's Grade.")
                 
-                # New Ladder Chart
+                # Distance Ladder Chart
                 grade_color_map = {'A': '#10B981', 'B': '#34D399', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
                 
                 fig_dist = px.bar(
@@ -1371,7 +1374,7 @@ if view_mode == "District View":
                 fig_dist.update_traces(
                     texttemplate='%{text:.1f} km', 
                     textposition='outside',
-                    textfont=dict(color="#064E3B", weight=700),
+                    textfont=dict(color="#0F172A", weight=700),
                     cliponaxis=False
                 )
                 
@@ -1389,8 +1392,8 @@ if view_mode == "District View":
                 dist_layout = PLOTLY_LAYOUT.copy()
                 dist_layout.update(dict(
                     height=max(400, len(valid_polar_df) * 35),
-                    yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=12, color="#064E3B", weight=600), automargin=True),
-                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Distance (km)"),
+                    yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=12, color="#0F172A", weight=600), automargin=True),
+                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Distance (km)"),
                     showlegend=False,
                     margin=dict(l=20, r=60, t=60, b=20),
                     coloraxis_showscale=False
@@ -1596,7 +1599,7 @@ elif view_mode == "State View":
                     a_uptime = calc_uptime(sa); b_uptime = calc_uptime(sb)
 
                     def get_style(v1, v2):
-                        if v1 > v2: return "font-weight: 800; color: #064E3B; font-size: 1.15rem;"
+                        if v1 > v2: return "font-weight: 800; color: #0F172A; font-size: 1.15rem;"
                         if v2 > v1: return "font-weight: 500; color: #64748B; font-size: 1rem;"
                         return "font-weight: 700; color: #0F172A; font-size: 1rem;"
 
@@ -1654,7 +1657,7 @@ elif view_mode == "State View":
                         height=350, margin=dict(l=10, r=10, t=40, b=40),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                         xaxis=dict(showgrid=False, tickformat="%d %b"), 
-                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9')
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1')
                     ))
                     fig_c.update_layout(**cmp_layout)
                     st.plotly_chart(fig_c, use_container_width=True)
@@ -1755,7 +1758,7 @@ elif view_mode == "ZM View":
                 with col_sort:
                     zm_sort_order = st.radio("Sort Order:", ["Descending", "Ascending"], horizontal=True, key="zm_sort")
                 
-                st.markdown(f"<h4 style='color:#064E3B; margin-top:16px; margin-bottom:16px; font-weight:800;'>District Breakdown</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:16px; font-weight:800;'>District Breakdown</h4>", unsafe_allow_html=True)
                 display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
                 is_ascending = (zm_sort_order == "Ascending")
                 display_df = zm_df[display_cols].sort_values(by=['Uptime %', 'Weighted Avg'], ascending=[is_ascending, is_ascending]).reset_index(drop=True)
@@ -1766,15 +1769,15 @@ elif view_mode == "ZM View":
                     "Weighted Avg": st.column_config.NumberColumn(format="%.1f")
                 })
                 
-                st.markdown(f"<h4 style='color:#064E3B; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
+                st.markdown(f"<h4 style='color:#0F172A; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
                 fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients', title="<b>Total Patients by District</b>")
-                fig_zm.update_traces(texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#FFFFFF', weight=700))
+                fig_zm.update_traces(texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#F8FAFC', weight=700))
                 
                 zm_layout = PLOTLY_LAYOUT.copy()
                 zm_layout.update(dict(
                     height=400,
-                    xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#064E3B", weight=700)),
-                    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Total Patients"),
+                    xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#0F172A", weight=700)),
+                    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients"),
                     margin=dict(l=10, r=10, t=60, b=10)
                 ))
                 fig_zm.update_layout(**zm_layout)
@@ -1968,19 +1971,19 @@ elif view_mode == "Inactive Spokes":
         with col_card2:
             st.markdown(f'''
             <div class="metric-card" style="border-left: 6px solid #94A3B8; padding: 20px; margin-bottom: 16px;">
-                <div class="metric-header"><div class="metric-label">Pending Launch</div><div class="metric-icon" style="background-color:#F1F5F9; color:#64748B;"><span class="material-symbols-rounded">pending</span></div></div>
-                <div class="metric-value" style="color:#64748B;">{len(pending_launch)}</div>
+                <div class="metric-header"><div class="metric-label">Pending Launch</div><div class="metric-icon" style="background-color:#E2E8F0; color:#475569;"><span class="material-symbols-rounded">pending</span></div></div>
+                <div class="metric-value" style="color:#475569;">{len(pending_launch)}</div>
                 <div class="metric-trend trend-neutral">Awaiting infrastructure readiness</div>
             </div>
             ''', unsafe_allow_html=True)
 
         if not op_failures.empty:
-            st.markdown("<h4 style='color:#064E3B; margin-top:16px; margin-bottom:16px; font-weight:800;'>Top Offending Districts (Operational Failures)</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color:#0F172A; margin-top:16px; margin-bottom:16px; font-weight:800;'>Top Offending Districts (Operational Failures)</h4>", unsafe_allow_html=True)
             district_counts = op_failures['District'].value_counts().head(5).reset_index()
             district_counts.columns = ['District', 'Failures']
             
             fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures', title="<b>Top 5 Districts by Operational Failures</b>")
-            fig_off.update_traces(marker_color='#F43F5E', textposition='auto', textfont=dict(color='#FFFFFF', weight=700))
+            fig_off.update_traces(marker_color='#F43F5E', textposition='auto', textfont=dict(color='#F8FAFC', weight=700))
             
             off_layout = PLOTLY_LAYOUT.copy()
             off_layout.update(dict(height=300, showlegend=False, xaxis_title="Number of Facilities", yaxis_title="", margin=dict(l=10, r=20, t=60, b=10)))
