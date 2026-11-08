@@ -163,22 +163,62 @@ st.markdown("""
         min-height: 72px !important;
     }
     
+    /* --- FLOATING SEGMENTED CONTROL --- */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
-        background-color: #E2E8F0 !important; border: 1px solid #CBD5E1 !important; border-radius: 12px !important; padding: 4px !important; gap: 4px !important;
+        background-color: #F1F5F9 !important; /* Lighter container */
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 12px !important;
+        padding: 4px !important;
+        gap: 2px !important;
         flex-wrap: nowrap !important;
     }
+    
+    /* Inactive items */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 6px 14px !important; font-size: 13px !important; margin: 0 !important; white-space: nowrap !important; border-radius: 8px !important; color: #475569 !important; transition: all 0.2s;
+        padding: 6px 16px !important;
+        font-size: 13px !important;
+        font-weight: 500 !important;
+        margin: 0 !important;
+        white-space: nowrap !important;
+        border-radius: 8px !important;
+        color: #64748B !important;
+        transition: all 0.2s ease !important;
+        background-color: transparent !important;
     }
+    
+    /* Hover state for inactive */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+        color: #0F172A !important;
+        background-color: #E2E8F0 !important;
+    }
+
+    /* Active item (Floating White Pill) */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-        background-color: #F8FAFC !important; box-shadow: 0 2px 4px rgba(0,0,0,0.05) !important; color: #0F172A !important; font-weight: 700 !important;
+        background-color: #FFFFFF !important;
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+        color: #0F172A !important;
+        font-weight: 700 !important;
     }
-    /* KILL THE BLUE DOT */
+
+    /* KILL THE BLUE DOT (Aggressive override) */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"] > div:first-child {
+        border-color: #CBD5E1 !important; 
+        background-color: transparent !important;
+        margin-right: 8px !important; 
+    }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child {
         border-color: #10B981 !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child > div {
         background-color: #10B981 !important;
+        border-color: #10B981 !important;
+    }
+    /* Catch any nested SVG or div that Streamlit uses for the dot */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) [data-testid="stMarkdownContainer"] div,
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) svg {
+        background-color: #10B981 !important;
+        fill: #10B981 !important;
+        color: #10B981 !important;
     }
 
     /* Header Details (Solid Logo) */
@@ -707,7 +747,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v51.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v52.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -729,7 +769,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v51.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v52.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
