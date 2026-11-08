@@ -163,62 +163,60 @@ st.markdown("""
         min-height: 72px !important;
     }
     
-    /* --- FLOATING SEGMENTED CONTROL --- */
+    /* The Segmented Control Track */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
-        background-color: #F1F5F9 !important; /* Lighter container */
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 12px !important;
-        padding: 4px !important;
-        gap: 2px !important;
+        background-color: #E2E8F0 !important; 
+        border: 1px solid #CBD5E1 !important; 
+        border-radius: 12px !important; 
+        padding: 4px !important; 
+        gap: 4px !important;
         flex-wrap: nowrap !important;
     }
-    
-    /* Inactive items */
+
+    /* The Individual Tabs */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 6px 16px !important;
-        font-size: 13px !important;
-        font-weight: 500 !important;
-        margin: 0 !important;
-        white-space: nowrap !important;
+        padding: 8px 16px !important; 
+        margin: 0 !important; 
         border-radius: 8px !important;
-        color: #64748B !important;
         transition: all 0.2s ease !important;
+        cursor: pointer !important;
         background-color: transparent !important;
+        display: flex !important;
+        align-items: center !important;
+    }
+
+    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+        display: none !important;
+    }
+
+    /* Tab Text Styling (Inactive) */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label p {
+        font-size: 13px !important;
+        font-weight: 600 !important;
+        color: #475569 !important;
+        margin: 0 !important;
+        transition: color 0.2s ease !important;
+    }
+
+    /* Hover State for Inactive Tabs */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+        background-color: rgba(255, 255, 255, 0.4) !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label:hover p {
+        color: #0F172A !important;
+    }
+
+    /* ACTIVE TAB (The Floating White Pill) */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
+        background-color: #FFFFFF !important; 
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.1) !important; 
     }
     
-    /* Hover state for inactive */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
+    /* Active Tab Text */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) p {
         color: #0F172A !important;
-        background-color: #E2E8F0 !important;
-    }
-
-    /* Active item (Floating White Pill) */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-        background-color: #FFFFFF !important;
-        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04) !important;
-        color: #0F172A !important;
-        font-weight: 700 !important;
-    }
-
-    /* KILL THE BLUE DOT (Aggressive override) */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"] > div:first-child {
-        border-color: #CBD5E1 !important; 
-        background-color: transparent !important;
-        margin-right: 8px !important; 
-    }
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child {
-        border-color: #10B981 !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) > div:first-child > div {
-        background-color: #10B981 !important;
-        border-color: #10B981 !important;
-    }
-    /* Catch any nested SVG or div that Streamlit uses for the dot */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) [data-testid="stMarkdownContainer"] div,
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) svg {
-        background-color: #10B981 !important;
-        fill: #10B981 !important;
-        color: #10B981 !important;
+        font-weight: 800 !important;
     }
 
     /* Header Details (Solid Logo) */
