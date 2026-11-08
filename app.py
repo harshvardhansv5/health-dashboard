@@ -32,7 +32,7 @@ st.markdown("""
     }
     .material-symbols-rounded, [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
     
-    /* --- THE SOFT SLATE CANVAS (Darker background to reduce glare) --- */
+    /* --- THE SOFT SLATE CANVAS --- */
     .stApp { background-color: #E2E8F0 !important; } 
     
     /* Remove Sidebar entirely */
@@ -181,18 +181,18 @@ st.markdown("""
         background-color: #10B981 !important;
     }
 
-    /* Header Details (Light Logo) */
+    /* Header Details (Solid Logo) */
     .header-left { display: flex; align-items: center; gap: 12px; }
     .header-icon { 
         display: flex; align-items: center; justify-content: center; 
-        width: 42px; height: 42px; 
-        background-color: #ECFDF5; 
-        border-radius: 50%; 
-        border: 1.5px solid #A7F3D0;
-        color: #10B981; 
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15); 
+        width: 44px; height: 44px; 
+        background-color: #10B981; /* Solid Emerald */
+        border-radius: 12px; /* Rounded square */
+        border: none;
+        color: #FFFFFF; 
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); 
     }
-    .header-icon svg { width: 20px; height: 20px; stroke: #10B981; }
+    .header-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; stroke-width: 2.5; }
     .header-title { font-size: 16px; font-weight: 800; color: #0F172A; letter-spacing: -0.3px; line-height: 1.1; margin-bottom: 2px; }
     .header-subtitle { font-size: 12px; font-weight: 500; color: #64748B; margin-top: 0; }
     
@@ -707,7 +707,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v49.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v50.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -729,7 +729,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v49.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v50.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -839,10 +839,8 @@ with col_title:
     <div class="app-header">
         <div class="header-left">
             <div class="header-icon">
-                <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M14.5 2v17.5c0 1.4-1.1 2.5-2.5 2.5h0c-1.4 0-2.5-1.1-2.5-2.5V2" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M8.5 2h7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <path d="M14.5 16h-5" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
                 </svg>
             </div>
             <div>
