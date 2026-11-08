@@ -706,7 +706,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v47.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v48.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -728,7 +728,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v47.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v48.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1347,29 +1347,57 @@ if view_mode == "District View":
             missing_polar_df = polar_df[polar_df['Distance'].isna()]
             
             if not valid_polar_df.empty:
-                valid_polar_df['Display_Name'] = valid_polar_df[facility_col].apply(lambda x: x if len(x) <= 28 else x[:25] + "...")
+                valid_polar_df['Display_Name'] = valid_polar_df[facility_col].apply(lambda x: x if len(x) <= 30 else x[:27] + "...")
+                valid_polar_df = valid_polar_df.sort_values(by='Distance', ascending=True)
                 
                 st.markdown(f"**Hub Center:** {selected_hub_zm}")
-                st.caption("Bar length represents distance from Hub (km). Hover for grade and performance details.")
+                st.caption("Bar length represents distance from Hub (km). Colors indicate the facility's Grade.")
                 
-                fig_polar = px.bar_polar(valid_polar_df, r="Distance", theta="Display_Name", 
-                                         color_discrete_sequence=['#10B981'],
-                                         hover_data={"Distance": ":.1f km", "Uptime %": ":.1f", "Average Patients": ":.1f", "Grade": True, facility_col: True, "Display_Name": False})
-                fig_polar.update_traces(marker_line_color='#064E3B', marker_line_width=1, opacity=0.9)
+                # New Ladder Chart
+                grade_color_map = {'A': '#10B981', 'B': '#34D399', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
                 
-                polar_layout = PLOTLY_LAYOUT.copy()
-                polar_layout.update(dict(
-                    template="plotly_white", height=750, showlegend=False,
-                    margin=dict(l=40, r=40, t=80, b=40),
-                    polar=dict(bargap=0.4, radialaxis=dict(visible=True, range=[0, valid_polar_df['Distance'].max() + 5], gridcolor='#F1F5F9', tickfont=dict(size=10, color="#64748B")),
-                               angularaxis=dict(gridcolor='#F1F5F9', tickfont=dict(size=11, color="#064E3B", weight=700), direction="clockwise"),
-                               bgcolor='rgba(248, 250, 252, 0.5)')
+                fig_dist = px.bar(
+                    valid_polar_df, 
+                    y='Display_Name', 
+                    x='Distance', 
+                    orientation='h',
+                    color='Grade',
+                    color_discrete_map=grade_color_map,
+                    text='Distance',
+                    hover_data={"Distance": ":.1f km", "Uptime %": ":.1f", "Average Patients": ":.1f", "Grade": True, facility_col: False, "Display_Name": False},
+                    title=f"<b>Distance from {selected_hub_zm} Hub</b>"
+                )
+                
+                fig_dist.update_traces(
+                    texttemplate='%{text:.1f} km', 
+                    textposition='outside',
+                    textfont=dict(color="#064E3B", weight=700),
+                    cliponaxis=False
+                )
+                
+                avg_dist = valid_polar_df['Distance'].mean()
+                fig_dist.add_vline(
+                    x=avg_dist, 
+                    line_dash="dash", 
+                    line_color="#475569", 
+                    line_width=2,
+                    annotation_text=f" Avg: {avg_dist:.1f} km", 
+                    annotation_position="top right",
+                    annotation_font=dict(size=12, color="#475569", weight=700)
+                )
+                
+                dist_layout = PLOTLY_LAYOUT.copy()
+                dist_layout.update(dict(
+                    height=max(400, len(valid_polar_df) * 35),
+                    yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=12, color="#064E3B", weight=600), automargin=True),
+                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#F1F5F9', title="Distance (km)"),
+                    showlegend=False,
+                    margin=dict(l=20, r=60, t=60, b=20),
+                    coloraxis_showscale=False
                 ))
-                fig_polar.update_layout(**polar_layout)
-                fig_polar.add_annotation(x=0.5, y=0.5, text="<b>HUB</b>", showarrow=False,
-                                         font=dict(size=12, color="#FFFFFF"), bgcolor="#10B981",
-                                         borderpad=6, bordercolor="#FFFFFF", borderwidth=2, opacity=0.9)
-                st.plotly_chart(fig_polar, use_container_width=True)
+                fig_dist.update_layout(**dist_layout)
+                st.plotly_chart(fig_dist, use_container_width=True)
+                
             else:
                 st.warning("⚠️ No valid distance data available for this district.")
             
