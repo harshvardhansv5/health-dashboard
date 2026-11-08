@@ -707,7 +707,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v50.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v51.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -729,7 +729,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v50.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v51.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1053,10 +1053,11 @@ if view_mode == "District View":
                 yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#0F172A", weight=600), automargin=True),
                 xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickfont=dict(size=12, color="#475569")),
                 showlegend=False, xaxis_title=metric_option, yaxis_title="",
-                margin=dict(l=20, r=40, t=80, b=10), coloraxis_showscale=False
+                margin=dict(l=20, r=60, t=80, b=10), coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
-            fig.update_traces(textposition='auto', textfont=dict(color="#0F172A", size=12, weight=700), cliponaxis=False)
+            # FIX: Force text outside and horizontal to prevent rotation
+            fig.update_traces(textposition='outside', textangle=0, textfont=dict(color="#0F172A", size=12, weight=700), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
 
             st.markdown("<hr style='margin: 24px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
@@ -1094,7 +1095,8 @@ if view_mode == "District View":
         
         if not monthly_df.empty:
             fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
-            fig_m.update_traces(marker_color='#1E293B', texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#F8FAFC', weight=700))
+            # FIX: Force text outside and horizontal
+            fig_m.update_traces(marker_color='#1E293B', texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
             m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
             fig_m.update_layout(**m_layout)
@@ -1372,6 +1374,7 @@ if view_mode == "District View":
                 fig_dist.update_traces(
                     texttemplate='%{text:.1f} km', 
                     textposition='outside',
+                    textangle=0,
                     textfont=dict(color="#0F172A", weight=700),
                     cliponaxis=False
                 )
@@ -1769,7 +1772,8 @@ elif view_mode == "ZM View":
                 
                 st.markdown(f"<h4 style='color:#0F172A; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
                 fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients', title="<b>Total Patients by District</b>")
-                fig_zm.update_traces(texttemplate='%{text:,}', textposition='auto', textfont=dict(color='#F8FAFC', weight=700))
+                # FIX: Force text outside and horizontal
+                fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
                 
                 zm_layout = PLOTLY_LAYOUT.copy()
                 zm_layout.update(dict(
@@ -1981,7 +1985,8 @@ elif view_mode == "Inactive Spokes":
             district_counts.columns = ['District', 'Failures']
             
             fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures', title="<b>Top 5 Districts by Operational Failures</b>")
-            fig_off.update_traces(marker_color='#F43F5E', textposition='auto', textfont=dict(color='#F8FAFC', weight=700))
+            # FIX: Force text outside and horizontal
+            fig_off.update_traces(marker_color='#F43F5E', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
             
             off_layout = PLOTLY_LAYOUT.copy()
             off_layout.update(dict(height=300, showlegend=False, xaxis_title="Number of Facilities", yaxis_title="", margin=dict(l=10, r=20, t=60, b=10)))
