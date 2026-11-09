@@ -431,9 +431,12 @@ if not st.session_state.authenticated:
             <div style="text-align: center; margin-bottom: 32px;">
                 <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background-color: #FEF2F2; border-radius: 16px; margin-bottom: 16px; border: 1px solid #FECACA;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 32px; height: 32px;">
-                        <path d="M10 2v15a2 2 0 0 0 4 0V2" />
-                        <path d="M8 2h8" />
-                        <path d="M10 10h4" />
+                        <path d="M6 18h8" />
+                        <path d="M3 22h18" />
+                        <path d="M14 22a7 7 0 1 0 0-14h-1" />
+                        <path d="M9 14h2" />
+                        <path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z" />
+                        <path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3" />
                     </svg>
                 </div>
                 <h2 style="color:#0F172A; font-size: 28px; font-weight: 800; margin-bottom: 8px;">Secure Login</h2>
@@ -773,7 +776,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v63.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v64.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -795,7 +798,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v63.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v64.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -906,9 +909,12 @@ with col_title:
         <div class="header-left">
             <div class="header-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M10 2v15a2 2 0 0 0 4 0V2" />
-                    <path d="M8 2h8" />
-                    <path d="M10 10h4" />
+                    <path d="M6 18h8" />
+                    <path d="M3 22h18" />
+                    <path d="M14 22a7 7 0 1 0 0-14h-1" />
+                    <path d="M9 14h2" />
+                    <path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z" />
+                    <path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3" />
                 </svg>
             </div>
             <div>
@@ -1193,11 +1199,11 @@ if view_mode == "District View":
                     m2.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Uptime</div><div class='metric-icon'><span class='material-symbols-rounded'>check_circle</span></div></div><div class='metric-value'>{fac_row['Uptime %']}%</div></div>", unsafe_allow_html=True)
                     m3.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Zero Days</div><div class='metric-icon'><span class='material-symbols-rounded'>warning</span></div></div><div class='metric-value'>{fac_row['Zero Days']}</div></div>", unsafe_allow_html=True)
                     
-                    drill_trend = [{'Date': stats['active_date_map'][c], 'Patients': fac_row[c]} for c in stats['active_date_cols']]
+                    # FIX: Use 'c' (the formatted string key) instead of active_date_map[c] which is a raw datetime
+                    drill_trend = [{'Date': c, 'Patients': fac_row[c]} for c in stats['active_date_cols']]
                     if drill_trend:
-                        dt_df = pd.DataFrame(drill_trend).sort_values('Date')
+                        dt_df = pd.DataFrame(drill_trend)
                         
-                        # FIX: Replaced the area chart with a clean Bar Chart for discrete daily counts
                         fig_dt = px.bar(dt_df, x='Date', y='Patients', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
                         fig_dt.update_traces(
                             marker_color='#06B6D4', 
@@ -1210,7 +1216,7 @@ if view_mode == "District View":
                         dt_layout = PLOTLY_LAYOUT.copy()
                         dt_layout.update(dict(
                             height=300,
-                            xaxis=dict(showgrid=False, tickformat="%d %b", type='category'), 
+                            xaxis=dict(showgrid=False, type='category'), 
                             yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickformat="d", nticks=6, rangemode="tozero"),
                             margin=dict(l=40, r=10, t=50, b=10)
                         ))
