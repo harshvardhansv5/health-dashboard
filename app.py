@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from datetime import timedelta, datetime
 import re
 import io
@@ -776,7 +777,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v64.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v65.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -798,7 +799,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v64.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v65.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1199,18 +1200,31 @@ if view_mode == "District View":
                     m2.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Uptime</div><div class='metric-icon'><span class='material-symbols-rounded'>check_circle</span></div></div><div class='metric-value'>{fac_row['Uptime %']}%</div></div>", unsafe_allow_html=True)
                     m3.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Zero Days</div><div class='metric-icon'><span class='material-symbols-rounded'>warning</span></div></div><div class='metric-value'>{fac_row['Zero Days']}</div></div>", unsafe_allow_html=True)
                     
-                    # FIX: Use 'c' (the formatted string key) instead of active_date_map[c] which is a raw datetime
-                    drill_trend = [{'Date': c, 'Patients': fac_row[c]} for c in stats['active_date_cols']]
+                    drill_trend = [{'Date': stats['active_date_map'][c], 'Patients': fac_row[c]} for c in stats['active_date_cols']]
                     if drill_trend:
-                        dt_df = pd.DataFrame(drill_trend)
+                        dt_df = pd.DataFrame(drill_trend).sort_values('Date')
                         
+                        # Create the combo chart (Bar + Line)
                         fig_dt = px.bar(dt_df, x='Date', y='Patients', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
+                        
+                        # 1. Style the Bars (Slightly transparent so line pops)
                         fig_dt.update_traces(
-                            marker_color='#06B6D4', 
+                            marker_color='rgba(6, 182, 212, 0.6)', 
                             text=dt_df['Patients'],
                             textposition='outside',
                             textfont=dict(color="#0F172A", weight=700),
                             cliponaxis=False
+                        )
+                        
+                        # 2. Add the Line overlay (Connecting the top center of the bars)
+                        fig_dt.add_scatter(
+                            x=dt_df['Date'], 
+                            y=dt_df['Patients'], 
+                            mode='lines+markers',
+                            line=dict(color='#0891B2', width=3, shape='linear'),
+                            marker=dict(size=8, color='#F8FAFC', line=dict(width=2, color='#0891B2')),
+                            showlegend=False,
+                            hoverinfo='skip'
                         )
                         
                         dt_layout = PLOTLY_LAYOUT.copy()
