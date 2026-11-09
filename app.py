@@ -769,7 +769,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v56.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v57.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -791,7 +791,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v56.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v57.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1129,7 +1129,6 @@ if view_mode == "District View":
         if filtered.empty: 
             st.warning("No data matches the filters.")
         else:
-            # POLISH: Filter out zero values for the bar chart to keep it clean, but retain the full filtered list for drill-down options
             chart_df = filtered[filtered[metric_col] > 0].copy()
             
             if chart_df.empty:
@@ -1541,10 +1540,14 @@ elif view_mode == "State View":
     
     with st.spinner("Loading State Data..."):
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+        # Fetch facility data to get accurate pending counts
+        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
-    if not state_df.empty:
+    if not state_df.empty and not all_fac_df.empty:
         total_active = state_df['Active Spokes'].sum()
-        total_facilities = TOTAL_SPOKES 
+        total_pending = len(all_fac_df[all_fac_df['Status'] == 'Pending Launch'])
+        total_operational = len(all_fac_df) - total_pending
+        
         reporting_districts = state_df[state_df['Days Reported'] > 0]
         avg_state_uptime = round(reporting_districts['Uptime %'].mean(), 1) if not reporting_districts.empty else 0.0
         
@@ -1552,10 +1555,17 @@ elif view_mode == "State View":
         <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
             <div class="metric-card">
                 <div class="metric-header">
-                    <div class="metric-label">Active Spokes ({time_filter})</div>
+                    <div class="metric-label">Network Status</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
                 </div>
-                <div class="metric-value">{total_active} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {total_facilities} Total</span></div>
+                <div class="metric-value" style="font-size: 28px;">
+                    <span style="color: #10B981;">{total_active}</span> <span style="font-size:16px; color:#64748B; font-weight:600; margin-left:2px;">Active</span> 
+                    <span style="color:#CBD5E1; margin: 0 8px; font-weight:400;">/</span> 
+                    <span style="color: #0F172A;">{total_operational}</span> <span style="font-size:16px; color:#64748B; font-weight:600; margin-left:2px;">Operational</span>
+                    <span style="color:#CBD5E1; margin: 0 8px; font-weight:400;">/</span> 
+                    <span style="color: #F59E0B;">{total_pending}</span> <span style="font-size:16px; color:#64748B; font-weight:600; margin-left:2px;">Pending</span>
+                </div>
+                <div class="metric-trend trend-neutral">Total Target: {TOTAL_SPOKES} Spokes</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
@@ -1563,6 +1573,7 @@ elif view_mode == "State View":
                     <div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div>
                 </div>
                 <div class="metric-value">{avg_state_uptime}%</div>
+                <div class="metric-trend trend-neutral">Across all operational facilities</div>
             </div>
         </div>
         ''', unsafe_allow_html=True)
