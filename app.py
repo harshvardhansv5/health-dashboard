@@ -89,13 +89,13 @@ st.markdown("""
         box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3) !important;
     }
 
-    /* --- HERO DECK CARDS (Soft off-white) --- */
+    /* --- HERO DECK CARDS (Redesigned) --- */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .metric-card {
         background-color: #F8FAFC !important; 
         border: 1px solid #CBD5E1 !important; 
         border-radius: 20px !important;
-        padding: 24px !important; 
+        padding: 20px 24px !important; 
         box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important; 
         display: flex; flex-direction: column; 
         transition: transform 0.2s ease, box-shadow 0.2s ease; 
@@ -104,15 +104,23 @@ st.markdown("""
         transform: translateY(-4px); 
         box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.1); 
     }
-    .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .metric-label { color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-    .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #E2E8F0; color: #475569; display: flex; align-items: center; justify-content: center; }
-    .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
-    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; }
-    .metric-trend { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: auto; }
-    .trend-up { color: #10B981; background-color: #ECFDF5; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
-    .trend-down { color: #F43F5E; background-color: #FFF1F2; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
-    .trend-neutral { color: #64748B; background-color: #F1F5F9; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
+    .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .metric-label { color: #475569; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-icon { width: 28px; height: 28px; border-radius: 8px; background-color: #E2E8F0; color: #475569; display: flex; align-items: center; justify-content: center; }
+    .metric-icon svg { width: 16px; height: 16px; fill: currentColor; }
+    
+    /* The Main Hero Number */
+    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1.1; letter-spacing: -1px; margin-bottom: 12px; }
+    
+    /* The Bottom Row (Trends + Context) */
+    .metric-footer { display: flex; align-items: center; gap: 8px; margin-top: auto; flex-wrap: wrap; }
+    
+    /* Standardized Trend Pills */
+    .trend-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+    .trend-up { color: #047857; background-color: #ECFDF5; }
+    .trend-down { color: #BE123C; background-color: #FFF1F2; }
+    .trend-neutral { color: #475569; background-color: #F1F5F9; }
+    .metric-context { color: #64748B; font-size: 12px; font-weight: 500; }
 
     /* --- PREMIUM ZM RIBBON --- */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) {
@@ -414,24 +422,6 @@ st.markdown("""
     /* Date Picker specific fix to prevent command bar explosion */
     div[data-testid="stDateInput"] { margin-bottom: 0px !important; }
     div[data-testid="stDateInput"] label { display: none !important; }
-
-    /* Playbook Buttons */
-    div[data-testid="stButton"] button[kind="secondary"] {
-        background-color: #F1F5F9 !important;
-        border: 1px solid #CBD5E1 !important;
-        color: #475569 !important;
-        font-weight: 600 !important;
-    }
-    div[data-testid="stButton"] button[kind="secondary"]:hover {
-        border-color: #10B981 !important;
-        color: #10B981 !important;
-    }
-    div[data-testid="stButton"] button[kind="primary"] {
-        background-color: #10B981 !important;
-        border: 1px solid #10B981 !important;
-        color: white !important;
-        font-weight: 600 !important;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -511,16 +501,16 @@ def format_reason(reason):
 
 def get_trend_html(cur, prev):
     if prev is None:
-        return '<span class="trend-neutral">—</span>'
+        return '<span class="trend-pill trend-neutral">—</span>'
     if prev == 0:
-        if cur > 0: return '<span class="trend-up">▲ NEW</span>'
-        return '<span class="trend-neutral">—</span>'
+        if cur > 0: return '<span class="trend-pill trend-up">▲ NEW</span>'
+        return '<span class="trend-pill trend-neutral">—</span>'
     pct = ((cur - prev) / prev) * 100
     if pct > 0:
-        return f'<span class="trend-up">▲ {pct:.1f}%</span>'
+        return f'<span class="trend-pill trend-up">▲ {pct:.1f}%</span>'
     elif pct < 0:
-        return f'<span class="trend-down">▼ {abs(pct):.1f}%</span>'
-    return '<span class="trend-neutral">— 0.0%</span>'
+        return f'<span class="trend-pill trend-down">▼ {abs(pct):.1f}%</span>'
+    return '<span class="trend-pill trend-neutral">— 0.0%</span>'
 
 @st.cache_data(ttl=3600, show_spinner="Fetching live data from Google Sheets...")
 def fetch_google_sheet(url):
@@ -725,16 +715,13 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
     plot_df['Average Patients'] = plot_df[active_dates].mean(axis=1).round(1)
     plot_df['Zero Days'] = (plot_df[active_dates] == 0).sum(axis=1)
     
-    # FIX: Find the absolute latest date in the active window
     max_allowed_date = active_dates[-1] if active_dates else (sorted_dates[-1] if sorted_dates else None)
 
     def get_last_sample_date(row):
         if max_allowed_date is None: return "Never Reported"
-        
-        # Search backwards from the end of the window
         for d in reversed(sorted_dates):
             if d > max_allowed_date:
-                continue # Ignore future dates!
+                continue
             if row[d] > 0:
                 return d.strftime('%d %b %Y')
         return "Never Reported"
@@ -788,7 +775,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v55.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v54.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -810,7 +797,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v55.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v54.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1035,41 +1022,8 @@ if view_mode == "District View":
     d_tab1, d_tab2, d_tab3, d_tab4 = st.tabs([":material/dashboard: Dashboard", ":material/receipt_long: Report Card", ":material/diagnosis: Diagnosis & Tracking", ":material/map: Logistics"])
 
     with d_tab1:
-        # --- QUICK PLAYBOOKS ---
-        st.markdown("<div style='font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 8px; margin-top: 16px;'>Quick Playbooks</div>", unsafe_allow_html=True)
-        pb_col1, pb_col2, pb_col3, pb_col4 = st.columns(4)
-        
-        if 'active_playbook' not in st.session_state:
-            st.session_state.active_playbook = None
-            
-        with pb_col1:
-            if st.button("🔴 Critical Failures (< 1 Avg)", use_container_width=True, type="primary" if st.session_state.active_playbook == "critical" else "secondary"):
-                st.session_state.active_playbook = "critical" if st.session_state.active_playbook != "critical" else None
-                st.rerun()
-        with pb_col2:
-            if st.button("⚠️ Underperforming (1-3 Avg)", use_container_width=True, type="primary" if st.session_state.active_playbook == "under" else "secondary"):
-                st.session_state.active_playbook = "under" if st.session_state.active_playbook != "under" else None
-                st.rerun()
-        with pb_col3:
-            if st.button("✅ Top Performers (> 5 Avg)", use_container_width=True, type="primary" if st.session_state.active_playbook == "top" else "secondary"):
-                st.session_state.active_playbook = "top" if st.session_state.active_playbook != "top" else None
-                st.rerun()
-        with pb_col4:
-            if st.button("🔄 Clear Playbook", use_container_width=True):
-                st.session_state.active_playbook = None
-                st.rerun()
-
         filtered_base = plot_df.copy()
-        
-        if st.session_state.active_playbook == "critical":
-            filtered_base = filtered_base[filtered_base['Average Patients'] < 1]
-        elif st.session_state.active_playbook == "under":
-            filtered_base = filtered_base[(filtered_base['Average Patients'] >= 1) & (filtered_base['Average Patients'] <= 3)]
-        elif st.session_state.active_playbook == "top":
-            filtered_base = filtered_base[filtered_base['Average Patients'] > 5]
-
-        if active_only: 
-            filtered_base = filtered_base[filtered_base['Total Patients'] > 0]
+        if active_only: filtered_base = filtered_base[filtered_base['Total Patients'] > 0]
         
         num_facs = len(filtered_base)
         dist_total = int(filtered_base['Total Patients'].sum())
@@ -1098,18 +1052,16 @@ if view_mode == "District View":
         if prev_stats:
             prev_total = prev_stats['total']
             prev_uptime = calc_uptime(prev_stats)
-            # To calculate prev_weighted_avg correctly if we filtered by active_only:
-            # We don't have prev filtered data easily here. We will just use the raw prev_stats avg.
             prev_avg = prev_stats['weighted_avg'] 
             
             trend_patients = get_trend_html(dist_total, prev_total)
             trend_uptime = get_trend_html(new_uptime, prev_uptime)
             trend_avg = get_trend_html(new_weighted_avg, prev_avg)
         else:
-            trend_patients = '<span class="trend-neutral">—</span>'
-            trend_uptime = '<span class="trend-neutral">—</span>'
-            trend_avg = '<span class="trend-neutral">—</span>'
-            
+            trend_patients = '<span class="trend-pill trend-neutral">—</span>'
+            trend_uptime = '<span class="trend-pill trend-neutral">—</span>'
+            trend_avg = '<span class="trend-pill trend-neutral">—</span>'
+
         st.markdown(f'''
         <div class="metric-grid">
             <div class="metric-card">
@@ -1118,76 +1070,81 @@ if view_mode == "District View":
                     <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
                 </div>
                 <div class="metric-value">{num_facs}</div>
-                <div class="metric-trend trend-neutral">{total_active} Active</div>
+                <div class="metric-footer">
+                    <span class="trend-pill trend-up">{total_active} Active</span>
+                    <span class="trend-pill trend-down">{total_inactive} Inactive</span>
+                </div>
             </div>
+            
             <div class="metric-card">
                 <div class="metric-header">
                     <div class="metric-label">Best Spoke</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">star</span></div>
                 </div>
-                <div class="metric-value" style="font-size: 16px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{best_name}">{best_name}</div>
-                <div class="metric-trend trend-up" style="font-size: 12px;">{best_avg} Avg / Day</div>
+                <div class="metric-value">{best_avg} <span style="font-size: 14px; color: #64748B; font-weight: 600;">Avg / Day</span></div>
+                <div class="metric-footer" title="{best_name}">
+                    <span class="trend-pill trend-neutral" style="max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;">
+                        🏆 {best_name}
+                    </span>
+                </div>
             </div>
+            
             <div class="metric-card">
                 <div class="metric-header">
                     <div class="metric-label">Total Patients</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">groups</span></div>
                 </div>
-                <div class="metric-value">{dist_total:,} {trend_patients}</div>
-                <div class="metric-trend trend-neutral">Across {date_range_str}</div>
+                <div class="metric-value">{dist_total:,}</div>
+                <div class="metric-footer">
+                    {trend_patients}
+                    <span class="metric-context">Across {date_range_str}</span>
+                </div>
             </div>
+            
             <div class="metric-card">
                 <div class="metric-header">
                     <div class="metric-label">Weighted Avg / Day</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">speed</span></div>
                 </div>
-                <div class="metric-value">{new_weighted_avg} {trend_avg}</div>
+                <div class="metric-value">{new_weighted_avg}</div>
+                <div class="metric-footer">
+                    {trend_avg}
+                    <span class="metric-context">vs prev period</span>
+                </div>
             </div>
+            
             <div class="metric-card">
                 <div class="metric-header">
                     <div class="metric-label">Facility Uptime</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div>
                 </div>
-                <div class="metric-value">{new_uptime}% {trend_uptime}</div>
-                <div class="metric-trend trend-neutral">Reliability Score</div>
+                <div class="metric-value">{new_uptime}%</div>
+                <div class="metric-footer">
+                    {trend_uptime}
+                    <span class="metric-context">Reliability Score</span>
+                </div>
             </div>
         </div>
         ''', unsafe_allow_html=True)
         
-        st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
-        
-        c1, c2, c3 = st.columns([2, 1.5, 1.5], vertical_alignment="bottom")
+        c1, c2 = st.columns([3, 1.5], vertical_alignment="bottom")
         with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d2")
         with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d3")
-        with c3: hide_zero_spokes = st.checkbox("Hide Zero-Volume Spokes", value=False, key="hide_zeros_dash")
         
         metric_col = {'Average Patients': 'Average Patients', 'Total Patients': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
         filtered = filtered_base.copy()
-        
-        if hide_zero_spokes:
-            filtered = filtered[filtered['Total Patients'] > 0]
             
         if filtered.empty: st.warning("No data matches the filters.")
         else:
-            # If we want highest at top, Plotly draws bottom-up, so we sort ascending=True.
-            sort_ascending = (sort_option == "Highest to Lowest")
-            sorted_df = filtered.sort_values(by=metric_col, ascending=sort_ascending)
+            sorted_df = filtered.sort_values(by=metric_col, ascending=(sort_option == "Lowest to Highest"))
             sorted_df['Grade'] = sorted_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
-            
-            text_labels = []
-            for v in sorted_df[metric_col]:
-                if v == 0:
-                    text_labels.append("")
-                elif metric_col == 'Uptime %':
-                    text_labels.append(f"{v:.1f}%")
-                else:
-                    text_labels.append(f"{v:.1f}" if v % 1 != 0 else f"{int(v)}")
+            text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                 
             grade_color_map = {'A': '#14B8A6', 'B': '#5EEAD4', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
             
             fig = px.bar(
                 sorted_df, y=facility_col, x=metric_col, orientation='h', color='Grade', 
-                color_discrete_map=grade_color_map, text=text_labels, hover_name=facility_col,
+                color_discrete_map=grade_color_map, text=text_labels, 
                 category_orders={facility_col: sorted_df[facility_col].tolist()},
                 title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#475569;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
             )
@@ -1209,7 +1166,7 @@ if view_mode == "District View":
             layout_dict = PLOTLY_LAYOUT.copy()
             layout_dict.update(dict(
                 height=max(500, len(sorted_df) * 30),
-                yaxis=dict(showgrid=False, tickfont=dict(size=13, color="#0F172A", weight=600), automargin=True),
+                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#0F172A", weight=600), automargin=True),
                 xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickfont=dict(size=12, color="#475569")),
                 showlegend=False, xaxis_title=metric_option, yaxis_title="",
                 margin=dict(l=20, r=60, t=80, b=10), coloraxis_showscale=False
@@ -1252,15 +1209,10 @@ if view_mode == "District View":
         monthly_df = get_district_monthly_trend(df_raw, facility_col)
         
         if not monthly_df.empty:
-            current_month_str = pd.Timestamp.now().strftime('%b %Y')
-            last_month_str = monthly_df['Month'].iloc[-1]
-            is_partial = (last_month_str == current_month_str)
-            title_suffix = " (Partial Month)" if is_partial else ""
-            
-            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients', title=f"<b>Monthly Patient Volume</b><br><span style='font-size:13px;color:#475569;font-weight:500;'>{title_suffix}</span>")
+            fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
             fig_m.update_traces(marker_color='#1E293B', texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
-            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients"), margin=dict(l=10, r=10, t=60, b=10)))
+            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
             fig_m.update_layout(**m_layout)
             st.plotly_chart(fig_m, use_container_width=True)
 
@@ -1270,7 +1222,7 @@ if view_mode == "District View":
             heatmap_df['Total'] = heatmap_df.sum(axis=1)
             heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
             
-            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F1F5F9'], [0.1, '#BAE6FD'], [1, '#0284C7']], labels=dict(x="Date", y="", color="Patients"))
+            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F0F9FF'], [0.1, '#BAE6FD'], [1, '#0284C7']], labels=dict(x="Date", y="", color="Patients"))
             fig_h.update_traces(xgap=2, ygap=2)
             
             hm_layout = PLOTLY_LAYOUT.copy()
@@ -1279,7 +1231,7 @@ if view_mode == "District View":
                 yaxis=dict(tickfont=dict(size=12, color="#0F172A", weight=600)),
                 xaxis=dict(tickfont=dict(size=11, color="#475569"), tickangle=-45),
                 coloraxis_colorbar=dict(title="Patients", thickness=20),
-                margin=dict(l=10, r=10, t=10, b=80)
+                margin=dict(l=10, r=10, t=10, b=60)
             ))
             fig_h.update_layout(**hm_layout)
             st.plotly_chart(fig_h, use_container_width=True)
@@ -1395,7 +1347,6 @@ if view_mode == "District View":
                         return "Unknown / No Note"
                     inactive_df['Primary Reason'] = inactive_df.apply(get_reason, axis=1).apply(format_reason)
                     
-                    # Calculate Days Inactive
                     inactive_df['Days Inactive'] = inactive_df['Last Sample Date'].apply(
                         lambda x: (pd.Timestamp.now().normalize() - pd.to_datetime(x, format='%d %b %Y')).days if x != "Never Reported" else "-"
                     )
@@ -1413,7 +1364,6 @@ if view_mode == "District View":
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                     })
                     
-                    # Actionable Export
                     buf = io.BytesIO()
                     with pd.ExcelWriter(buf, engine='openpyxl') as writer:
                         display_inactive.to_excel(writer, index=False, sheet_name='Inactive List')
@@ -1499,16 +1449,10 @@ if view_mode == "District View":
             
             def clean_distance(val):
                 if pd.isna(val): return None
-                s = str(val).strip().lower()
-                s = s.replace('km', '').replace('kms', '').replace(' ', '')
+                s = str(val).strip().replace(' ', '')
                 s = re.sub(r'^\.', '', s)
-                try: 
-                    return float(s)
-                except ValueError: 
-                    # Try extracting any numeric float from the string
-                    m = re.search(r'(\d+(\.\d+)?)', s)
-                    if m: return float(m.group(1))
-                    return DISTANCE_FALLBACK.get(str(val).strip(), None)
+                try: return float(s)
+                except ValueError: return DISTANCE_FALLBACK.get(str(val).strip(), None)
                     
             dist_data['Distance'] = dist_data['Raw_Distance'].apply(clean_distance)
             polar_df = pd.merge(scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients']], 
@@ -1524,7 +1468,6 @@ if view_mode == "District View":
                 st.markdown(f"**Hub Center:** {selected_hub_zm}")
                 st.caption("Bar length represents distance from Hub (km). Colors indicate the facility's Grade.")
                 
-                # Distance Ladder Chart
                 grade_color_map = {'A': '#10B981', 'B': '#34D399', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
                 
                 fig_dist = px.bar(
@@ -1561,7 +1504,7 @@ if view_mode == "District View":
                 dist_layout = PLOTLY_LAYOUT.copy()
                 dist_layout.update(dict(
                     height=max(400, len(valid_polar_df) * 35),
-                    yaxis=dict(showgrid=False, tickfont=dict(size=12, color="#0F172A", weight=600), automargin=True),
+                    yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=12, color="#0F172A", weight=600), automargin=True),
                     xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Distance (km)"),
                     showlegend=False,
                     margin=dict(l=20, r=60, t=60, b=20),
@@ -1862,7 +1805,6 @@ elif view_mode == "ZM View":
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
-        # Calculate previous ZM stats for the trend arrows
         prev_state_df = None
         if time_filter != "Full History":
             if time_filter == "Select Dates..." and start_date and end_date:
@@ -1892,7 +1834,6 @@ elif view_mode == "ZM View":
             
             avg_uptime = round(zm_df['Uptime %'].mean(), 1)
             
-            # Trends
             if prev_state_df is not None and not prev_state_df.empty:
                 prev_zm_df = prev_state_df[prev_state_df['District'].isin(zm_districts)]
                 if not prev_zm_df.empty:
@@ -1922,20 +1863,22 @@ elif view_mode == "ZM View":
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Coverage</div><div class="metric-icon"><span class="material-symbols-rounded">map</span></div></div>
                     <div class="metric-value">{total_units}</div>
-                    <div class="metric-trend trend-neutral">Total Units</div>
+                    <div class="metric-footer"><span class="metric-context">Total Units</span></div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Weighted Avg / Day</div><div class="metric-icon"><span class="material-symbols-rounded">speed</span></div></div>
-                    <div class="metric-value">{zone_weighted_avg} {trend_avg}</div>
+                    <div class="metric-value">{zone_weighted_avg}</div>
+                    <div class="metric-footer">{trend_avg}</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">hub</span></div></div>
                     <div class="metric-value">{total_active} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {total_operational} Operational</span></div>
-                    <div class="metric-trend trend-neutral">Operational Facilities</div>
+                    <div class="metric-footer"><span class="metric-context">Operational Facilities</span></div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Avg Zone Uptime</div><div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div></div>
-                    <div class="metric-value">{avg_uptime}% {trend_uptime}</div>
+                    <div class="metric-value">{avg_uptime}%</div>
+                    <div class="metric-footer">{trend_uptime}</div>
                 </div>
             </div>
             ''', unsafe_allow_html=True)
@@ -2079,7 +2022,7 @@ elif view_mode == "Active Spokes":
         col1, col2, col3 = st.columns([2, 2, 2])
         with col1:
             st.markdown(f'''
-            <div class="metric-card" style="padding: 16px; margin-bottom: 0; height: 100%; display: flex; justify-content: center;">
+            <div class="metric-card">
                 <div class="metric-header"><div class="metric-label">Active Spokes Shown</div><div class="metric-icon"><span class="material-symbols-rounded">visibility</span></div></div>
                 <div class="metric-value">{len(active_df)} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {TOTAL_SPOKES} Total</span></div>
             </div>
@@ -2163,7 +2106,7 @@ elif view_mode == "Inactive Spokes":
             <div class="metric-card" style="border-left: 6px solid #F43F5E; padding: 20px; margin-bottom: 16px;">
                 <div class="metric-header"><div class="metric-label">Operational Failures</div><div class="metric-icon" style="background-color:#FEE2E2; color:#F43F5E;"><span class="material-symbols-rounded">error</span></div></div>
                 <div class="metric-value" style="color:#F43F5E;">{len(op_failures)}</div>
-                <div class="metric-trend trend-down">Requires immediate intervention</div>
+                <div class="metric-footer"><span class="trend-pill trend-down">Requires immediate intervention</span></div>
             </div>
             ''', unsafe_allow_html=True)
         with col_card2:
@@ -2171,7 +2114,7 @@ elif view_mode == "Inactive Spokes":
             <div class="metric-card" style="border-left: 6px solid #94A3B8; padding: 20px; margin-bottom: 16px;">
                 <div class="metric-header"><div class="metric-label">Pending Launch</div><div class="metric-icon" style="background-color:#E2E8F0; color:#475569;"><span class="material-symbols-rounded">pending</span></div></div>
                 <div class="metric-value" style="color:#475569;">{len(pending_launch)}</div>
-                <div class="metric-trend trend-neutral">Awaiting infrastructure readiness</div>
+                <div class="metric-footer"><span class="trend-pill trend-neutral">Awaiting infrastructure readiness</span></div>
             </div>
             ''', unsafe_allow_html=True)
 
@@ -2181,7 +2124,6 @@ elif view_mode == "Inactive Spokes":
             district_counts.columns = ['District', 'Failures']
             
             fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures', title="<b>Top 5 Districts by Operational Failures</b>")
-            # FIX: Force text outside and horizontal
             fig_off.update_traces(marker_color='#F43F5E', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
             
             off_layout = PLOTLY_LAYOUT.copy()
