@@ -108,11 +108,13 @@ st.markdown("""
     .metric-label { color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #E2E8F0; color: #475569; display: flex; align-items: center; justify-content: center; }
     .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
-    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; }
+    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+    
+    /* FIXED: Trend badges now have fixed font size and won't wrap */
+    .trend-up { color: #10B981; background-color: #ECFDF5; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; font-size: 14px !important; font-weight: 700; white-space: nowrap; line-height: 1; }
+    .trend-down { color: #F43F5E; background-color: #FFF1F2; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; font-size: 14px !important; font-weight: 700; white-space: nowrap; line-height: 1; }
+    .trend-neutral { color: #64748B; background-color: #F1F5F9; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; font-size: 14px !important; font-weight: 700; white-space: nowrap; line-height: 1; }
     .metric-trend { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: auto; }
-    .trend-up { color: #10B981; background-color: #ECFDF5; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
-    .trend-down { color: #F43F5E; background-color: #FFF1F2; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
-    .trend-neutral { color: #64748B; background-color: #F1F5F9; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
 
     /* --- PREMIUM ZM RIBBON --- */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) {
@@ -730,7 +732,6 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
     if num_days > 0: plot_df['Uptime %'] = ((num_days - plot_df['Zero Days']) / num_days * 100).round(1)
     else: plot_df['Uptime %'] = 0
         
-    # FIX (d): year-safe column labels to prevent collisions when data spans >1 year
     col_map = {d: d.strftime('%d %b %y') for d in active_dates}
     active_date_map = {col_map[d]: d for d in active_dates}
     plot_df = plot_df.rename(columns=col_map)
@@ -768,7 +769,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v54.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v55.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -790,7 +791,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v54.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v55.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -958,7 +959,6 @@ if view_mode == "District View":
     with col_h:
         zm_name_for_district = DISTRICT_TO_ZM.get(selected_district_zm, "Unknown")
         hub_options = sorted(ZM_DATA[zm_name_for_district][selected_district_zm])
-        # The dynamic key forces the widget to reset when the district changes
         selected_hub_zm = st.selectbox("Select Hub", hub_options, key=f"hub_select_{selected_district_zm}")
     with col_chk:
         active_only = st.checkbox("Exclude Inactive", value=False)
@@ -993,7 +993,7 @@ if view_mode == "District View":
     df_raw = read_sheet_robust(xls, sheet_to_load)
     plot_df, _, stats = process_district_df(df_raw, time_filter, start_date, end_date)
     
-    # FIX (c): Calculate Previous Stats for Trends — handle Select Dates by shifting window manually
+    # Calculate Previous Stats for Trends
     prev_stats = None
     prev_plot_df = None
     if time_filter != "Full History":
@@ -1015,7 +1015,6 @@ if view_mode == "District View":
     total_active = stats['active_facilities']
     total_inactive = stats['num_facilities'] - total_active
     
-    # TRUE failures vs Partial failures
     is_pending = stats['num_days'] == 0
     inactive_facilities = plot_df[plot_df['Total Patients'] == 0]
     true_inactive_count = len(inactive_facilities) if not is_pending else 0
@@ -1052,7 +1051,6 @@ if view_mode == "District View":
             best_grade = "F"
             best_avg = 0
             
-        # Trend calculations — apply the SAME active_only filter to prev window for like-for-like comparison
         if prev_stats and prev_plot_df is not None:
             prev_filtered = prev_plot_df.copy()
             if active_only:
@@ -1166,7 +1164,6 @@ if view_mode == "District View":
                 margin=dict(l=20, r=60, t=80, b=10), coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
-            # Force text outside and horizontal to prevent rotation
             fig.update_traces(textposition='outside', textangle=0, textfont=dict(color="#0F172A", size=12, weight=700), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
 
@@ -1342,7 +1339,6 @@ if view_mode == "District View":
                         return "Unknown / No Note"
                     inactive_df['Primary Reason'] = inactive_df.apply(get_reason, axis=1).apply(format_reason)
                     
-                    # Calculate Days Inactive
                     inactive_df['Days Inactive'] = inactive_df['Last Sample Date'].apply(
                         lambda x: (pd.Timestamp.now().normalize() - pd.to_datetime(x, format='%d %b %Y')).days if x != "Never Reported" else "-"
                     )
@@ -1360,7 +1356,6 @@ if view_mode == "District View":
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                     })
                     
-                    # Actionable Export
                     buf = io.BytesIO()
                     with pd.ExcelWriter(buf, engine='openpyxl') as writer:
                         display_inactive.to_excel(writer, index=False, sheet_name='Inactive List')
@@ -1444,7 +1439,6 @@ if view_mode == "District View":
             dist_data = df_raw[[facility_col, dist_col]].copy()
             dist_data.columns = ['Facility', 'Raw_Distance']
             
-            # FIX (a): Do NOT strip leading dot — float(".5") parses natively. Stripping it turned .5 km into 5 km.
             def clean_distance(val):
                 if pd.isna(val): return None
                 s = str(val).strip().replace(' ', '')
@@ -1465,7 +1459,6 @@ if view_mode == "District View":
                 st.markdown(f"**Hub Center:** {selected_hub_zm}")
                 st.caption("Bar length represents distance from Hub (km). Colors indicate the facility's Grade.")
                 
-                # Distance Ladder Chart
                 grade_color_map = {'A': '#10B981', 'B': '#34D399', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
                 
                 fig_dist = px.bar(
@@ -1587,12 +1580,10 @@ elif view_mode == "State View":
             if not is_ascending:
                 lb_df['District'] = lb_df.apply(lambda row: f"{medal(row['Rank'])} {row['District']}".strip(), axis=1)
             
-            # FIX (b): Cast Rank to str BEFORE appending total row to prevent Arrow mixed-dtype crash
             lb_df['Rank'] = lb_df['Rank'].astype(str)
             
             total_row = pd.DataFrame([{
                 'Rank': '', 'District': '🏆 STATE TOTAL', 'Total Patients': state_df['Total Patients'].sum(),
-                # FIX (b): use None (not '') so Weighted Avg stays float64 with NaN
                 'Weighted Avg': None, 'Uptime %': None, 'Facilities': TOTAL_SPOKES,
                 'Active Spokes': state_df['Active Spokes'].sum(), 'Days Reported': None
             }])
@@ -1600,7 +1591,6 @@ elif view_mode == "State View":
             
             display_cols = ['Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
             st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={
-                # FIX (b): pin Rank as TextColumn
                 "Rank": st.column_config.TextColumn("Rank", width="small"),
                 "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)
             })
@@ -1811,7 +1801,6 @@ elif view_mode == "ZM View":
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
-        # Calculate previous ZM stats for the trend arrows
         prev_state_df = None
         if time_filter != "Full History":
             if time_filter == "Select Dates..." and start_date and end_date:
@@ -1841,7 +1830,6 @@ elif view_mode == "ZM View":
             
             avg_uptime = round(zm_df['Uptime %'].mean(), 1)
             
-            # Trends
             if prev_state_df is not None and not prev_state_df.empty:
                 prev_zm_df = prev_state_df[prev_state_df['District'].isin(zm_districts)]
                 if not prev_zm_df.empty:
