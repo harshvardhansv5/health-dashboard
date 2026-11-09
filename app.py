@@ -707,8 +707,16 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
     plot_df['Average Patients'] = plot_df[active_dates].mean(axis=1).round(1)
     plot_df['Zero Days'] = (plot_df[active_dates] == 0).sum(axis=1)
     
+    # FIX: Find the absolute latest date in the active window
+    max_allowed_date = active_dates[-1] if active_dates else (sorted_dates[-1] if sorted_dates else None)
+
     def get_last_sample_date(row):
+        if max_allowed_date is None: return "Never Reported"
+        
+        # Search backwards from the end of the window
         for d in reversed(sorted_dates):
+            if d > max_allowed_date:
+                continue # Ignore future dates!
             if row[d] > 0:
                 return d.strftime('%d %b %Y')
         return "Never Reported"
@@ -762,7 +770,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v53.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v54.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -784,7 +792,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v53.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v54.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
