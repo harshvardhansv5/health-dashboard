@@ -769,7 +769,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v60.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v61.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -791,7 +791,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v60.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v61.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1918,14 +1918,19 @@ elif view_mode == "ZM View":
             ])
             
             with zm_tab1:
-                col_sort, _ = st.columns([1.5, 3.5])
-                with col_sort:
-                    zm_sort_order = st.radio("Sort Order:", ["Descending", "Ascending"], horizontal=True, key="zm_sort")
+                # FIX: Replaced the lonely "Sort Order" button with a full sort selector
+                c1, c2 = st.columns([2, 1])
+                with c1: 
+                    zm_sort_metric = st.selectbox("Sort By:", ["Uptime %", "Weighted Avg", "Total Patients"], key="zm_sort_col")
+                with c2:
+                    zm_sort_order = st.radio("Order:", ["Descending", "Ascending"], horizontal=True, key="zm_sort_order")
                 
                 st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:16px; font-weight:800;'>District Breakdown</h4>", unsafe_allow_html=True)
                 display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
                 is_ascending = (zm_sort_order == "Ascending")
-                display_df = zm_df[display_cols].sort_values(by=['Uptime %', 'Weighted Avg'], ascending=[is_ascending, is_ascending]).reset_index(drop=True)
+                
+                sort_col = "Weighted Avg" if zm_sort_metric == "Weighted Avg" else zm_sort_metric
+                display_df = zm_df[display_cols].sort_values(by=[sort_col, 'Weighted Avg'], ascending=[is_ascending, is_ascending]).reset_index(drop=True)
                 
                 st.dataframe(display_df, use_container_width=True, hide_index=True, column_config={
                     "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100),
