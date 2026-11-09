@@ -707,16 +707,13 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
     plot_df['Average Patients'] = plot_df[active_dates].mean(axis=1).round(1)
     plot_df['Zero Days'] = (plot_df[active_dates] == 0).sum(axis=1)
     
-    # FIX: Find the absolute latest date in the active window
     max_allowed_date = active_dates[-1] if active_dates else (sorted_dates[-1] if sorted_dates else None)
 
     def get_last_sample_date(row):
         if max_allowed_date is None: return "Never Reported"
-        
-        # Search backwards from the end of the window
         for d in reversed(sorted_dates):
             if d > max_allowed_date:
-                continue # Ignore future dates!
+                continue
             if row[d] > 0:
                 return d.strftime('%d %b %Y')
         return "Never Reported"
@@ -733,7 +730,8 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
     if num_days > 0: plot_df['Uptime %'] = ((num_days - plot_df['Zero Days']) / num_days * 100).round(1)
     else: plot_df['Uptime %'] = 0
         
-    col_map = {d: d.strftime('%d %b') for d in active_dates}
+    # FIX (d): year-safe column labels to prevent collisions when data spans >1 year
+    col_map = {d: d.strftime('%d %b %y') for d in active_dates}
     active_date_map = {col_map[d]: d for d in active_dates}
     plot_df = plot_df.rename(columns=col_map)
         
@@ -995,10 +993,21 @@ if view_mode == "District View":
     df_raw = read_sheet_robust(xls, sheet_to_load)
     plot_df, _, stats = process_district_df(df_raw, time_filter, start_date, end_date)
     
-    # Calculate Previous Stats for Trends
+    # FIX (c): Calculate Previous Stats for Trends — handle Select Dates by shifting window manually
     prev_stats = None
+    prev_plot_df = None
     if time_filter != "Full History":
-        _, _, prev_stats = process_district_df(df_raw, time_filter, start_date, end_date, window_offset=1)
+        if time_filter == "Select Dates..." and start_date and end_date:
+            span = (end_date - start_date).days + 1
+            prev_end = start_date - timedelta(days=1)
+            prev_start = prev_end - timedelta(days=span - 1)
+            prev_plot_df, _, prev_stats = process_district_df(
+                df_raw, "Select Dates...", prev_start, prev_end, window_offset=0
+            )
+        else:
+            prev_plot_df, _, prev_stats = process_district_df(
+                df_raw, time_filter, None, None, window_offset=1
+            )
         
     if plot_df is None: st.error(f"Could not process data."); st.stop()
     facility_col = stats['facility_col']
@@ -1043,13 +1052,22 @@ if view_mode == "District View":
             best_grade = "F"
             best_avg = 0
             
-        # Trend calculations
-        if prev_stats:
-            prev_total = prev_stats['total']
-            prev_uptime = calc_uptime(prev_stats)
-            # To calculate prev_weighted_avg correctly if we filtered by active_only:
-            # We don't have prev filtered data easily here. We will just use the raw prev_stats avg.
-            prev_avg = prev_stats['weighted_avg'] 
+        # Trend calculations — apply the SAME active_only filter to prev window for like-for-like comparison
+        if prev_stats and prev_plot_df is not None:
+            prev_filtered = prev_plot_df.copy()
+            if active_only:
+                prev_filtered = prev_filtered[prev_filtered['Total Patients'] > 0]
+            
+            if len(prev_filtered) > 0 and prev_stats['num_days'] > 0:
+                prev_total = int(prev_filtered['Total Patients'].sum())
+                prev_fd = len(prev_filtered) * prev_stats['num_days']
+                prev_zero = int(prev_filtered['Zero Days'].sum())
+                prev_uptime = round(((prev_fd - prev_zero) / prev_fd * 100), 1)
+                prev_avg = round(prev_total / prev_fd, 1)
+            else:
+                prev_total = 0
+                prev_uptime = 0.0
+                prev_avg = 0.0
             
             trend_patients = get_trend_html(dist_total, prev_total)
             trend_uptime = get_trend_html(new_uptime, prev_uptime)
@@ -1148,7 +1166,7 @@ if view_mode == "District View":
                 margin=dict(l=20, r=60, t=80, b=10), coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
-            # FIX: Force text outside and horizontal to prevent rotation
+            # Force text outside and horizontal to prevent rotation
             fig.update_traces(textposition='outside', textangle=0, textfont=dict(color="#0F172A", size=12, weight=700), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
 
@@ -1187,7 +1205,6 @@ if view_mode == "District View":
         
         if not monthly_df.empty:
             fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
-            # FIX: Force text outside and horizontal
             fig_m.update_traces(marker_color='#1E293B', texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
             m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
@@ -1427,10 +1444,10 @@ if view_mode == "District View":
             dist_data = df_raw[[facility_col, dist_col]].copy()
             dist_data.columns = ['Facility', 'Raw_Distance']
             
+            # FIX (a): Do NOT strip leading dot — float(".5") parses natively. Stripping it turned .5 km into 5 km.
             def clean_distance(val):
                 if pd.isna(val): return None
                 s = str(val).strip().replace(' ', '')
-                s = re.sub(r'^\.', '', s)
                 try: return float(s)
                 except ValueError: return DISTANCE_FALLBACK.get(str(val).strip(), None)
                     
@@ -1570,15 +1587,23 @@ elif view_mode == "State View":
             if not is_ascending:
                 lb_df['District'] = lb_df.apply(lambda row: f"{medal(row['Rank'])} {row['District']}".strip(), axis=1)
             
+            # FIX (b): Cast Rank to str BEFORE appending total row to prevent Arrow mixed-dtype crash
+            lb_df['Rank'] = lb_df['Rank'].astype(str)
+            
             total_row = pd.DataFrame([{
                 'Rank': '', 'District': '🏆 STATE TOTAL', 'Total Patients': state_df['Total Patients'].sum(),
-                'Weighted Avg': '', 'Uptime %': None, 'Facilities': TOTAL_SPOKES,
+                # FIX (b): use None (not '') so Weighted Avg stays float64 with NaN
+                'Weighted Avg': None, 'Uptime %': None, 'Facilities': TOTAL_SPOKES,
                 'Active Spokes': state_df['Active Spokes'].sum(), 'Days Reported': None
             }])
             lb_df = pd.concat([lb_df, total_row], ignore_index=True)
             
             display_cols = ['Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
-            st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
+            st.dataframe(lb_df[display_cols], use_container_width=True, hide_index=True, column_config={
+                # FIX (b): pin Rank as TextColumn
+                "Rank": st.column_config.TextColumn("Rank", width="small"),
+                "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)
+            })
             
             buf_state = io.BytesIO()
             with pd.ExcelWriter(buf_state, engine='openpyxl') as writer:
@@ -2105,7 +2130,6 @@ elif view_mode == "Inactive Spokes":
             district_counts.columns = ['District', 'Failures']
             
             fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures', title="<b>Top 5 Districts by Operational Failures</b>")
-            # FIX: Force text outside and horizontal
             fig_off.update_traces(marker_color='#F43F5E', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
             
             off_layout = PLOTLY_LAYOUT.copy()
