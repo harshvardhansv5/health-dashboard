@@ -769,7 +769,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v58.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v59.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -791,7 +791,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v58.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v59.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1190,14 +1190,17 @@ if view_mode == "District View":
                     drill_trend = [{'Date': stats['active_date_map'][c], 'Patients': fac_row[c]} for c in stats['active_date_cols']]
                     if drill_trend:
                         dt_df = pd.DataFrame(drill_trend).sort_values('Date')
-                        fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True, line_shape='spline', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
+                        
+                        # FIX: Changed line_shape from 'spline' to 'linear' to stop fake curves and fractional/negative patients
+                        fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True, line_shape='linear', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
                         fig_dt.update_traces(line_color='#10B981', line_width=3, marker=dict(size=8, color='#F8FAFC', line=dict(width=2, color='#10B981')), fillcolor='rgba(16, 185, 129, 0.15)')
                         
                         dt_layout = PLOTLY_LAYOUT.copy()
                         dt_layout.update(dict(
                             height=300,
                             xaxis=dict(showgrid=False, tickformat="%d %b", range=[dt_df['Date'].min(), dt_df['Date'].max()]),
-                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'),
+                            # FIX: dtick=1 forces whole numbers on the Y-axis
+                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', dtick=1),
                             margin=dict(l=10, r=10, t=50, b=10)
                         ))
                         fig_dt.update_layout(**dt_layout)
@@ -1782,7 +1785,8 @@ elif view_mode == "State View":
                         get_trend(pb, b_obj_to_col, district_b_display, all_dates_objs)
                     ])
                     
-                    fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, line_shape='spline', 
+                    # Also fixed the comparison chart to use linear shapes
+                    fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, line_shape='linear', 
                                     color_discrete_map={district_a_display: '#10B981', district_b_display: '#4F46E5'})
                     fig_c.update_traces(connectgaps=True, marker=dict(size=8))
                     
@@ -1791,7 +1795,7 @@ elif view_mode == "State View":
                         height=350, margin=dict(l=10, r=10, t=40, b=40),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                         xaxis=dict(showgrid=False, tickformat="%d %b"), 
-                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1')
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', dtick=1)
                     ))
                     fig_c.update_layout(**cmp_layout)
                     st.plotly_chart(fig_c, use_container_width=True)
