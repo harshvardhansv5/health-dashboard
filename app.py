@@ -232,7 +232,7 @@ st.markdown("""
         color: #FFFFFF; 
         box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); 
     }
-    .header-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; stroke-width: 2.5; fill: none; }
+    .header-icon svg { width: 26px; height: 26px; stroke: #FFFFFF; stroke-width: 2.5; fill: none; }
     .header-title { font-size: 16px; font-weight: 800; color: #0F172A; letter-spacing: -0.3px; line-height: 1.1; margin-bottom: 2px; }
     .header-subtitle { font-size: 12px; font-weight: 500; color: #64748B; margin-top: 0; }
     
@@ -431,9 +431,9 @@ if not st.session_state.authenticated:
             <div style="text-align: center; margin-bottom: 32px;">
                 <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background-color: #FEF2F2; border-radius: 16px; margin-bottom: 16px; border: 1px solid #FECACA;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 32px; height: 32px;">
-                        <path d="M14.5 2h-5v16.5a2.5 2.5 0 0 0 5 0V2z"></path>
-                        <path d="M9.5 12h5"></path>
-                        <path d="M12 15.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="#DC2626"></path>
+                        <path d="M10 2v15a2 2 0 0 0 4 0V2" />
+                        <path d="M8 2h8" />
+                        <path d="M10 10h4" />
                     </svg>
                 </div>
                 <h2 style="color:#0F172A; font-size: 28px; font-weight: 800; margin-bottom: 8px;">Secure Login</h2>
@@ -773,7 +773,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v62.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v63.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -795,7 +795,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v62.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v63.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -906,9 +906,9 @@ with col_title:
         <div class="header-left">
             <div class="header-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14.5 2h-5v16.5a2.5 2.5 0 0 0 5 0V2z"></path>
-                    <path d="M9.5 12h5"></path>
-                    <path d="M12 15.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="currentColor"></path>
+                    <path d="M10 2v15a2 2 0 0 0 4 0V2" />
+                    <path d="M8 2h8" />
+                    <path d="M10 10h4" />
                 </svg>
             </div>
             <div>
@@ -1197,15 +1197,20 @@ if view_mode == "District View":
                     if drill_trend:
                         dt_df = pd.DataFrame(drill_trend).sort_values('Date')
                         
-                        # FIX: Changed line_shape from 'spline' to 'linear' to stop fake curves and fractional/negative patients
-                        fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True, line_shape='linear', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
-                        fig_dt.update_traces(line_color='#06B6D4', line_width=3, marker=dict(size=8, color='#F8FAFC', line=dict(width=2, color='#06B6D4')), fillcolor='rgba(6, 182, 212, 0.15)')
+                        # FIX: Replaced the area chart with a clean Bar Chart for discrete daily counts
+                        fig_dt = px.bar(dt_df, x='Date', y='Patients', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
+                        fig_dt.update_traces(
+                            marker_color='#06B6D4', 
+                            text=dt_df['Patients'],
+                            textposition='outside',
+                            textfont=dict(color="#0F172A", weight=700),
+                            cliponaxis=False
+                        )
                         
                         dt_layout = PLOTLY_LAYOUT.copy()
                         dt_layout.update(dict(
                             height=300,
-                            xaxis=dict(showgrid=False, tickformat="%d %b", range=[dt_df['Date'].min(), dt_df['Date'].max()]),
-                            # FIX: Use tickformat="d" to force integers, nticks to prevent overlap, and rangemode="tozero" to start at 0
+                            xaxis=dict(showgrid=False, tickformat="%d %b", type='category'), 
                             yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickformat="d", nticks=6, rangemode="tozero"),
                             margin=dict(l=40, r=10, t=50, b=10)
                         ))
