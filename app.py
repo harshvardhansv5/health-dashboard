@@ -89,13 +89,13 @@ st.markdown("""
         box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3) !important;
     }
 
-    /* --- HERO DECK CARDS (Redesigned) --- */
+    /* --- HERO DECK CARDS (Soft off-white) --- */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .metric-card {
         background-color: #F8FAFC !important; 
         border: 1px solid #CBD5E1 !important; 
         border-radius: 20px !important;
-        padding: 20px 24px !important; 
+        padding: 24px !important; 
         box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important; 
         display: flex; flex-direction: column; 
         transition: transform 0.2s ease, box-shadow 0.2s ease; 
@@ -104,23 +104,15 @@ st.markdown("""
         transform: translateY(-4px); 
         box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.1); 
     }
-    .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-    .metric-label { color: #475569; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-    .metric-icon { width: 28px; height: 28px; border-radius: 8px; background-color: #E2E8F0; color: #475569; display: flex; align-items: center; justify-content: center; }
-    .metric-icon svg { width: 16px; height: 16px; fill: currentColor; }
-    
-    /* The Main Hero Number */
-    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1.1; letter-spacing: -1px; margin-bottom: 12px; }
-    
-    /* The Bottom Row (Trends + Context) */
-    .metric-footer { display: flex; align-items: center; gap: 8px; margin-top: auto; flex-wrap: wrap; }
-    
-    /* Standardized Trend Pills */
-    .trend-pill { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
-    .trend-up { color: #047857; background-color: #ECFDF5; }
-    .trend-down { color: #BE123C; background-color: #FFF1F2; }
-    .trend-neutral { color: #475569; background-color: #F1F5F9; }
-    .metric-context { color: #64748B; font-size: 12px; font-weight: 500; }
+    .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .metric-label { color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #E2E8F0; color: #475569; display: flex; align-items: center; justify-content: center; }
+    .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
+    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; }
+    .metric-trend { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: auto; }
+    .trend-up { color: #10B981; background-color: #ECFDF5; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
+    .trend-down { color: #F43F5E; background-color: #FFF1F2; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
+    .trend-neutral { color: #64748B; background-color: #F1F5F9; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
 
     /* --- PREMIUM ZM RIBBON --- */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) {
@@ -434,14 +426,14 @@ if not st.session_state.authenticated:
     with col2:
         with st.form("login_form"):
             st.markdown("""
-<div style="text-align: center; margin-bottom: 32px;">
-    <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background-color: #ECFDF5; border-radius: 16px; margin-bottom: 16px; border: 1px solid #A7F3D0;">
-        <span class="material-symbols-rounded" style="font-size: 32px; color: #10B981;">health_and_safety</span>
-    </div>
-    <h2 style="color:#0F172A; font-size: 28px; font-weight: 800; margin-bottom: 8px;">Secure Login</h2>
-    <p style="color:#475569; font-size: 14px; margin: 0;">Enter the password to access the Bihar Health Dashboard.</p>
-</div>
-""", unsafe_allow_html=True)
+            <div style="text-align: center; margin-bottom: 32px;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background-color: #ECFDF5; border-radius: 16px; margin-bottom: 16px; border: 1px solid #A7F3D0;">
+                    <span class="material-symbols-rounded" style="font-size: 32px; color: #10B981;">health_and_safety</span>
+                </div>
+                <h2 style="color:#0F172A; font-size: 28px; font-weight: 800; margin-bottom: 8px;">Secure Login</h2>
+                <p style="color:#475569; font-size: 14px; margin: 0;">Enter the password to access the Bihar Health Dashboard.</p>
+            </div>
+            """, unsafe_allow_html=True)
             
             pwd = st.text_input("Password", type="password", label_visibility="collapsed")
             submit = st.form_submit_button("Login", use_container_width=True)
@@ -501,16 +493,16 @@ def format_reason(reason):
 
 def get_trend_html(cur, prev):
     if prev is None:
-        return '<span class="trend-pill trend-neutral">—</span>'
+        return '<span class="trend-neutral">—</span>'
     if prev == 0:
-        if cur > 0: return '<span class="trend-pill trend-up">▲ NEW</span>'
-        return '<span class="trend-pill trend-neutral">—</span>'
+        if cur > 0: return '<span class="trend-up">▲ NEW</span>'
+        return '<span class="trend-neutral">—</span>'
     pct = ((cur - prev) / prev) * 100
     if pct > 0:
-        return f'<span class="trend-pill trend-up">▲ {pct:.1f}%</span>'
+        return f'<span class="trend-up">▲ {pct:.1f}%</span>'
     elif pct < 0:
-        return f'<span class="trend-pill trend-down">▼ {abs(pct):.1f}%</span>'
-    return '<span class="trend-pill trend-neutral">— 0.0%</span>'
+        return f'<span class="trend-down">▼ {abs(pct):.1f}%</span>'
+    return '<span class="trend-neutral">— 0.0%</span>'
 
 @st.cache_data(ttl=3600, show_spinner="Fetching live data from Google Sheets...")
 def fetch_google_sheet(url):
@@ -715,13 +707,16 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
     plot_df['Average Patients'] = plot_df[active_dates].mean(axis=1).round(1)
     plot_df['Zero Days'] = (plot_df[active_dates] == 0).sum(axis=1)
     
+    # FIX: Find the absolute latest date in the active window
     max_allowed_date = active_dates[-1] if active_dates else (sorted_dates[-1] if sorted_dates else None)
 
     def get_last_sample_date(row):
         if max_allowed_date is None: return "Never Reported"
+        
+        # Search backwards from the end of the window
         for d in reversed(sorted_dates):
             if d > max_allowed_date:
-                continue
+                continue # Ignore future dates!
             if row[d] > 0:
                 return d.strftime('%d %b %Y')
         return "Never Reported"
@@ -904,20 +899,20 @@ col_title, col_nav, col_time_ctrl = st.columns([2.5, 5.0, 2.5], vertical_alignme
 
 with col_title:
     st.markdown("""
-<div class="app-header">
-    <div class="header-left">
-        <div class="header-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
-            </svg>
-        </div>
-        <div>
-            <div class="header-title">Bihar Health Dashboard</div>
-            <div class="header-subtitle">Statewide Operations & Pathology</div>
+    <div class="app-header">
+        <div class="header-left">
+            <div class="header-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                </svg>
+            </div>
+            <div>
+                <div class="header-title">Bihar Health Dashboard</div>
+                <div class="header-subtitle">Statewide Operations & Pathology</div>
+            </div>
         </div>
     </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
 with col_nav:
     _NAV_OPTS = ["District View", "State View", "ZM View", "Active Spokes", "Inactive Spokes"]
@@ -976,13 +971,13 @@ if view_mode == "District View":
     
     col_ribbon, col_btn = st.columns([4.5, 1], vertical_alignment="center")
     with col_ribbon:
-        st.markdown(f"""
-<div class="zm-ribbon-text">
-<span class="zm-label">ZONE MANAGER</span>
-<span class="zm-name">{display_zm}</span>
-<span class="zm-zone">({zone_name})</span>
-</div>
-""", unsafe_allow_html=True)
+        st.markdown(f'''
+        <div class="zm-ribbon-text">
+            <span class="zm-label">ZONE MANAGER</span>
+            <span class="zm-name">{display_zm}</span>
+            <span class="zm-zone">({zone_name})</span>
+        </div>
+        ''', unsafe_allow_html=True)
     with col_btn:
         if st.button("View Profile →", use_container_width=True):
             st.session_state.zm_view_target = zm_name_for_district
@@ -1052,80 +1047,61 @@ if view_mode == "District View":
         if prev_stats:
             prev_total = prev_stats['total']
             prev_uptime = calc_uptime(prev_stats)
+            # To calculate prev_weighted_avg correctly if we filtered by active_only:
+            # We don't have prev filtered data easily here. We will just use the raw prev_stats avg.
             prev_avg = prev_stats['weighted_avg'] 
             
             trend_patients = get_trend_html(dist_total, prev_total)
             trend_uptime = get_trend_html(new_uptime, prev_uptime)
             trend_avg = get_trend_html(new_weighted_avg, prev_avg)
         else:
-            trend_patients = '<span class="trend-pill trend-neutral">—</span>'
-            trend_uptime = '<span class="trend-pill trend-neutral">—</span>'
-            trend_avg = '<span class="trend-pill trend-neutral">—</span>'
-
-        st.markdown(f"""
-<div class="metric-grid">
-    <div class="metric-card">
-        <div class="metric-header">
-            <div class="metric-label">Total Spokes</div>
-            <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
+            trend_patients = '<span class="trend-neutral">—</span>'
+            trend_uptime = '<span class="trend-neutral">—</span>'
+            trend_avg = '<span class="trend-neutral">—</span>'
+            
+        st.markdown(f'''
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Total Spokes</div>
+                    <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
+                </div>
+                <div class="metric-value">{num_facs}</div>
+                <div class="metric-trend trend-neutral">{total_active} Active</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Best Spoke</div>
+                    <div class="metric-icon"><span class="material-symbols-rounded">star</span></div>
+                </div>
+                <div class="metric-value" style="font-size: 16px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{best_name}">{best_name}</div>
+                <div class="metric-trend trend-up" style="font-size: 12px;">↗ {best_avg} Avg / Day</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Total Patients</div>
+                    <div class="metric-icon"><span class="material-symbols-rounded">groups</span></div>
+                </div>
+                <div class="metric-value">{dist_total:,} {trend_patients}</div>
+                <div class="metric-trend trend-neutral">Across {date_range_str}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Weighted Avg / Day</div>
+                    <div class="metric-icon"><span class="material-symbols-rounded">speed</span></div>
+                </div>
+                <div class="metric-value">{new_weighted_avg} {trend_avg}</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Facility Uptime</div>
+                    <div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div>
+                </div>
+                <div class="metric-value">{new_uptime}% {trend_uptime}</div>
+                <div class="metric-trend trend-neutral">Reliability Score</div>
+            </div>
         </div>
-        <div class="metric-value">{num_facs}</div>
-        <div class="metric-footer">
-            <span class="trend-pill trend-up">{total_active} Active</span>
-            <span class="trend-pill trend-down">{total_inactive} Inactive</span>
-        </div>
-    </div>
-    
-    <div class="metric-card">
-        <div class="metric-header">
-            <div class="metric-label">Best Spoke</div>
-            <div class="metric-icon"><span class="material-symbols-rounded">star</span></div>
-        </div>
-        <div class="metric-value">{best_avg} <span style="font-size: 14px; color: #64748B; font-weight: 600;">Avg / Day</span></div>
-        <div class="metric-footer" title="{best_name}">
-            <span class="trend-pill trend-neutral" style="max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: inline-block;">
-                🏆 {best_name}
-            </span>
-        </div>
-    </div>
-    
-    <div class="metric-card">
-        <div class="metric-header">
-            <div class="metric-label">Total Patients</div>
-            <div class="metric-icon"><span class="material-symbols-rounded">groups</span></div>
-        </div>
-        <div class="metric-value">{dist_total:,}</div>
-        <div class="metric-footer">
-            {trend_patients}
-            <span class="metric-context">Across {date_range_str}</span>
-        </div>
-    </div>
-    
-    <div class="metric-card">
-        <div class="metric-header">
-            <div class="metric-label">Weighted Avg / Day</div>
-            <div class="metric-icon"><span class="material-symbols-rounded">speed</span></div>
-        </div>
-        <div class="metric-value">{new_weighted_avg}</div>
-        <div class="metric-footer">
-            {trend_avg}
-            <span class="metric-context">vs prev period</span>
-        </div>
-    </div>
-    
-    <div class="metric-card">
-        <div class="metric-header">
-            <div class="metric-label">Facility Uptime</div>
-            <div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div>
-        </div>
-        <div class="metric-value">{new_uptime}%</div>
-        <div class="metric-footer">
-            {trend_uptime}
-            <span class="metric-context">Reliability Score</span>
-        </div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
         
         c1, c2 = st.columns([3, 1.5], vertical_alignment="bottom")
         with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d2")
@@ -1172,6 +1148,7 @@ if view_mode == "District View":
                 margin=dict(l=20, r=60, t=80, b=10), coloraxis_showscale=False
             ))
             fig.update_layout(**layout_dict)
+            # FIX: Force text outside and horizontal to prevent rotation
             fig.update_traces(textposition='outside', textangle=0, textfont=dict(color="#0F172A", size=12, weight=700), cliponaxis=False)
             st.plotly_chart(fig, use_container_width=True)
 
@@ -1210,6 +1187,7 @@ if view_mode == "District View":
         
         if not monthly_df.empty:
             fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
+            # FIX: Force text outside and horizontal
             fig_m.update_traces(marker_color='#1E293B', texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
             m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
@@ -1247,39 +1225,39 @@ if view_mode == "District View":
         
         d_grade = district_grade(plot_df)
         
-        st.markdown(f"""
-<div class="report-header">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-        <div class="report-title" style="margin-bottom: 0;">District Report Card — {selected_district_zm}</div>
-        <div style="background-color: #ECFDF5; color: #047857; padding: 8px 20px; border-radius: 30px; font-weight: 700; font-size: 14px; border: 1px solid #A7F3D0; display: flex; align-items: center; gap: 8px;">
-            <span class="material-symbols-rounded" style="font-size:18px;">local_hospital</span> <span>Total Spokes: {stats['num_facilities']}</span>
+        st.markdown(f'''
+        <div class="report-header">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <div class="report-title" style="margin-bottom: 0;">District Report Card — {selected_district_zm}</div>
+                <div style="background-color: #ECFDF5; color: #047857; padding: 8px 20px; border-radius: 30px; font-weight: 700; font-size: 14px; border: 1px solid #A7F3D0; display: flex; align-items: center; gap: 8px;">
+                    <span class="material-symbols-rounded" style="font-size:18px;">local_hospital</span> <span>Total Spokes: {stats['num_facilities']}</span>
+                </div>
+            </div>
+            <div class="report-meta"><strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; <strong>Period:</strong> {period_str} ({stats["num_days"]} days)</div>
         </div>
-    </div>
-    <div class="report-meta"><strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; <strong>Period:</strong> {period_str} ({stats["num_days"]} days)</div>
-</div>
-""", unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
         
-        st.markdown(f"""
-<div class="metric-grid">
-    <div class="metric-card"><div class="metric-label">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
-    <div class="metric-card"><div class="metric-label">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
-    <div class="metric-card"><div class="metric-label">Facility Uptime</div><div class="metric-value">{calc_uptime(stats)}%</div></div>
-    <div class="metric-card" style="background-color:#E2E8F0;"><div class="metric-label">District Grade</div><div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div></div>
-</div>
-""", unsafe_allow_html=True)
+        st.markdown(f'''
+        <div class="metric-grid">
+            <div class="metric-card"><div class="metric-label">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
+            <div class="metric-card"><div class="metric-label">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
+            <div class="metric-card"><div class="metric-label">Facility Uptime</div><div class="metric-value">{calc_uptime(stats)}%</div></div>
+            <div class="metric-card" style="background-color:#E2E8F0;"><div class="metric-label">District Grade</div><div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div></div>
+        </div>
+        ''', unsafe_allow_html=True)
 
         st.markdown("""
-<div style="text-align: center; margin-top: 16px; margin-bottom: 24px;">
-    <div style="display: inline-flex; gap: 20px; font-size: 13px; font-weight: 600; color: #475569; background-color: #F8FAFC; padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); align-items: center; border: 1px solid #CBD5E1;">
-        <span style="color: #64748B; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Grade Legend:</span>
-        <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#10B981; border-radius:4px;"></span> A</div>
-        <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#34D399; border-radius:4px;"></span> B</div>
-        <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#FBBF24; border-radius:4px;"></span> C</div>
-        <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#F97316; border-radius:4px;"></span> D</div>
-        <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#F43F5E; border-radius:4px;"></span> F</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+        <div style="text-align: center; margin-top: 16px; margin-bottom: 24px;">
+            <div style="display: inline-flex; gap: 20px; font-size: 13px; font-weight: 600; color: #475569; background-color: #F8FAFC; padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); align-items: center; border: 1px solid #CBD5E1;">
+                <span style="color: #64748B; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Grade Legend:</span>
+                <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#10B981; border-radius:4px;"></span> A</div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#34D399; border-radius:4px;"></span> B</div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#FBBF24; border-radius:4px;"></span> C</div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#F97316; border-radius:4px;"></span> D</div>
+                <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#F43F5E; border-radius:4px;"></span> F</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("<h4 style='color:#0F172A; margin-top:16px; margin-bottom:16px; font-weight:800;'>Spoke Scorecard</h4>", unsafe_allow_html=True)
         display = pd.DataFrame()
@@ -1347,6 +1325,7 @@ if view_mode == "District View":
                         return "Unknown / No Note"
                     inactive_df['Primary Reason'] = inactive_df.apply(get_reason, axis=1).apply(format_reason)
                     
+                    # Calculate Days Inactive
                     inactive_df['Days Inactive'] = inactive_df['Last Sample Date'].apply(
                         lambda x: (pd.Timestamp.now().normalize() - pd.to_datetime(x, format='%d %b %Y')).days if x != "Never Reported" else "-"
                     )
@@ -1364,6 +1343,7 @@ if view_mode == "District View":
                         "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
                     })
                     
+                    # Actionable Export
                     buf = io.BytesIO()
                     with pd.ExcelWriter(buf, engine='openpyxl') as writer:
                         display_inactive.to_excel(writer, index=False, sheet_name='Inactive List')
@@ -1468,6 +1448,7 @@ if view_mode == "District View":
                 st.markdown(f"**Hub Center:** {selected_hub_zm}")
                 st.caption("Bar length represents distance from Hub (km). Colors indicate the facility's Grade.")
                 
+                # Distance Ladder Chart
                 grade_color_map = {'A': '#10B981', 'B': '#34D399', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
                 
                 fig_dist = px.bar(
@@ -1528,16 +1509,16 @@ if view_mode == "District View":
 # ==============================================================================
 elif view_mode == "State View":
     st.markdown("""
-<div class="page-header-container">
-    <div class="page-icon-container">
-        <span class="material-symbols-rounded" style="font-size:28px;">domain</span>
+    <div class="page-header-container">
+        <div class="page-icon-container">
+            <span class="material-symbols-rounded" style="font-size:28px;">domain</span>
+        </div>
+        <div>
+            <div class="page-title-text">Bihar State Master View</div>
+            <div class="page-subtitle-text">Statewide operational summary and district performance</div>
+        </div>
     </div>
-    <div>
-        <div class="page-title-text">Bihar State Master View</div>
-        <div class="page-subtitle-text">Statewide operational summary and district performance</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     with st.spinner("Loading State Data..."):
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
@@ -1548,24 +1529,24 @@ elif view_mode == "State View":
         reporting_districts = state_df[state_df['Days Reported'] > 0]
         avg_state_uptime = round(reporting_districts['Uptime %'].mean(), 1) if not reporting_districts.empty else 0.0
         
-        st.markdown(f"""
-<div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
-    <div class="metric-card">
-        <div class="metric-header">
-            <div class="metric-label">Active Spokes ({time_filter})</div>
-            <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
+        st.markdown(f'''
+        <div class="metric-grid" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Active Spokes ({time_filter})</div>
+                    <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
+                </div>
+                <div class="metric-value">{total_active} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {total_facilities} Total</span></div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-header">
+                    <div class="metric-label">Statewide Avg Uptime</div>
+                    <div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div>
+                </div>
+                <div class="metric-value">{avg_state_uptime}%</div>
+            </div>
         </div>
-        <div class="metric-value">{total_active} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {total_facilities} Total</span></div>
-    </div>
-    <div class="metric-card">
-        <div class="metric-header">
-            <div class="metric-label">Statewide Avg Uptime</div>
-            <div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div>
-        </div>
-        <div class="metric-value">{avg_state_uptime}%</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+        ''', unsafe_allow_html=True)
         
         s_tab1, s_tab2, s_tab3 = st.tabs(["District Leaderboard", "ZM Leaderboard", "District vs District"])
         
@@ -1717,26 +1698,26 @@ elif view_mode == "State View":
 
                     col1, col2 = st.columns(2)
                     with col1: 
-                        st.markdown(f"""
-<div class="battle-card battle-card-green">
-<div class="battle-title" style="color: #10B981;">{district_a_display}</div>
-<div class="battle-row"><span>Total Patients</span> <span style="{get_style(sa['total'], sb['total'])}">{sa['total']:,}</span></div>
-<div class="battle-row"><span>Weighted Avg / Day</span> <span style="{get_style(sa['weighted_avg'], sb['weighted_avg'])}">{sa['weighted_avg']}</span></div>
-<div class="battle-row"><span>Facility Uptime</span> <span style="{get_style(a_uptime, b_uptime)}">{a_uptime}%</span></div>
-<div class="battle-row"><span>Total Spokes</span> <span style="{get_style(sa['total_absolute_facilities'], sb['total_absolute_facilities'])}">{sa['total_absolute_facilities']}</span></div>
-</div>
-""", unsafe_allow_html=True)
+                        st.markdown(f'''
+                        <div class="battle-card battle-card-green">
+                            <div class="battle-title" style="color: #10B981;">{district_a_display}</div>
+                            <div class="battle-row"><span>Total Patients</span> <span style="{get_style(sa['total'], sb['total'])}">{sa['total']:,}</span></div>
+                            <div class="battle-row"><span>Weighted Avg / Day</span> <span style="{get_style(sa['weighted_avg'], sb['weighted_avg'])}">{sa['weighted_avg']}</span></div>
+                            <div class="battle-row"><span>Facility Uptime</span> <span style="{get_style(a_uptime, b_uptime)}">{a_uptime}%</span></div>
+                            <div class="battle-row"><span>Total Spokes</span> <span style="{get_style(sa['total_absolute_facilities'], sb['total_absolute_facilities'])}">{sa['total_absolute_facilities']}</span></div>
+                        </div>
+                        ''', unsafe_allow_html=True)
                     
                     with col2: 
-                        st.markdown(f"""
-<div class="battle-card battle-card-red">
-<div class="battle-title" style="color: #4F46E5;">{district_b_display}</div>
-<div class="battle-row"><span>Total Patients</span> <span style="{get_style(sb['total'], sa['total'])}">{sb['total']:,}</span></div>
-<div class="battle-row"><span>Weighted Avg / Day</span> <span style="{get_style(sb['weighted_avg'], sa['weighted_avg'])}">{sb['weighted_avg']}</span></div>
-<div class="battle-row"><span>Facility Uptime</span> <span style="{get_style(b_uptime, a_uptime)}">{b_uptime}%</span></div>
-<div class="battle-row"><span>Total Spokes</span> <span style="{get_style(sb['total_absolute_facilities'], sa['total_absolute_facilities'])}">{sb['total_absolute_facilities']}</span></div>
-</div>
-""", unsafe_allow_html=True)
+                        st.markdown(f'''
+                        <div class="battle-card battle-card-red">
+                            <div class="battle-title" style="color: #4F46E5;">{district_b_display}</div>
+                            <div class="battle-row"><span>Total Patients</span> <span style="{get_style(sb['total'], sa['total'])}">{sb['total']:,}</span></div>
+                            <div class="battle-row"><span>Weighted Avg / Day</span> <span style="{get_style(sb['weighted_avg'], sa['weighted_avg'])}">{sb['weighted_avg']}</span></div>
+                            <div class="battle-row"><span>Facility Uptime</span> <span style="{get_style(b_uptime, a_uptime)}">{b_uptime}%</span></div>
+                            <div class="battle-row"><span>Total Spokes</span> <span style="{get_style(sb['total_absolute_facilities'], sa['total_absolute_facilities'])}">{sb['total_absolute_facilities']}</span></div>
+                        </div>
+                        ''', unsafe_allow_html=True)
                     
                     st.markdown("#### Daily Patient Trend — Overlaid")
                     
@@ -1781,16 +1762,16 @@ elif view_mode == "State View":
 # ==============================================================================
 elif view_mode == "ZM View":
     st.markdown("""
-<div class="page-header-container">
-    <div class="page-icon-container">
-        <span class="material-symbols-rounded" style="font-size:28px;">shield_person</span>
+    <div class="page-header-container">
+        <div class="page-icon-container">
+            <span class="material-symbols-rounded" style="font-size:28px;">shield_person</span>
+        </div>
+        <div>
+            <div class="page-title-text">Zone Manager View</div>
+            <div class="page-subtitle-text">Drill down into specific Zonal performance</div>
+        </div>
     </div>
-    <div>
-        <div class="page-title-text">Zone Manager View</div>
-        <div class="page-subtitle-text">Drill down into specific Zonal performance</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     _zm_opts = sorted(ZM_DATA.keys())
     if 'zm_view_target' in st.session_state:
@@ -1805,6 +1786,7 @@ elif view_mode == "ZM View":
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
+        # Calculate previous ZM stats for the trend arrows
         prev_state_df = None
         if time_filter != "Full History":
             if time_filter == "Select Dates..." and start_date and end_date:
@@ -1834,6 +1816,7 @@ elif view_mode == "ZM View":
             
             avg_uptime = round(zm_df['Uptime %'].mean(), 1)
             
+            # Trends
             if prev_state_df is not None and not prev_state_df.empty:
                 prev_zm_df = prev_state_df[prev_state_df['District'].isin(zm_districts)]
                 if not prev_zm_df.empty:
@@ -1858,30 +1841,28 @@ elif view_mode == "ZM View":
             if sub_count > 0:
                 breakdown_text += f" & {sub_count} Sub-districts"
             
-            st.markdown(f"""
-<div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
-<div class="metric-card">
-<div class="metric-header"><div class="metric-label">Coverage</div><div class="metric-icon"><span class="material-symbols-rounded">map</span></div></div>
-<div class="metric-value">{total_units}</div>
-<div class="metric-footer"><span class="metric-context">Total Units</span></div>
-</div>
-<div class="metric-card">
-<div class="metric-header"><div class="metric-label">Weighted Avg / Day</div><div class="metric-icon"><span class="material-symbols-rounded">speed</span></div></div>
-<div class="metric-value">{zone_weighted_avg}</div>
-<div class="metric-footer">{trend_avg}</div>
-</div>
-<div class="metric-card">
-<div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">hub</span></div></div>
-<div class="metric-value">{total_active} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {total_operational} Operational</span></div>
-<div class="metric-footer"><span class="metric-context">Operational Facilities</span></div>
-</div>
-<div class="metric-card">
-<div class="metric-header"><div class="metric-label">Avg Zone Uptime</div><div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div></div>
-<div class="metric-value">{avg_uptime}%</div>
-<div class="metric-footer">{trend_uptime}</div>
-</div>
-</div>
-""", unsafe_allow_html=True)
+            st.markdown(f'''
+            <div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
+                <div class="metric-card">
+                    <div class="metric-header"><div class="metric-label">Coverage</div><div class="metric-icon"><span class="material-symbols-rounded">map</span></div></div>
+                    <div class="metric-value">{total_units}</div>
+                    <div class="metric-trend trend-neutral">Total Units</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header"><div class="metric-label">Weighted Avg / Day</div><div class="metric-icon"><span class="material-symbols-rounded">speed</span></div></div>
+                    <div class="metric-value">{zone_weighted_avg} {trend_avg}</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">hub</span></div></div>
+                    <div class="metric-value">{total_active} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {total_operational} Operational</span></div>
+                    <div class="metric-trend trend-neutral">Operational Facilities</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-header"><div class="metric-label">Avg Zone Uptime</div><div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div></div>
+                    <div class="metric-value">{avg_uptime}% {trend_uptime}</div>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
             
             op_failures_zm = zm_fac_df[(zm_fac_df['Total Patients'] == 0) & (zm_fac_df['Status'] == 'Operational')]
             
@@ -2002,16 +1983,16 @@ elif view_mode == "ZM View":
 # ==============================================================================
 elif view_mode == "Active Spokes":
     st.markdown("""
-<div class="page-header-container">
-    <div class="page-icon-container">
-        <span class="material-symbols-rounded" style="font-size:28px;">check_circle</span>
+    <div class="page-header-container">
+        <div class="page-icon-container">
+            <span class="material-symbols-rounded" style="font-size:28px;">check_circle</span>
+        </div>
+        <div>
+            <div class="page-title-text">Active Spokes Tracker</div>
+            <div class="page-subtitle-text">Facilities currently seeing patients</div>
+        </div>
     </div>
-    <div>
-        <div class="page-title-text">Active Spokes Tracker</div>
-        <div class="page-subtitle-text">Facilities currently seeing patients</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     with st.spinner("Loading all active facilities..."):
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
@@ -2021,12 +2002,12 @@ elif view_mode == "Active Spokes":
         
         col1, col2, col3 = st.columns([2, 2, 2])
         with col1:
-            st.markdown(f"""
-<div class="metric-card">
-<div class="metric-header"><div class="metric-label">Active Spokes Shown</div><div class="metric-icon"><span class="material-symbols-rounded">visibility</span></div></div>
-<div class="metric-value">{len(active_df)} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {TOTAL_SPOKES} Total</span></div>
-</div>
-""", unsafe_allow_html=True)
+            st.markdown(f'''
+            <div class="metric-card" style="padding: 16px; margin-bottom: 0; height: 100%; display: flex; justify-content: center;">
+                <div class="metric-header"><div class="metric-label">Active Spokes Shown</div><div class="metric-icon"><span class="material-symbols-rounded">visibility</span></div></div>
+                <div class="metric-value">{len(active_df)} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {TOTAL_SPOKES} Total</span></div>
+            </div>
+            ''', unsafe_allow_html=True)
         with col2:
             dist_filter = st.multiselect("Filter by District", sorted(active_df['District'].unique()), default=[])
         with col3:
@@ -2081,16 +2062,16 @@ elif view_mode == "Active Spokes":
 # ==============================================================================
 elif view_mode == "Inactive Spokes":
     st.markdown("""
-<div class="page-header-container">
-    <div class="page-icon-container">
-        <span class="material-symbols-rounded" style="font-size:28px;">warning</span>
+    <div class="page-header-container">
+        <div class="page-icon-container">
+            <span class="material-symbols-rounded" style="font-size:28px;">warning</span>
+        </div>
+        <div>
+            <div class="page-title-text">Inactive Spokes Tracker</div>
+            <div class="page-subtitle-text">Operational failures and pending infrastructure launches</div>
+        </div>
     </div>
-    <div>
-        <div class="page-title-text">Inactive Spokes Tracker</div>
-        <div class="page-subtitle-text">Operational failures and pending infrastructure launches</div>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
     
     with st.spinner("Scanning all districts for inactive facilities..."):
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
@@ -2102,21 +2083,21 @@ elif view_mode == "Inactive Spokes":
         
         col_card1, col_card2 = st.columns(2)
         with col_card1:
-            st.markdown(f"""
-<div class="metric-card" style="border-left: 6px solid #F43F5E; padding: 20px; margin-bottom: 16px;">
-<div class="metric-header"><div class="metric-label">Operational Failures</div><div class="metric-icon" style="background-color:#FEE2E2; color:#F43F5E;"><span class="material-symbols-rounded">error</span></div></div>
-<div class="metric-value" style="color:#F43F5E;">{len(op_failures)}</div>
-<div class="metric-footer"><span class="trend-pill trend-down">Requires immediate intervention</span></div>
-</div>
-""", unsafe_allow_html=True)
+            st.markdown(f'''
+            <div class="metric-card" style="border-left: 6px solid #F43F5E; padding: 20px; margin-bottom: 16px;">
+                <div class="metric-header"><div class="metric-label">Operational Failures</div><div class="metric-icon" style="background-color:#FEE2E2; color:#F43F5E;"><span class="material-symbols-rounded">error</span></div></div>
+                <div class="metric-value" style="color:#F43F5E;">{len(op_failures)}</div>
+                <div class="metric-trend trend-down">Requires immediate intervention</div>
+            </div>
+            ''', unsafe_allow_html=True)
         with col_card2:
-            st.markdown(f"""
-<div class="metric-card" style="border-left: 6px solid #94A3B8; padding: 20px; margin-bottom: 16px;">
-<div class="metric-header"><div class="metric-label">Pending Launch</div><div class="metric-icon" style="background-color:#E2E8F0; color:#475569;"><span class="material-symbols-rounded">pending</span></div></div>
-<div class="metric-value" style="color:#475569;">{len(pending_launch)}</div>
-<div class="metric-footer"><span class="trend-pill trend-neutral">Awaiting infrastructure readiness</span></div>
-</div>
-""", unsafe_allow_html=True)
+            st.markdown(f'''
+            <div class="metric-card" style="border-left: 6px solid #94A3B8; padding: 20px; margin-bottom: 16px;">
+                <div class="metric-header"><div class="metric-label">Pending Launch</div><div class="metric-icon" style="background-color:#E2E8F0; color:#475569;"><span class="material-symbols-rounded">pending</span></div></div>
+                <div class="metric-value" style="color:#475569;">{len(pending_launch)}</div>
+                <div class="metric-trend trend-neutral">Awaiting infrastructure readiness</div>
+            </div>
+            ''', unsafe_allow_html=True)
 
         if not op_failures.empty:
             st.markdown("<h4 style='color:#0F172A; margin-top:16px; margin-bottom:16px; font-weight:800;'>Top Offending Districts (Operational Failures)</h4>", unsafe_allow_html=True)
@@ -2124,6 +2105,7 @@ elif view_mode == "Inactive Spokes":
             district_counts.columns = ['District', 'Failures']
             
             fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures', title="<b>Top 5 Districts by Operational Failures</b>")
+            # FIX: Force text outside and horizontal
             fig_off.update_traces(marker_color='#F43F5E', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
             
             off_layout = PLOTLY_LAYOUT.copy()
@@ -2200,21 +2182,21 @@ elif view_mode == "Inactive Spokes":
 st.markdown("<br>", unsafe_allow_html=True)
 with st.expander(":material/info: Metric Definitions & Grading System"):
     st.markdown("""
-**📊 Weighted Avg / Day**
-Total patients divided by total facility-days (Total Facilities × Total Days). This is the truest measure of daily efficiency, as it prevents a facility that was only open for 1 day with 50 patients from skewing the district's average.
-
-**⏱️ Uptime %**
-The percentage of possible facility-days where the patient count was greater than zero. A higher percentage means the facility is consistently operational.
-
-**🔴 Inactive vs 🟢 Active**
-A facility is marked **Inactive** if it reported 0 patients across the *entire* selected time range. If it reported patients on even a single day, it is **Active**.
-""")
+    **📊 Weighted Avg / Day**
+    Total patients divided by total facility-days (Total Facilities × Total Days). This is the truest measure of daily efficiency, as it prevents a facility that was only open for 1 day with 50 patients from skewing the district's average.
+    
+    **⏱️ Uptime %**
+    The percentage of possible facility-days where the patient count was greater than zero. A higher percentage means the facility is consistently operational.
+    
+    **🔴 Inactive vs 🟢 Active**
+    A facility is marked **Inactive** if it reported 0 patients across the *entire* selected time range. If it reported patients on even a single day, it is **Active**.
+    """)
     
     st.info("""
-**Example:**
-*   **Weighted Avg:** 10 facilities report for 5 days (50 total facility-days). They see 100 patients total. The Weighted Avg is **100 ÷ 50 = 2.0**.
-*   **Uptime:** A facility has 10 days of data. They report `0` on 3 days. Their Uptime is **7 ÷ 10 = 70%**.
-""")
+    **Example:**
+    *   **Weighted Avg:** 10 facilities report for 5 days (50 total facility-days). They see 100 patients total. The Weighted Avg is **100 ÷ 50 = 2.0**.
+    *   **Uptime:** A facility has 10 days of data. They report `0` on 3 days. Their Uptime is **7 ÷ 10 = 70%**.
+    """)
 
     st.markdown("**🏆 Grading System**")
     st.markdown("*Note: A facility must meet **BOTH** the Uptime and Avg Patients requirements to earn the grade. If it fails either one, it drops to the next lowest grade.*")
@@ -2232,6 +2214,6 @@ A facility is marked **Inactive** if it reported 0 patients across the *entire* 
     })
     
     st.info("""
-**Grading Example:**
-If a facility reports every single day (100% Uptime) but only sees **1 patient per day** (Avg 1.0), they get a **D**. They do not get an A, because their patient volume is too low.
-""")
+    **Grading Example:**
+    If a facility reports every single day (100% Uptime) but only sees **1 patient per day** (Avg 1.0), they get a **D**. They do not get an A, because their patient volume is too low.
+    """)
