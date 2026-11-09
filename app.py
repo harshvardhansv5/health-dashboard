@@ -110,7 +110,7 @@ st.markdown("""
     .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
     .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
     
-    /* FIXED: Trend badges now have fixed font size and won't wrap */
+    /* Trend badges now have fixed font size and won't wrap */
     .trend-up { color: #10B981; background-color: #ECFDF5; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; font-size: 14px !important; font-weight: 700; white-space: nowrap; line-height: 1; }
     .trend-down { color: #F43F5E; background-color: #FFF1F2; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; font-size: 14px !important; font-weight: 700; white-space: nowrap; line-height: 1; }
     .trend-neutral { color: #64748B; background-color: #F1F5F9; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; font-size: 14px !important; font-weight: 700; white-space: nowrap; line-height: 1; }
@@ -769,7 +769,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v55.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v56.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -791,7 +791,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v55.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v56.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1126,76 +1126,84 @@ if view_mode == "District View":
         metric_col = {'Average Patients': 'Average Patients', 'Total Patients': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
         filtered = filtered_base.copy()
             
-        if filtered.empty: st.warning("No data matches the filters.")
+        if filtered.empty: 
+            st.warning("No data matches the filters.")
         else:
-            sorted_df = filtered.sort_values(by=metric_col, ascending=(sort_option == "Lowest to Highest"))
-            sorted_df['Grade'] = sorted_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
-            text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
-                
-            grade_color_map = {'A': '#14B8A6', 'B': '#5EEAD4', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
+            # POLISH: Filter out zero values for the bar chart to keep it clean, but retain the full filtered list for drill-down options
+            chart_df = filtered[filtered[metric_col] > 0].copy()
             
-            fig = px.bar(
-                sorted_df, y=facility_col, x=metric_col, orientation='h', color='Grade', 
-                color_discrete_map=grade_color_map, text=text_labels, 
-                category_orders={facility_col: sorted_df[facility_col].tolist()},
-                title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#475569;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
-            )
-            
-            if metric_col == 'Average Patients': current_avg = new_weighted_avg
-            elif metric_col == 'Total Patients': current_avg = round(filtered['Total Patients'].mean(), 1)
-            else: current_avg = round(filtered['Uptime %'].mean(), 1)
-                
-            fig.add_vline(
-                x=current_avg, 
-                line_dash="dash", 
-                line_color="#0F172A", 
-                line_width=2,
-                annotation_text=f" Avg: {current_avg}", 
-                annotation_position="top left",
-                annotation_font=dict(size=12, color="#0F172A", weight=700)
-            )
-            
-            layout_dict = PLOTLY_LAYOUT.copy()
-            layout_dict.update(dict(
-                height=max(500, len(sorted_df) * 30),
-                yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#0F172A", weight=600), automargin=True),
-                xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickfont=dict(size=12, color="#475569")),
-                showlegend=False, xaxis_title=metric_option, yaxis_title="",
-                margin=dict(l=20, r=60, t=80, b=10), coloraxis_showscale=False
-            ))
-            fig.update_layout(**layout_dict)
-            fig.update_traces(textposition='outside', textangle=0, textfont=dict(color="#0F172A", size=12, weight=700), cliponaxis=False)
-            st.plotly_chart(fig, use_container_width=True)
-
-            st.markdown("<hr style='margin: 24px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
-            st.markdown("<h4 style='color:#0F172A; margin-bottom:16px; font-weight:800;'>Facility Drill-Down</h4>", unsafe_allow_html=True)
-            
-            drill_options = sorted_df[facility_col].tolist()
-            selected_drill_facility = st.selectbox("Facility", drill_options, index=0 if drill_options else None, label_visibility="collapsed")
-            
-            if selected_drill_facility:
-                fac_row = plot_df[plot_df[facility_col] == selected_drill_facility].iloc[0]
-                
-                m1, m2, m3 = st.columns(3)
-                m1.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Avg / Day</div><div class='metric-icon'><span class='material-symbols-rounded'>trending_up</span></div></div><div class='metric-value'>{fac_row['Average Patients']}</div></div>", unsafe_allow_html=True)
-                m2.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Uptime</div><div class='metric-icon'><span class='material-symbols-rounded'>check_circle</span></div></div><div class='metric-value'>{fac_row['Uptime %']}%</div></div>", unsafe_allow_html=True)
-                m3.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Zero Days</div><div class='metric-icon'><span class='material-symbols-rounded'>warning</span></div></div><div class='metric-value'>{fac_row['Zero Days']}</div></div>", unsafe_allow_html=True)
-                
-                drill_trend = [{'Date': stats['active_date_map'][c], 'Patients': fac_row[c]} for c in stats['active_date_cols']]
-                if drill_trend:
-                    dt_df = pd.DataFrame(drill_trend).sort_values('Date')
-                    fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True, line_shape='spline', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
-                    fig_dt.update_traces(line_color='#10B981', line_width=3, marker=dict(size=8, color='#F8FAFC', line=dict(width=2, color='#10B981')), fillcolor='rgba(16, 185, 129, 0.15)')
+            if chart_df.empty:
+                st.info(f"All facilities currently have a {metric_option} of 0. Check the Diagnosis tab for operational failures.")
+            else:
+                sorted_df = chart_df.sort_values(by=metric_col, ascending=(sort_option == "Lowest to Highest"))
+                sorted_df['Grade'] = sorted_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
+                text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                     
-                    dt_layout = PLOTLY_LAYOUT.copy()
-                    dt_layout.update(dict(
-                        height=300,
-                        xaxis=dict(showgrid=False, tickformat="%d %b", range=[dt_df['Date'].min(), dt_df['Date'].max()]),
-                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'),
-                        margin=dict(l=10, r=10, t=50, b=10)
-                    ))
-                    fig_dt.update_layout(**dt_layout)
-                    st.plotly_chart(fig_dt, use_container_width=True)
+                grade_color_map = {'A': '#14B8A6', 'B': '#5EEAD4', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
+                
+                fig = px.bar(
+                    sorted_df, y=facility_col, x=metric_col, orientation='h', color='Grade', 
+                    color_discrete_map=grade_color_map, text=text_labels, 
+                    category_orders={facility_col: sorted_df[facility_col].tolist()},
+                    title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#475569;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
+                )
+                
+                if metric_col == 'Average Patients': current_avg = new_weighted_avg
+                elif metric_col == 'Total Patients': current_avg = round(filtered['Total Patients'].mean(), 1) # Keep average of the full set
+                else: current_avg = round(filtered['Uptime %'].mean(), 1) # Keep average of the full set
+                    
+                fig.add_vline(
+                    x=current_avg, 
+                    line_dash="dash", 
+                    line_color="#0F172A", 
+                    line_width=2,
+                    annotation_text=f" Avg: {current_avg}", 
+                    annotation_position="top left",
+                    annotation_font=dict(size=12, color="#0F172A", weight=700)
+                )
+                
+                layout_dict = PLOTLY_LAYOUT.copy()
+                layout_dict.update(dict(
+                    height=max(500, len(sorted_df) * 30),
+                    yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#0F172A", weight=600), automargin=True),
+                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickfont=dict(size=12, color="#475569")),
+                    showlegend=False, xaxis_title=metric_option, yaxis_title="",
+                    margin=dict(l=20, r=60, t=80, b=10), coloraxis_showscale=False
+                ))
+                fig.update_layout(**layout_dict)
+                fig.update_traces(textposition='outside', textangle=0, textfont=dict(color="#0F172A", size=12, weight=700), cliponaxis=False)
+                st.plotly_chart(fig, use_container_width=True)
+
+                st.markdown("<hr style='margin: 24px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
+                st.markdown("<h4 style='color:#0F172A; margin-bottom:16px; font-weight:800;'>Facility Drill-Down</h4>", unsafe_allow_html=True)
+                
+                # Use filtered so users can drill into facilities that had 0, even if the chart hides them
+                drill_options = filtered[facility_col].tolist()
+                selected_drill_facility = st.selectbox("Facility", drill_options, index=0 if drill_options else None, label_visibility="collapsed")
+                
+                if selected_drill_facility:
+                    fac_row = plot_df[plot_df[facility_col] == selected_drill_facility].iloc[0]
+                    
+                    m1, m2, m3 = st.columns(3)
+                    m1.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Avg / Day</div><div class='metric-icon'><span class='material-symbols-rounded'>trending_up</span></div></div><div class='metric-value'>{fac_row['Average Patients']}</div></div>", unsafe_allow_html=True)
+                    m2.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Uptime</div><div class='metric-icon'><span class='material-symbols-rounded'>check_circle</span></div></div><div class='metric-value'>{fac_row['Uptime %']}%</div></div>", unsafe_allow_html=True)
+                    m3.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Zero Days</div><div class='metric-icon'><span class='material-symbols-rounded'>warning</span></div></div><div class='metric-value'>{fac_row['Zero Days']}</div></div>", unsafe_allow_html=True)
+                    
+                    drill_trend = [{'Date': stats['active_date_map'][c], 'Patients': fac_row[c]} for c in stats['active_date_cols']]
+                    if drill_trend:
+                        dt_df = pd.DataFrame(drill_trend).sort_values('Date')
+                        fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True, line_shape='spline', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
+                        fig_dt.update_traces(line_color='#10B981', line_width=3, marker=dict(size=8, color='#F8FAFC', line=dict(width=2, color='#10B981')), fillcolor='rgba(16, 185, 129, 0.15)')
+                        
+                        dt_layout = PLOTLY_LAYOUT.copy()
+                        dt_layout.update(dict(
+                            height=300,
+                            xaxis=dict(showgrid=False, tickformat="%d %b", range=[dt_df['Date'].min(), dt_df['Date'].max()]),
+                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1'),
+                            margin=dict(l=10, r=10, t=50, b=10)
+                        ))
+                        fig_dt.update_layout(**dt_layout)
+                        st.plotly_chart(fig_dt, use_container_width=True)
 
         st.markdown("<h4 style='color:#0F172A; margin-top:24px; margin-bottom:16px; font-weight:800;'>Monthly Patient Volume</h4>", unsafe_allow_html=True)
         monthly_df = get_district_monthly_trend(df_raw, facility_col)
@@ -1207,6 +1215,7 @@ if view_mode == "District View":
             m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
             fig_m.update_layout(**m_layout)
             st.plotly_chart(fig_m, use_container_width=True)
+            st.caption("ℹ️ *Note: The most recent month may show lower volume as it represents month-to-date data only.*")
 
         st.markdown("<h4 style='color:#0F172A; margin-top:24px; margin-bottom:16px; font-weight:800;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
