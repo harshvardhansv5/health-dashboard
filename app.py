@@ -108,11 +108,11 @@ st.markdown("""
     .metric-label { color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
     .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #E2E8F0; color: #475569; display: flex; align-items: center; justify-content: center; }
     .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
-    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; }
+    .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; }
     .metric-trend { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: auto; }
-    .trend-up { color: #475569; } 
-    .trend-down { color: #F43F5E; }
-    .trend-neutral { color: #64748B; }
+    .trend-up { color: #10B981; background-color: #ECFDF5; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
+    .trend-down { color: #F43F5E; background-color: #FFF1F2; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
+    .trend-neutral { color: #64748B; background-color: #F1F5F9; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
 
     /* --- PREMIUM ZM RIBBON --- */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) {
@@ -410,6 +410,10 @@ st.markdown("""
     div[data-testid="stExpander"] > details > div {
         padding: 0px 24px 24px 24px !important;
     }
+
+    /* Date Picker specific fix to prevent command bar explosion */
+    div[data-testid="stDateInput"] { margin-bottom: 0px !important; }
+    div[data-testid="stDateInput"] label { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -486,6 +490,19 @@ def format_reason(reason):
     acronyms = ['OPD', 'LT', 'CHC', 'PHC', 'UPHC', 'RH', 'SDH', 'DH']
     words = str(reason).split()
     return ' '.join([w if w.upper() in acronyms else w.capitalize() for w in words])
+
+def get_trend_html(cur, prev):
+    if prev is None:
+        return '<span class="trend-neutral">—</span>'
+    if prev == 0:
+        if cur > 0: return '<span class="trend-up">▲ NEW</span>'
+        return '<span class="trend-neutral">—</span>'
+    pct = ((cur - prev) / prev) * 100
+    if pct > 0:
+        return f'<span class="trend-up">▲ {pct:.1f}%</span>'
+    elif pct < 0:
+        return f'<span class="trend-down">▼ {abs(pct):.1f}%</span>'
+    return '<span class="trend-neutral">— 0.0%</span>'
 
 @st.cache_data(ttl=3600, show_spinner="Fetching live data from Google Sheets...")
 def fetch_google_sheet(url):
@@ -651,7 +668,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
             active_dates = sorted_dates[start_idx:end_idx] if end_idx > 0 else []
         
     if not active_dates:
-        if window_offset > 0:
+        if window_offset > 0 or time_filter == "Select Dates...":
             plot_df = df[[facility_col]].copy()
             plot_df['Total Patients'] = 0
             plot_df['Average Patients'] = 0.0
@@ -745,7 +762,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v52.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v53.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -767,7 +784,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v52.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v53.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -901,9 +918,16 @@ with col_time_ctrl:
     time_filter = st.selectbox("TIME RANGE", ["Full History", "Past Week", "Past 2 Weeks", "Past Month", "Select Dates..."], label_visibility="visible")
     start_date, end_date = None, None
     if time_filter == "Select Dates...":
-        start_date = st.date_input("Start Date", value=pd.Timestamp.now() - timedelta(days=30))
-        end_date = st.date_input("End Date", value=pd.Timestamp.now())
-        date_range_str = f"{start_date.strftime('%d %b %Y')} to {end_date.strftime('%d %b %Y')}"
+        c1, c2 = st.columns(2)
+        with c1:
+            start_date = st.date_input("Start", value=pd.Timestamp.now() - timedelta(days=7), label_visibility="collapsed")
+        with c2:
+            end_date = st.date_input("End", value=pd.Timestamp.now(), label_visibility="collapsed")
+        
+        if start_date == end_date:
+            date_range_str = start_date.strftime('%d %b %Y')
+        else:
+            date_range_str = f"{start_date.strftime('%d %b')} to {end_date.strftime('%d %b')}"
     else:
         date_range_str = time_filter
 
@@ -962,6 +986,12 @@ if view_mode == "District View":
         
     df_raw = read_sheet_robust(xls, sheet_to_load)
     plot_df, _, stats = process_district_df(df_raw, time_filter, start_date, end_date)
+    
+    # Calculate Previous Stats for Trends
+    prev_stats = None
+    if time_filter != "Full History":
+        _, _, prev_stats = process_district_df(df_raw, time_filter, start_date, end_date, window_offset=1)
+        
     if plot_df is None: st.error(f"Could not process data."); st.stop()
     facility_col = stats['facility_col']
 
@@ -1005,6 +1035,22 @@ if view_mode == "District View":
             best_grade = "F"
             best_avg = 0
             
+        # Trend calculations
+        if prev_stats:
+            prev_total = prev_stats['total']
+            prev_uptime = calc_uptime(prev_stats)
+            # To calculate prev_weighted_avg correctly if we filtered by active_only:
+            # We don't have prev filtered data easily here. We will just use the raw prev_stats avg.
+            prev_avg = prev_stats['weighted_avg'] 
+            
+            trend_patients = get_trend_html(dist_total, prev_total)
+            trend_uptime = get_trend_html(new_uptime, prev_uptime)
+            trend_avg = get_trend_html(new_weighted_avg, prev_avg)
+        else:
+            trend_patients = '<span class="trend-neutral">—</span>'
+            trend_uptime = '<span class="trend-neutral">—</span>'
+            trend_avg = '<span class="trend-neutral">—</span>'
+            
         st.markdown(f'''
         <div class="metric-grid">
             <div class="metric-card">
@@ -1028,7 +1074,7 @@ if view_mode == "District View":
                     <div class="metric-label">Total Patients</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">groups</span></div>
                 </div>
-                <div class="metric-value">{dist_total:,}</div>
+                <div class="metric-value">{dist_total:,} {trend_patients}</div>
                 <div class="metric-trend trend-neutral">Across {date_range_str}</div>
             </div>
             <div class="metric-card">
@@ -1036,14 +1082,14 @@ if view_mode == "District View":
                     <div class="metric-label">Weighted Avg / Day</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">speed</span></div>
                 </div>
-                <div class="metric-value">{new_weighted_avg}</div>
+                <div class="metric-value">{new_weighted_avg} {trend_avg}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
                     <div class="metric-label">Facility Uptime</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div>
                 </div>
-                <div class="metric-value">{new_uptime}%</div>
+                <div class="metric-value">{new_uptime}% {trend_uptime}</div>
                 <div class="metric-trend trend-neutral">Reliability Score</div>
             </div>
         </div>
@@ -1732,6 +1778,17 @@ elif view_mode == "ZM View":
         state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
+        # Calculate previous ZM stats for the trend arrows
+        prev_state_df = None
+        if time_filter != "Full History":
+            if time_filter == "Select Dates..." and start_date and end_date:
+                span = (end_date - start_date).days + 1
+                prev_end = start_date - timedelta(days=1)
+                prev_start = prev_end - timedelta(days=span - 1)
+                prev_state_df = calculate_all_districts(tuple(available_sheets), file_bytes, "Select Dates...", prev_start, prev_end, window_offset=0)
+            else:
+                prev_state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, None, None, window_offset=1)
+        
     if not state_df.empty and not all_fac_df.empty:
         zm_df = state_df[state_df['District'].isin(zm_districts)].copy()
         zm_fac_df = all_fac_df[all_fac_df['District'].isin(zm_districts)].copy()
@@ -1751,6 +1808,23 @@ elif view_mode == "ZM View":
             
             avg_uptime = round(zm_df['Uptime %'].mean(), 1)
             
+            # Trends
+            if prev_state_df is not None and not prev_state_df.empty:
+                prev_zm_df = prev_state_df[prev_state_df['District'].isin(zm_districts)]
+                if not prev_zm_df.empty:
+                    p_total = prev_zm_df['Total Patients'].sum()
+                    p_fac_days = int((prev_zm_df['Facilities'] * prev_zm_df['Days Reported']).sum())
+                    p_avg = round(p_total / p_fac_days, 1) if p_fac_days > 0 else 0.0
+                    p_uptime = round(prev_zm_df['Uptime %'].mean(), 1)
+                    
+                    trend_patients = get_trend_html(total_patients, p_total)
+                    trend_avg = get_trend_html(zone_weighted_avg, p_avg)
+                    trend_uptime = get_trend_html(avg_uptime, p_uptime)
+                else:
+                    trend_patients = trend_avg = trend_uptime = "—"
+            else:
+                trend_patients = trend_avg = trend_uptime = "—"
+            
             sub_districts = ['Barh', 'Danapur']
             sub_count = len([d for d in zm_districts if d in sub_districts])
             dist_count = len(zm_districts) - sub_count
@@ -1768,7 +1842,7 @@ elif view_mode == "ZM View":
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Weighted Avg / Day</div><div class="metric-icon"><span class="material-symbols-rounded">speed</span></div></div>
-                    <div class="metric-value">{zone_weighted_avg}</div>
+                    <div class="metric-value">{zone_weighted_avg} {trend_avg}</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">hub</span></div></div>
@@ -1777,8 +1851,7 @@ elif view_mode == "ZM View":
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Avg Zone Uptime</div><div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div></div>
-                    <div class="metric-value">{avg_uptime}%</div>
-                    <div class="metric-trend trend-neutral">Reliability Score</div>
+                    <div class="metric-value">{avg_uptime}% {trend_uptime}</div>
                 </div>
             </div>
             ''', unsafe_allow_html=True)
@@ -1810,7 +1883,6 @@ elif view_mode == "ZM View":
                 
                 st.markdown(f"<h4 style='color:#0F172A; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
                 fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients', title="<b>Total Patients by District</b>")
-                # FIX: Force text outside and horizontal
                 fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
                 
                 zm_layout = PLOTLY_LAYOUT.copy()
@@ -1920,7 +1992,14 @@ elif view_mode == "Active Spokes":
     if not all_fac_df.empty:
         active_df = all_fac_df[all_fac_df['Total Patients'] > 0].copy()
         
-        col1, col2, col3 = st.columns([1.5, 1.5, 1.5], vertical_alignment="bottom")
+        col1, col2, col3 = st.columns([2, 2, 2])
+        with col1:
+            st.markdown(f'''
+            <div class="metric-card" style="padding: 16px; margin-bottom: 0; height: 100%; display: flex; justify-content: center;">
+                <div class="metric-header"><div class="metric-label">Active Spokes Shown</div><div class="metric-icon"><span class="material-symbols-rounded">visibility</span></div></div>
+                <div class="metric-value">{len(active_df)} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {TOTAL_SPOKES} Total</span></div>
+            </div>
+            ''', unsafe_allow_html=True)
         with col2:
             dist_filter = st.multiselect("Filter by District", sorted(active_df['District'].unique()), default=[])
         with col3:
@@ -1928,14 +2007,6 @@ elif view_mode == "Active Spokes":
             
         if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
         if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
-        
-        with col1:
-            st.markdown(f'''
-            <div class="metric-card" style="padding: 16px; margin-bottom: 0;">
-                <div class="metric-header"><div class="metric-label">Active Spokes Shown</div><div class="metric-icon"><span class="material-symbols-rounded">visibility</span></div></div>
-                <div class="metric-value">{len(active_df)} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {TOTAL_SPOKES} Total</span></div>
-            </div>
-            ''', unsafe_allow_html=True)
         
         active_df = active_df.sort_values(by=['Uptime %', 'Total Patients'], ascending=[False, False]).reset_index(drop=True)
         
@@ -1945,8 +2016,11 @@ elif view_mode == "Active Spokes":
             elif val == 'F': return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
             return ''
             
-        dynamic_total_label = f"Total Patients ({time_filter})"
-        if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
+        if time_filter == "Select Dates..." and start_date == end_date:
+            dynamic_total_label = f"Total Patients ({start_date.strftime('%d %b %Y')})"
+        else:
+            dynamic_total_label = f"Total Patients ({time_filter})"
+            if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
 
         display_active = active_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
         display_active = display_active.rename(columns={'Total Patients': dynamic_total_label})
