@@ -21,7 +21,7 @@ DISTANCE_FALLBACK = {}
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🩸", layout="wide")
 
-# --- SOFT SLATE & MINT UI CSS ---
+# --- SOFT SLATE & CLINICAL UI CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -43,10 +43,10 @@ st.markdown("""
     [data-testid="stDataFrameColumnMenu"] { display: none !important; }
     [data-testid="stDataFrame"] div[role="columnheader"] { cursor: pointer !important; }
 
-    /* --- FORCE EMERALD PROGRESS BARS (EVERYWHERE) --- */
-    div[data-testid="stProgress"] > div > div > div { background-color: #10B981 !important; }
-    div[data-testid="stDataFrame"] div[role="progressbar"] > div { background-color: #10B981 !important; }
-    div[data-testid="stDataFrame"] div[role="progressbar"] > div > div { background-color: #10B981 !important; }
+    /* --- FORCE CYAN PROGRESS BARS --- */
+    div[data-testid="stProgress"] > div > div > div { background-color: #06B6D4 !important; }
+    div[data-testid="stDataFrame"] div[role="progressbar"] > div { background-color: #06B6D4 !important; }
+    div[data-testid="stDataFrame"] div[role="progressbar"] > div > div { background-color: #06B6D4 !important; }
 
     /* --- LOGIN SPECIFIC CSS --- */
     div[data-testid="stHorizontalBlock"]:has(> div > div[data-testid="stForm"]) {
@@ -68,25 +68,25 @@ st.markdown("""
         font-size: 14px !important;
     }
     div[data-testid="stTextInput"] input:focus {
-        border-color: #10B981 !important;
-        box-shadow: 0 0 0 1px #10B981 !important;
+        border-color: #06B6D4 !important;
+        box-shadow: 0 0 0 1px #06B6D4 !important;
         background-color: #F8FAFC !important;
     }
     div[data-testid="stFormSubmitButton"] > button {
-        background-color: #10B981 !important;
+        background-color: #06B6D4 !important;
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 10px !important;
         font-weight: 700 !important;
         font-size: 15px !important;
         height: 48px !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2) !important;
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2) !important;
         margin-top: 16px !important;
     }
     div[data-testid="stFormSubmitButton"] > button:hover {
-        background-color: #059669 !important;
+        background-color: #0891B2 !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3) !important;
+        box-shadow: 0 6px 16px rgba(6, 182, 212, 0.3) !important;
     }
 
     /* --- HERO DECK CARDS (Soft off-white) --- */
@@ -120,7 +120,7 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) {
         background-color: #F8FAFC !important;
         border: 1px solid #CBD5E1 !important;
-        border-left: 6px solid #10B981 !important;
+        border-left: 6px solid #06B6D4 !important;
         border-radius: 16px !important;
         padding: 12px 24px !important;
         margin-bottom: 24px !important;
@@ -131,7 +131,7 @@ st.markdown("""
     }
     .zm-label { color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-right: 12px; }
     .zm-name { color: #0F172A; font-size: 16px; font-weight: 800; margin-right: 8px; }
-    .zm-zone { color: #10B981; font-size: 14px; font-weight: 600; }
+    .zm-zone { color: #06B6D4; font-size: 14px; font-weight: 600; }
 
     /* --- MODERN PAGE HEADERS --- */
     .page-header-container { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; margin-top: 8px; }
@@ -141,7 +141,7 @@ st.markdown("""
     .page-subtitle-text { font-size: 14px; font-weight: 500; color: #475569; margin-top: 4px; }
 
     /* Report Header */
-    .report-header { background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05); border-left: 6px solid #10B981; }
+    .report-header { background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05); border-left: 6px solid #06B6D4; }
     .report-title { color: #0F172A; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
     .report-meta { color: #475569; font-size: 13px; line-height: 1.5; font-weight: 500; }
     
@@ -226,13 +226,13 @@ st.markdown("""
     .header-icon { 
         display: flex; align-items: center; justify-content: center; 
         width: 44px; height: 44px; 
-        background-color: #10B981; /* Solid Emerald */
+        background-color: #DC2626; /* Crimson Red for Pathology */
         border-radius: 12px; /* Rounded square */
         border: none;
         color: #FFFFFF; 
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); 
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); 
     }
-    .header-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; stroke-width: 2.5; }
+    .header-icon svg { width: 24px; height: 24px; stroke: #FFFFFF; stroke-width: 2.5; fill: none; }
     .header-title { font-size: 16px; font-weight: 800; color: #0F172A; letter-spacing: -0.3px; line-height: 1.1; margin-bottom: 2px; }
     .header-subtitle { font-size: 12px; font-weight: 500; color: #64748B; margin-top: 0; }
     
@@ -251,10 +251,10 @@ st.markdown("""
     
     /* Hover and focus states for the select box */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"]:hover {
-        border-color: #10B981 !important;
+        border-color: #06B6D4 !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"]:focus-within {
-        box-shadow: 0 0 0 2px #10B981 inset !important;
+        box-shadow: 0 0 0 2px #06B6D4 inset !important;
         background-color: #F8FAFC !important;
     }
 
@@ -268,23 +268,23 @@ st.markdown("""
         content: "";
         display: inline-block;
         width: 8px; height: 8px;
-        background-color: #10B981;
+        background-color: #06B6D4;
         border-radius: 50%;
-        animation: pulse-emerald 2s infinite;
+        animation: pulse-cyan 2s infinite;
     }
 
     /* Blinking Radar Dot (Kept for other uses) */
-    .status-dot { width: 8px; height: 8px; background-color: #10B981; border-radius: 50%; animation: pulse-emerald 2s infinite; display: inline-block; margin-right: 6px; }
-    @keyframes pulse-emerald {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    .status-dot { width: 8px; height: 8px; background-color: #06B6D4; border-radius: 50%; animation: pulse-cyan 2s infinite; display: inline-block; margin-right: 6px; }
+    @keyframes pulse-cyan {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(6, 182, 212, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
     }
 
     /* Compare Battle Cards */
     .battle-card { background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05); margin-bottom: 16px; }
-    .battle-card-green { border-top: 6px solid #10B981; }
-    .battle-card-red { border-top: 6px solid #F43F5E; }
+    .battle-card-green { border-top: 6px solid #06B6D4; }
+    .battle-card-red { border-top: 6px solid #DC2626; }
     .battle-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: #0F172A; }
     .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #CBD5E1; padding: 12px 0; font-size: 14px; color: #475569; font-weight: 500;}
     .battle-row:last-child { border-bottom: none; }
@@ -296,10 +296,10 @@ st.markdown("""
         transition: all 0.2s ease-in-out !important; min-height: 42px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover { background-color: #F8FAFC !important; border-color: #10B981 !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { box-shadow: 0 0 0 2px #10B981 inset !important; background-color: #F8FAFC !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { background-color: #F8FAFC !important; border-color: #06B6D4 !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { box-shadow: 0 0 0 2px #06B6D4 inset !important; background-color: #F8FAFC !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; font-size: 14px !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #10B981 !important; width: 16px !important; height: 16px !important;}
+    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #06B6D4 !important; width: 16px !important; height: 16px !important;}
     
     label[data-testid="stWidgetLabel"] p { color: #475569 !important; font-weight: 700 !important; font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px !important;}
 
@@ -315,7 +315,7 @@ st.markdown("""
     
     /* The Apply Filters Button */
     div[data-testid="stFormSubmitButton"] > button {
-        background-color: #10B981 !important;
+        background-color: #06B6D4 !important;
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 10px !important;
@@ -323,14 +323,14 @@ st.markdown("""
         font-size: 14px !important;
         padding: 0px 24px !important;
         transition: all 0.2s ease !important;
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2) !important;
+        box-shadow: 0 2px 8px rgba(6, 182, 212, 0.2) !important;
         height: 42px !important;
         width: 100% !important;
     }
     div[data-testid="stFormSubmitButton"] > button:hover {
-        background-color: #059669 !important;
+        background-color: #0891B2 !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3) !important;
     }
 
     /* Ghost Button for ZM Profile */
@@ -347,9 +347,9 @@ st.markdown("""
         width: 100% !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button:hover {
-        background-color: #ECFDF5 !important;
-        border-color: #10B981 !important;
-        color: #10B981 !important;
+        background-color: #ECFEFF !important;
+        border-color: #06B6D4 !important;
+        color: #06B6D4 !important;
     }
 
     /* Compact Download Buttons */
@@ -366,8 +366,8 @@ st.markdown("""
     }
     div[data-testid="stDownloadButton"] > button:hover {
         background-color: #E2E8F0 !important;
-        border-color: #10B981 !important;
-        color: #10B981 !important;
+        border-color: #06B6D4 !important;
+        color: #06B6D4 !important;
     }
 
     /* --- TAB OVERRIDES (Kill the Blue) --- */
@@ -379,7 +379,7 @@ st.markdown("""
     button[data-baseweb="tab"] p { font-weight: 600 !important; }
     button[aria-selected="true"] { color: #0F172A !important; }
     button[aria-selected="true"] p { color: #0F172A !important; font-weight: 800 !important; }
-    div[data-baseweb="tab-highlight"] { background-color: #10B981 !important; height: 3px !important; border-radius: 3px !important; }
+    div[data-baseweb="tab-highlight"] { background-color: #06B6D4 !important; height: 3px !important; border-radius: 3px !important; }
     div[data-baseweb="tab-border"] { background-color: #CBD5E1 !important; }
 
     /* --- STYLE THE EXPANDER (SOFT UI CARD) --- */
@@ -406,8 +406,8 @@ st.markdown("""
         background-color: #E2E8F0 !important;
     }
     div[data-testid="stExpander"] summary svg {
-        fill: #10B981 !important;
-        color: #10B981 !important;
+        fill: #06B6D4 !important;
+        color: #06B6D4 !important;
     }
     div[data-testid="stExpander"] > details > div {
         padding: 0px 24px 24px 24px !important;
@@ -429,8 +429,12 @@ if not st.session_state.authenticated:
         with st.form("login_form"):
             st.markdown("""
             <div style="text-align: center; margin-bottom: 32px;">
-                <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background-color: #ECFDF5; border-radius: 16px; margin-bottom: 16px; border: 1px solid #A7F3D0;">
-                    <span class="material-symbols-rounded" style="font-size: 32px; color: #10B981;">health_and_safety</span>
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background-color: #FEF2F2; border-radius: 16px; margin-bottom: 16px; border: 1px solid #FECACA;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 32px; height: 32px;">
+                        <path d="M14.5 2h-5v16.5a2.5 2.5 0 0 0 5 0V2z"></path>
+                        <path d="M9.5 12h5"></path>
+                        <path d="M12 15.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="#DC2626"></path>
+                    </svg>
                 </div>
                 <h2 style="color:#0F172A; font-size: 28px; font-weight: 800; margin-bottom: 8px;">Secure Login</h2>
                 <p style="color:#475569; font-size: 14px; margin: 0;">Enter the password to access the Bihar Health Dashboard.</p>
@@ -769,7 +773,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v61.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v62.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -791,7 +795,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v61.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v62.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -902,7 +906,9 @@ with col_title:
         <div class="header-left">
             <div class="header-icon">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"></path>
+                    <path d="M14.5 2h-5v16.5a2.5 2.5 0 0 0 5 0V2z"></path>
+                    <path d="M9.5 12h5"></path>
+                    <path d="M12 15.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3z" fill="currentColor"></path>
                 </svg>
             </div>
             <div>
@@ -1193,7 +1199,7 @@ if view_mode == "District View":
                         
                         # FIX: Changed line_shape from 'spline' to 'linear' to stop fake curves and fractional/negative patients
                         fig_dt = px.area(dt_df, x='Date', y='Patients', markers=True, line_shape='linear', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
-                        fig_dt.update_traces(line_color='#10B981', line_width=3, marker=dict(size=8, color='#F8FAFC', line=dict(width=2, color='#10B981')), fillcolor='rgba(16, 185, 129, 0.15)')
+                        fig_dt.update_traces(line_color='#06B6D4', line_width=3, marker=dict(size=8, color='#F8FAFC', line=dict(width=2, color='#06B6D4')), fillcolor='rgba(6, 182, 212, 0.15)')
                         
                         dt_layout = PLOTLY_LAYOUT.copy()
                         dt_layout.update(dict(
@@ -1253,7 +1259,7 @@ if view_mode == "District View":
         <div class="report-header">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div class="report-title" style="margin-bottom: 0;">District Report Card — {selected_district_zm}</div>
-                <div style="background-color: #ECFDF5; color: #047857; padding: 8px 20px; border-radius: 30px; font-weight: 700; font-size: 14px; border: 1px solid #A7F3D0; display: flex; align-items: center; gap: 8px;">
+                <div style="background-color: #ECFEFF; color: #0891B2; padding: 8px 20px; border-radius: 30px; font-weight: 700; font-size: 14px; border: 1px solid #A5F3FC; display: flex; align-items: center; gap: 8px;">
                     <span class="material-symbols-rounded" style="font-size:18px;">local_hospital</span> <span>Total Spokes: {stats['num_facilities']}</span>
                 </div>
             </div>
@@ -1561,7 +1567,7 @@ elif view_mode == "State View":
                     <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
                 </div>
                 <div class="metric-value" style="font-size: 32px; margin-bottom: 4px;">
-                    <span style="color: #10B981;">{total_active}</span> 
+                    <span style="color: #06B6D4;">{total_active}</span> 
                     <span style="font-size: 16px; color:#64748B; font-weight:600; margin-left: 4px;">Active</span>
                 </div>
                 <div class="metric-trend" style="margin-top: 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -1744,7 +1750,7 @@ elif view_mode == "State View":
                     with col1: 
                         st.markdown(f'''
                         <div class="battle-card battle-card-green">
-                            <div class="battle-title" style="color: #10B981;">{district_a_display}</div>
+                            <div class="battle-title" style="color: #06B6D4;">{district_a_display}</div>
                             <div class="battle-row"><span>Total Patients</span> <span style="{get_style(sa['total'], sb['total'])}">{sa['total']:,}</span></div>
                             <div class="battle-row"><span>Weighted Avg / Day</span> <span style="{get_style(sa['weighted_avg'], sb['weighted_avg'])}">{sa['weighted_avg']}</span></div>
                             <div class="battle-row"><span>Facility Uptime</span> <span style="{get_style(a_uptime, b_uptime)}">{a_uptime}%</span></div>
@@ -1755,7 +1761,7 @@ elif view_mode == "State View":
                     with col2: 
                         st.markdown(f'''
                         <div class="battle-card battle-card-red">
-                            <div class="battle-title" style="color: #4F46E5;">{district_b_display}</div>
+                            <div class="battle-title" style="color: #DC2626;">{district_b_display}</div>
                             <div class="battle-row"><span>Total Patients</span> <span style="{get_style(sb['total'], sa['total'])}">{sb['total']:,}</span></div>
                             <div class="battle-row"><span>Weighted Avg / Day</span> <span style="{get_style(sb['weighted_avg'], sa['weighted_avg'])}">{sb['weighted_avg']}</span></div>
                             <div class="battle-row"><span>Facility Uptime</span> <span style="{get_style(b_uptime, a_uptime)}">{b_uptime}%</span></div>
@@ -1787,7 +1793,7 @@ elif view_mode == "State View":
                     
                     # Also fixed the comparison chart to use linear shapes
                     fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, line_shape='linear', 
-                                    color_discrete_map={district_a_display: '#10B981', district_b_display: '#4F46E5'})
+                                    color_discrete_map={district_a_display: '#06B6D4', district_b_display: '#DC2626'})
                     fig_c.update_traces(connectgaps=True, marker=dict(size=8))
                     
                     cmp_layout = PLOTLY_LAYOUT.copy()
