@@ -109,24 +109,10 @@ st.markdown("""
     .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #E2E8F0; color: #475569; display: flex; align-items: center; justify-content: center; }
     .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
     .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; }
-    
-    /* Trend Badges (Subdued Context) */
-    .metric-trend { 
-        display: flex; justify-content: space-between; align-items: center; width: 100%; 
-        font-size: 12px; font-weight: 600; color: #64748B; margin-top: auto; 
-    }
-    .trend-up { 
-        color: #10B981; background-color: #ECFDF5; padding: 2px 6px; border-radius: 4px; 
-        font-size: 11px !important; font-weight: 800; display: inline-flex; align-items: center; 
-    }
-    .trend-down { 
-        color: #F43F5E; background-color: #FFF1F2; padding: 2px 6px; border-radius: 4px; 
-        font-size: 11px !important; font-weight: 800; display: inline-flex; align-items: center; 
-    }
-    .trend-neutral { 
-        color: #64748B; background-color: #F1F5F9; padding: 2px 6px; border-radius: 4px; 
-        font-size: 11px !important; font-weight: 800; display: inline-flex; align-items: center; 
-    }
+    .metric-trend { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; margin-top: auto; }
+    .trend-up { color: #10B981; background-color: #ECFDF5; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
+    .trend-down { color: #F43F5E; background-color: #FFF1F2; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
+    .trend-neutral { color: #64748B; background-color: #F1F5F9; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; }
 
     /* --- PREMIUM ZM RIBBON --- */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) {
@@ -784,7 +770,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v55.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v54.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -806,7 +792,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v55.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v54.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1061,6 +1047,8 @@ if view_mode == "District View":
         if prev_stats:
             prev_total = prev_stats['total']
             prev_uptime = calc_uptime(prev_stats)
+            # To calculate prev_weighted_avg correctly if we filtered by active_only:
+            # We don't have prev filtered data easily here. We will just use the raw prev_stats avg.
             prev_avg = prev_stats['weighted_avg'] 
             
             trend_patients = get_trend_html(dist_total, prev_total)
@@ -1079,9 +1067,7 @@ if view_mode == "District View":
                     <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
                 </div>
                 <div class="metric-value">{num_facs}</div>
-                <div class="metric-trend">
-                    <span>{total_active} Active</span>
-                </div>
+                <div class="metric-trend trend-neutral">{total_active} Active</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
@@ -1089,42 +1075,30 @@ if view_mode == "District View":
                     <div class="metric-icon"><span class="material-symbols-rounded">star</span></div>
                 </div>
                 <div class="metric-value" style="font-size: 16px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{best_name}">{best_name}</div>
-                <div class="metric-trend">
-                    <span class="trend-up" style="background: none; padding: 0;">↗ {best_avg} Avg / Day</span>
-                </div>
+                <div class="metric-trend trend-up" style="font-size: 12px;">↗ {best_avg} Avg / Day</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
                     <div class="metric-label">Total Patients</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">groups</span></div>
                 </div>
-                <div class="metric-value">{dist_total:,}</div>
-                <div class="metric-trend">
-                    <span>Across {date_range_str}</span>
-                    {trend_patients}
-                </div>
+                <div class="metric-value">{dist_total:,} {trend_patients}</div>
+                <div class="metric-trend trend-neutral">Across {date_range_str}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
                     <div class="metric-label">Weighted Avg / Day</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">speed</span></div>
                 </div>
-                <div class="metric-value">{new_weighted_avg}</div>
-                <div class="metric-trend">
-                    <span>Facilities × Days</span>
-                    {trend_avg}
-                </div>
+                <div class="metric-value">{new_weighted_avg} {trend_avg}</div>
             </div>
             <div class="metric-card">
                 <div class="metric-header">
                     <div class="metric-label">Facility Uptime</div>
                     <div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div>
                 </div>
-                <div class="metric-value">{new_uptime}%</div>
-                <div class="metric-trend">
-                    <span>Reliability Score</span>
-                    {trend_uptime}
-                </div>
+                <div class="metric-value">{new_uptime}% {trend_uptime}</div>
+                <div class="metric-trend trend-neutral">Reliability Score</div>
             </div>
         </div>
         ''', unsafe_allow_html=True)
@@ -1872,32 +1846,20 @@ elif view_mode == "ZM View":
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Coverage</div><div class="metric-icon"><span class="material-symbols-rounded">map</span></div></div>
                     <div class="metric-value">{total_units}</div>
-                    <div class="metric-trend">
-                        <span>Total Units</span>
-                    </div>
+                    <div class="metric-trend trend-neutral">Total Units</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Weighted Avg / Day</div><div class="metric-icon"><span class="material-symbols-rounded">speed</span></div></div>
-                    <div class="metric-value">{zone_weighted_avg}</div>
-                    <div class="metric-trend">
-                        <span>Facilities × Days</span>
-                        {trend_avg}
-                    </div>
+                    <div class="metric-value">{zone_weighted_avg} {trend_avg}</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">hub</span></div></div>
-                    <div class="metric-value">{total_active} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {total_operational}</span></div>
-                    <div class="metric-trend">
-                        <span>Operational Facilities</span>
-                    </div>
+                    <div class="metric-value">{total_active} <span style="font-size:16px; color:#64748B; font-weight:600;">/ {total_operational} Operational</span></div>
+                    <div class="metric-trend trend-neutral">Operational Facilities</div>
                 </div>
                 <div class="metric-card">
                     <div class="metric-header"><div class="metric-label">Avg Zone Uptime</div><div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div></div>
-                    <div class="metric-value">{avg_uptime}%</div>
-                    <div class="metric-trend">
-                        <span>Reliability Score</span>
-                        {trend_uptime}
-                    </div>
+                    <div class="metric-value">{avg_uptime}% {trend_uptime}</div>
                 </div>
             </div>
             ''', unsafe_allow_html=True)
@@ -2151,4 +2113,107 @@ elif view_mode == "Inactive Spokes":
             fig_off.update_layout(**off_layout)
             st.plotly_chart(fig_off, use_container_width=True)
 
-        z_tab1, z_tab2 = st.tabs([f"🔴 True Operational Failures ({len(op_failures)})", f"🚧 Pending Launch ({len(pending_launch)})
+        z_tab1, z_tab2 = st.tabs([f"🔴 True Operational Failures ({len(op_failures)})", f"🚧 Pending Launch ({len(pending_launch)})"])
+        
+        with z_tab1:
+            if not op_failures.empty:
+                op_failures['SortDate'] = pd.to_datetime(op_failures['Last Sample Date'], errors='coerce')
+                op_failures = op_failures.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
+                
+                display_tracker = op_failures[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
+                styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
+                
+                st.dataframe(styled_tracker, use_container_width=True, hide_index=True, column_config={
+                    "District": st.column_config.TextColumn("District", width="medium"),
+                    "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                    "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                    "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                })
+                
+                buffer1 = io.BytesIO()
+                with pd.ExcelWriter(buffer1, engine='openpyxl') as writer:
+                    display_tracker.to_excel(writer, index=False, sheet_name='Operational Failures')
+                
+                col_dl1, col_dl2 = st.columns([8, 2])
+                with col_dl2:
+                    st.download_button(
+                        label=f"📥 Download Failures ({len(op_failures)})", data=buffer1.getvalue(),
+                        file_name=f"Statewide_OpFailures_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
+                    )
+            else:
+                st.success("✅ Excellent! No operational facilities found with 0 patients.")
+
+        with z_tab2:
+            if not pending_launch.empty:
+                pending_launch['SortDate'] = pd.to_datetime(pending_launch['Last Sample Date'], errors='coerce')
+                pending_launch = pending_launch.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
+                
+                display_pending = pending_launch[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                display_pending['Primary Reason'] = display_pending['Primary Reason'].apply(format_reason)
+                styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
+                
+                st.dataframe(styled_pending, use_container_width=True, hide_index=True, column_config={
+                    "District": st.column_config.TextColumn("District", width="medium"),
+                    "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                    "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                    "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                })
+                st.info("These facilities will automatically move to 'Operational' as soon as their first data column is added.")
+                
+                buffer2 = io.BytesIO()
+                with pd.ExcelWriter(buffer2, engine='openpyxl') as writer:
+                    display_pending.to_excel(writer, index=False, sheet_name='Pending Launch')
+                
+                col_dl1, col_dl2 = st.columns([8, 2])
+                with col_dl2:
+                    st.download_button(
+                        label=f"📥 Download Pending ({len(pending_launch)})", data=buffer2.getvalue(),
+                        file_name=f"Statewide_PendingLaunch_{pd.Timestamp.now().strftime('%Y%m%d')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
+                    )
+            else:
+                st.success("✅ All facilities have launched!")
+    else:
+        st.warning("Could not load facility data.")
+
+# --- GLOBAL DEFINITIONS EXPANDER ---
+st.markdown("<br>", unsafe_allow_html=True)
+with st.expander(":material/info: Metric Definitions & Grading System"):
+    st.markdown("""
+    **📊 Weighted Avg / Day**
+    Total patients divided by total facility-days (Total Facilities × Total Days). This is the truest measure of daily efficiency, as it prevents a facility that was only open for 1 day with 50 patients from skewing the district's average.
+    
+    **⏱️ Uptime %**
+    The percentage of possible facility-days where the patient count was greater than zero. A higher percentage means the facility is consistently operational.
+    
+    **🔴 Inactive vs 🟢 Active**
+    A facility is marked **Inactive** if it reported 0 patients across the *entire* selected time range. If it reported patients on even a single day, it is **Active**.
+    """)
+    
+    st.info("""
+    **Example:**
+    *   **Weighted Avg:** 10 facilities report for 5 days (50 total facility-days). They see 100 patients total. The Weighted Avg is **100 ÷ 50 = 2.0**.
+    *   **Uptime:** A facility has 10 days of data. They report `0` on 3 days. Their Uptime is **7 ÷ 10 = 70%**.
+    """)
+
+    st.markdown("**🏆 Grading System**")
+    st.markdown("*Note: A facility must meet **BOTH** the Uptime and Avg Patients requirements to earn the grade. If it fails either one, it drops to the next lowest grade.*")
+    
+    grade_data = pd.DataFrame({
+        "Grade": ["A (Excellent)", "B (Good)", "C (Fair)", "D (Poor)", "F (Critical)"],
+        "Uptime Requirement": ["> 85%", "> 70%", "> 50%", "> 30%", "< 30%"],
+        "Avg Patients Requirement": ["> 10", "> 5", "> 2", "> 1", "0"]
+    })
+    
+    st.dataframe(grade_data, hide_index=True, use_container_width=True, column_config={
+        "Grade": st.column_config.TextColumn("Grade", width="medium"),
+        "Uptime Requirement": st.column_config.TextColumn("Uptime Requirement", width="medium"),
+        "Avg Patients Requirement": st.column_config.TextColumn("Avg Patients Requirement", width="medium"),
+    })
+    
+    st.info("""
+    **Grading Example:**
+    If a facility reports every single day (100% Uptime) but only sees **1 patient per day** (Avg 1.0), they get a **D**. They do not get an A, because their patient volume is too low.
+    """)
