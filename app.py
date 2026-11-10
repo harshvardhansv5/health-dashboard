@@ -568,6 +568,10 @@ def extract_date(col_name):
         s = re.sub(r'\(.*?\)', '', s) 
         s = s.replace('∕', '/').replace('⁄', '/')
         s = s.replace('‐', '-').replace('–', '-').replace('—', '-')
+        
+        # FIX: Collapse multiple dashes (e.g., '--' to '-')
+        s = re.sub(r'-+', '-', s)
+        
         s = re.sub(r'\s*([-/.∕⁄‐–—])\s*', r'\1', s)
         s = re.sub(r'(\d+)(st|nd|rd|th)', r'\1', s)
         s = s.strip()
@@ -777,7 +781,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v66.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v69.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -799,7 +803,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v66.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v69.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1608,9 +1612,12 @@ elif view_mode == "State View":
         s_tab1, s_tab2, s_tab3 = st.tabs(["District Leaderboard", "ZM Leaderboard", "District vs District"])
         
         with s_tab1:
-            c1, c2 = st.columns(2)
-            with c1: state_metric_label = st.radio("Rank & Compare by:", ["Total Patient Count", "Weighted Avg", "Uptime %"], horizontal=True)
-            with c2: state_sort_order = st.radio("Sort Order:", ["Descending", "Ascending"], horizontal=True)
+            # FIX: Replaced the radio buttons with the dropdown UI to match ZM View
+            c1, c2 = st.columns([2, 1])
+            with c1: 
+                state_metric_label = st.selectbox("Sort By:", ["Total Patient Count", "Weighted Avg", "Uptime %"], key="state_sort_col")
+            with c2:
+                state_sort_order = st.radio("Order:", ["Descending", "Ascending"], horizontal=True, key="state_sort_order")
                 
             state_metric_col = {"Total Patient Count": "Total Patients", "Weighted Avg": "Weighted Avg", "Uptime %": "Uptime %"}[state_metric_label]
             
@@ -1936,7 +1943,6 @@ elif view_mode == "ZM View":
             ])
             
             with zm_tab1:
-                # FIX: Replaced the lonely "Sort Order" button with a full sort selector
                 c1, c2 = st.columns([2, 1])
                 with c1: 
                     zm_sort_metric = st.selectbox("Sort By:", ["Uptime %", "Weighted Avg", "Total Patients"], key="zm_sort_col")
