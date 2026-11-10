@@ -782,7 +782,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v75.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v76.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -804,7 +804,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v75.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v76.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1374,11 +1374,10 @@ if view_mode == "District View":
         st.caption("The Excel file contains two sheets: one for the District Summary and one for the full Spoke Scorecard.")
 
     with d_tab3:
-        sub_tab1, sub_tab2, sub_tab3, sub_tab4 = st.tabs([
+        sub_tab1, sub_tab2, sub_tab3 = st.tabs([
             f"🔴 Inactive ({true_inactive_count})", 
             f"{active_icon} Active ({total_active})", 
-            f"🚧 Pending ({pending_count})",
-            "📝 Text Log"
+            f"🚧 Pending ({pending_count})"
         ])
         
         with sub_tab1:
@@ -1467,26 +1466,6 @@ if view_mode == "District View":
                     "Status": st.column_config.TextColumn("Status", width="medium")
                 })
                 st.info("These facilities will automatically move to 'Active' as soon as their first data column is added.")
-
-        with sub_tab4:
-            text_records = stats.get('text_records', [])
-            if not text_records:
-                st.success("✅ No text notes (reasons) were found for this district in the selected time range.")
-            else:
-                df_texts = pd.DataFrame(text_records)
-                df_texts['Date'] = df_texts['Date'].dt.strftime('%d %b %Y')
-                df_texts['Raw_Note'] = df_texts['Raw_Note'].apply(format_reason)
-                
-                df_texts['SortDate'] = pd.to_datetime(df_texts['Date'], format='%d %b %Y', errors='coerce')
-                df_texts = df_texts.sort_values(by=['SortDate', 'Facility'], ascending=[False, True]).drop(columns=['SortDate'])
-                
-                styled_texts = df_texts.style.map(style_reason, subset=['Raw_Note'])
-                st.dataframe(styled_texts, use_container_width=True, hide_index=True, column_config={
-                    "Facility": st.column_config.TextColumn("Facility", width="large"),
-                    "Date": st.column_config.TextColumn("Date", width="medium"),
-                    "Raw_Note": st.column_config.TextColumn("Reason", width="large"),
-                })
-                st.info("This log captures text notes for facilities even if they reported patients on other days.")
 
     with d_tab4:
         st.markdown("<h4 style='color:#1C1917; margin-bottom:16px; font-weight:800;'>Hub Logistics & Distance Mapping</h4>", unsafe_allow_html=True)
