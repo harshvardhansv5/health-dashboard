@@ -782,7 +782,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v76.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v77.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -804,7 +804,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v76.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v77.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1243,11 +1243,11 @@ if view_mode == "District View":
                         )
                         
                         dt_layout = PLOTLY_LAYOUT.copy()
-                        # FIX: Removed dtick=1. Letting nticks handle the spacing while forcing integers.
+                        # FIX: Force dtick=1 to eliminate duplicate Y-axis labels
                         dt_layout.update(dict(
                             height=300,
                             xaxis=dict(showgrid=False, type='category'), 
-                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', tickformat="d", nticks=6, rangemode="tozero"),
+                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', tickformat="d", dtick=1, rangemode="tozero"),
                             margin=dict(l=40, r=10, t=50, b=10)
                         ))
                         fig_dt.update_layout(**dt_layout)
@@ -1258,7 +1258,8 @@ if view_mode == "District View":
         
         if not monthly_df.empty:
             fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
-            fig_m.update_traces(marker_color='#1C1917', texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#1C1917', weight=700))
+            # FIX: Changed bars from pitch black to Navy Blue
+            fig_m.update_traces(marker_color='#1E3A8A', texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#1C1917', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
             m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
             fig_m.update_layout(**m_layout)
