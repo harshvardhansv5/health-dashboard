@@ -22,7 +22,7 @@ DISTANCE_FALLBACK = {}
 # --- PAGE SETUP ---
 st.set_page_config(page_title="Bihar Health Dashboard", page_icon="🩸", layout="wide")
 
-# --- SOFT SLATE & CLINICAL UI CSS ---
+# --- DEEP GOVERNMENT UI CSS ---
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -33,8 +33,8 @@ st.markdown("""
     }
     .material-symbols-rounded, [data-testid="stIconMaterial"] { font-family: 'Material Symbols Rounded' !important; }
     
-    /* --- THE SOFT SLATE CANVAS --- */
-    .stApp { background-color: #E2E8F0 !important; } 
+    /* --- THE CRISP CANVAS --- */
+    .stApp { background-color: #F8FAFC !important; } 
     
     /* Remove Sidebar entirely */
     [data-testid="stSidebar"] { display: none !important; }
@@ -44,24 +44,24 @@ st.markdown("""
     [data-testid="stDataFrameColumnMenu"] { display: none !important; }
     [data-testid="stDataFrame"] div[role="columnheader"] { cursor: pointer !important; }
 
-    /* --- FORCE CYAN PROGRESS BARS --- */
-    div[data-testid="stProgress"] > div > div > div { background-color: #06B6D4 !important; }
-    div[data-testid="stDataFrame"] div[role="progressbar"] > div { background-color: #06B6D4 !important; }
-    div[data-testid="stDataFrame"] div[role="progressbar"] > div > div { background-color: #06B6D4 !important; }
+    /* --- FORCE NAVY PROGRESS BARS --- */
+    div[data-testid="stProgress"] > div > div > div { background-color: #1E3A8A !important; }
+    div[data-testid="stDataFrame"] div[role="progressbar"] > div { background-color: #1E3A8A !important; }
+    div[data-testid="stDataFrame"] div[role="progressbar"] > div > div { background-color: #1E3A8A !important; }
 
     /* --- LOGIN SPECIFIC CSS --- */
     div[data-testid="stHorizontalBlock"]:has(> div > div[data-testid="stForm"]) {
         margin-top: 10vh;
     }
     div[data-testid="stForm"] {
-        background-color: #F8FAFC !important;
+        background-color: #FFFFFF !important;
         border-radius: 24px !important;
         padding: 48px 40px !important;
         box-shadow: 0 12px 32px -8px rgba(15, 23, 42, 0.08) !important;
-        border: 1px solid #CBD5E1 !important;
+        border: 1px solid #E2E8F0 !important;
     }
     div[data-testid="stTextInput"] input {
-        background-color: #E2E8F0 !important;
+        background-color: #F8FAFC !important;
         border: 1px solid #CBD5E1 !important;
         border-radius: 10px !important;
         padding: 12px 16px !important;
@@ -69,32 +69,32 @@ st.markdown("""
         font-size: 14px !important;
     }
     div[data-testid="stTextInput"] input:focus {
-        border-color: #06B6D4 !important;
-        box-shadow: 0 0 0 1px #06B6D4 !important;
-        background-color: #F8FAFC !important;
+        border-color: #1E3A8A !important;
+        box-shadow: 0 0 0 1px #1E3A8A !important;
+        background-color: #FFFFFF !important;
     }
     div[data-testid="stFormSubmitButton"] > button {
-        background-color: #06B6D4 !important;
+        background-color: #1E3A8A !important;
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 10px !important;
         font-weight: 700 !important;
         font-size: 15px !important;
         height: 48px !important;
-        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.2) !important;
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2) !important;
         margin-top: 16px !important;
     }
     div[data-testid="stFormSubmitButton"] > button:hover {
-        background-color: #0891B2 !important;
+        background-color: #1E40AF !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 6px 16px rgba(6, 182, 212, 0.3) !important;
+        box-shadow: 0 6px 16px rgba(30, 58, 138, 0.3) !important;
     }
 
-    /* --- HERO DECK CARDS (Soft off-white) --- */
+    /* --- HERO DECK CARDS (Pure White) --- */
     .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .metric-card {
-        background-color: #F8FAFC !important; 
-        border: 1px solid #CBD5E1 !important; 
+        background-color: #FFFFFF !important; 
+        border: 1px solid #E2E8F0 !important; 
         border-radius: 20px !important;
         padding: 24px !important; 
         box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important; 
@@ -106,12 +106,12 @@ st.markdown("""
         box-shadow: 0 12px 24px -6px rgba(15, 23, 42, 0.1); 
     }
     .metric-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .metric-label { color: #475569; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-    .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #E2E8F0; color: #475569; display: flex; align-items: center; justify-content: center; }
+    .metric-label { color: #64748B; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-icon { width: 32px; height: 32px; border-radius: 8px; background-color: #F1F5F9; color: #64748B; display: flex; align-items: center; justify-content: center; }
     .metric-icon svg { width: 18px; height: 18px; fill: currentColor; }
     .metric-value { color: #0F172A; font-size: 32px; font-weight: 800; line-height: 1; letter-spacing: -1px; margin-bottom: 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
     
-    /* Trend badges now have fixed font size and won't wrap */
+    /* Trend badges */
     .trend-up { color: #10B981; background-color: #ECFDF5; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; font-size: 14px !important; font-weight: 700; white-space: nowrap; line-height: 1; }
     .trend-down { color: #F43F5E; background-color: #FFF1F2; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; font-size: 14px !important; font-weight: 700; white-space: nowrap; line-height: 1; }
     .trend-neutral { color: #64748B; background-color: #F1F5F9; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; font-size: 14px !important; font-weight: 700; white-space: nowrap; line-height: 1; }
@@ -119,9 +119,9 @@ st.markdown("""
 
     /* --- PREMIUM ZM RIBBON --- */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) {
-        background-color: #F8FAFC !important;
-        border: 1px solid #CBD5E1 !important;
-        border-left: 6px solid #06B6D4 !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
+        border-left: 6px solid #1E3A8A !important;
         border-radius: 16px !important;
         padding: 12px 24px !important;
         margin-bottom: 24px !important;
@@ -132,17 +132,17 @@ st.markdown("""
     }
     .zm-label { color: #64748B; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-right: 12px; }
     .zm-name { color: #0F172A; font-size: 16px; font-weight: 800; margin-right: 8px; }
-    .zm-zone { color: #06B6D4; font-size: 14px; font-weight: 600; }
+    .zm-zone { color: #1E3A8A; font-size: 14px; font-weight: 600; }
 
     /* --- MODERN PAGE HEADERS --- */
     .page-header-container { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; margin-top: 8px; }
-    .page-icon-container { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 14px; background-color: #F8FAFC; color: #475569; border: 1px solid #CBD5E1; }
+    .page-icon-container { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 14px; background-color: #FFFFFF; color: #64748B; border: 1px solid #E2E8F0; }
     .page-icon svg { width: 24px; height: 24px; fill: currentColor; }
     .page-title-text { font-size: 26px; font-weight: 800; color: #0F172A; letter-spacing: -0.5px; line-height: 1.1; }
     .page-subtitle-text { font-size: 14px; font-weight: 500; color: #475569; margin-top: 4px; }
 
     /* Report Header */
-    .report-header { background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05); border-left: 6px solid #06B6D4; }
+    .report-header { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 24px; margin-bottom: 24px; box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05); border-left: 6px solid #1E3A8A; }
     .report-title { color: #0F172A; font-size: 22px; font-weight: 800; margin-bottom: 8px; }
     .report-meta { color: #475569; font-size: 13px; line-height: 1.5; font-weight: 500; }
     
@@ -156,8 +156,8 @@ st.markdown("""
 
     /* --- COMMAND BAR & NAVIGATION --- */
     div[data-testid="stHorizontalBlock"]:has(.app-header) {
-        background-color: #F8FAFC !important;
-        border: 1px solid #CBD5E1 !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
         border-radius: 20px !important;
         box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important;
         padding: 12px 24px !important;
@@ -168,8 +168,8 @@ st.markdown("""
     
     /* The Segmented Control Track */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
-        background-color: #E2E8F0 !important; 
-        border: 1px solid #CBD5E1 !important; 
+        background-color: #F1F5F9 !important; 
+        border: 1px solid #E2E8F0 !important; 
         border-radius: 12px !important; 
         padding: 4px !important; 
         gap: 4px !important;
@@ -244,19 +244,19 @@ st.markdown("""
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"] {
         border-radius: 12px !important; 
         min-height: 44px !important;
-        background-color: #E2E8F0 !important;
-        border: 1px solid #CBD5E1 !important;
+        background-color: #F1F5F9 !important;
+        border: 1px solid #E2E8F0 !important;
         box-shadow: none !important;
         transition: all 0.2s ease !important;
     }
     
     /* Hover and focus states for the select box */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"]:hover {
-        border-color: #06B6D4 !important;
+        border-color: #1E3A8A !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stSelectbox"] div[role="combobox"]:focus-within {
-        box-shadow: 0 0 0 2px #06B6D4 inset !important;
-        background-color: #F8FAFC !important;
+        box-shadow: 0 0 0 2px #1E3A8A inset !important;
+        background-color: #FFFFFF !important;
     }
 
     /* The Label and the Live Dot */
@@ -269,54 +269,54 @@ st.markdown("""
         content: "";
         display: inline-block;
         width: 8px; height: 8px;
-        background-color: #06B6D4;
+        background-color: #1E3A8A;
         border-radius: 50%;
-        animation: pulse-cyan 2s infinite;
+        animation: pulse-navy 2s infinite;
     }
 
     /* Blinking Radar Dot (Kept for other uses) */
-    .status-dot { width: 8px; height: 8px; background-color: #06B6D4; border-radius: 50%; animation: pulse-cyan 2s infinite; display: inline-block; margin-right: 6px; }
-    @keyframes pulse-cyan {
-        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0.7); }
-        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(6, 182, 212, 0); }
-        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(6, 182, 212, 0); }
+    .status-dot { width: 8px; height: 8px; background-color: #1E3A8A; border-radius: 50%; animation: pulse-navy 2s infinite; display: inline-block; margin-right: 6px; }
+    @keyframes pulse-navy {
+        0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(30, 58, 138, 0.7); }
+        70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(30, 58, 138, 0); }
+        100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(30, 58, 138, 0); }
     }
 
     /* Compare Battle Cards */
-    .battle-card { background-color: #F8FAFC; border: 1px solid #CBD5E1; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05); margin-bottom: 16px; }
-    .battle-card-green { border-top: 6px solid #06B6D4; }
+    .battle-card { background-color: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05); margin-bottom: 16px; }
+    .battle-card-green { border-top: 6px solid #1E3A8A; }
     .battle-card-red { border-top: 6px solid #DC2626; }
     .battle-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: #0F172A; }
-    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #CBD5E1; padding: 12px 0; font-size: 14px; color: #475569; font-weight: 500;}
+    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #E2E8F0; padding: 12px 0; font-size: 14px; color: #475569; font-weight: 500;}
     .battle-row:last-child { border-bottom: none; }
 
     /* --- PREMIUM INPUTS & DROPDOWNS --- */
     div[data-testid="stSelectbox"] { margin-bottom: 0px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
-        background-color: #E2E8F0 !important; border: 1px solid #CBD5E1 !important; border-radius: 10px !important; 
+        background-color: #F1F5F9 !important; border: 1px solid #E2E8F0 !important; border-radius: 10px !important; 
         transition: all 0.2s ease-in-out !important; min-height: 42px !important; 
     }
     div[data-testid="stSelectbox"] div[data-baseweb="select"] > div { background-color: transparent !important; border: none !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:hover { background-color: #F8FAFC !important; border-color: #06B6D4 !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { box-shadow: 0 0 0 2px #06B6D4 inset !important; background-color: #F8FAFC !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:hover { background-color: #FFFFFF !important; border-color: #1E3A8A !important; }
+    div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { box-shadow: 0 0 0 2px #1E3A8A inset !important; background-color: #FFFFFF !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] * { color: #0F172A !important; font-weight: 600 !important; font-size: 14px !important; }
-    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #06B6D4 !important; width: 16px !important; height: 16px !important;}
+    div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #1E3A8A !important; width: 16px !important; height: 16px !important;}
     
-    label[data-testid="stWidgetLabel"] p { color: #475569 !important; font-weight: 700 !important; font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px !important;}
+    label[data-testid="stWidgetLabel"] p { color: #64748B !important; font-weight: 700 !important; font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px !important;}
 
     /* --- TIGHTENED FORM & PREMIUM BUTTONS --- */
     div[data-testid="stForm"] {
-        border: 1px solid #CBD5E1 !important;
+        border: 1px solid #E2E8F0 !important;
         border-radius: 20px !important;
         padding: 20px !important;
-        background-color: #F8FAFC !important;
+        background-color: #FFFFFF !important;
         box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important;
         margin-bottom: 24px !important;
     }
     
     /* The Apply Filters Button */
     div[data-testid="stFormSubmitButton"] > button {
-        background-color: #06B6D4 !important;
+        background-color: #1E3A8A !important;
         color: #FFFFFF !important;
         border: none !important;
         border-radius: 10px !important;
@@ -324,21 +324,21 @@ st.markdown("""
         font-size: 14px !important;
         padding: 0px 24px !important;
         transition: all 0.2s ease !important;
-        box-shadow: 0 2px 8px rgba(6, 182, 212, 0.2) !important;
+        box-shadow: 0 2px 8px rgba(30, 58, 138, 0.2) !important;
         height: 42px !important;
         width: 100% !important;
     }
     div[data-testid="stFormSubmitButton"] > button:hover {
-        background-color: #0891B2 !important;
+        background-color: #1E40AF !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3) !important;
+        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3) !important;
     }
 
     /* Ghost Button for ZM Profile */
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button {
-        background-color: #F8FAFC !important;
+        background-color: #FFFFFF !important;
         color: #0F172A !important;
-        border: 1px solid #CBD5E1 !important;
+        border: 1px solid #E2E8F0 !important;
         border-radius: 10px !important;
         font-weight: 600 !important;
         font-size: 13px !important;
@@ -348,16 +348,16 @@ st.markdown("""
         width: 100% !important;
     }
     div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button:hover {
-        background-color: #ECFEFF !important;
-        border-color: #06B6D4 !important;
-        color: #06B6D4 !important;
+        background-color: #EFF6FF !important;
+        border-color: #1E3A8A !important;
+        color: #1E3A8A !important;
     }
 
     /* Compact Download Buttons */
     div[data-testid="stDownloadButton"] > button {
-        background-color: #F8FAFC !important;
+        background-color: #FFFFFF !important;
         color: #475569 !important;
-        border: 1px solid #CBD5E1 !important;
+        border: 1px solid #E2E8F0 !important;
         border-radius: 10px !important;
         font-weight: 600 !important;
         font-size: 13px !important;
@@ -366,9 +366,9 @@ st.markdown("""
         width: 100% !important;
     }
     div[data-testid="stDownloadButton"] > button:hover {
-        background-color: #E2E8F0 !important;
-        border-color: #06B6D4 !important;
-        color: #06B6D4 !important;
+        background-color: #F1F5F9 !important;
+        border-color: #1E3A8A !important;
+        color: #1E3A8A !important;
     }
 
     /* --- TAB OVERRIDES (Kill the Blue) --- */
@@ -380,13 +380,13 @@ st.markdown("""
     button[data-baseweb="tab"] p { font-weight: 600 !important; }
     button[aria-selected="true"] { color: #0F172A !important; }
     button[aria-selected="true"] p { color: #0F172A !important; font-weight: 800 !important; }
-    div[data-baseweb="tab-highlight"] { background-color: #06B6D4 !important; height: 3px !important; border-radius: 3px !important; }
-    div[data-baseweb="tab-border"] { background-color: #CBD5E1 !important; }
+    div[data-baseweb="tab-highlight"] { background-color: #1E3A8A !important; height: 3px !important; border-radius: 3px !important; }
+    div[data-baseweb="tab-border"] { background-color: #E2E8F0 !important; }
 
     /* --- STYLE THE EXPANDER (SOFT UI CARD) --- */
     div[data-testid="stExpander"] {
-        background-color: #F8FAFC !important;
-        border: 1px solid #CBD5E1 !important;
+        background-color: #FFFFFF !important;
+        border: 1px solid #E2E8F0 !important;
         border-radius: 16px !important;
         box-shadow: 0 4px 12px -2px rgba(15, 23, 42, 0.05) !important;
         margin-bottom: 24px !important;
@@ -400,15 +400,15 @@ st.markdown("""
         font-weight: 700 !important;
         font-size: 14px !important;
         color: #0F172A !important;
-        background-color: #F8FAFC !important;
+        background-color: #FFFFFF !important;
         transition: background-color 0.2s ease !important;
     }
     div[data-testid="stExpander"] summary:hover {
-        background-color: #E2E8F0 !important;
+        background-color: #F1F5F9 !important;
     }
     div[data-testid="stExpander"] summary svg {
-        fill: #06B6D4 !important;
-        color: #06B6D4 !important;
+        fill: #1E3A8A !important;
+        color: #1E3A8A !important;
     }
     div[data-testid="stExpander"] > details > div {
         padding: 0px 24px 24px 24px !important;
@@ -781,7 +781,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v70.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v71.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -803,7 +803,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v70.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v71.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1155,7 +1155,7 @@ if view_mode == "District View":
                 sorted_df['Grade'] = sorted_df.apply(lambda r: calculate_grade(r['Uptime %'], r['Average Patients']), axis=1)
                 text_labels = [f"{v:.1f}%" if metric_col == 'Uptime %' else (f"{v:.1f}" if v % 1 != 0 else f"{int(v)}") for v in sorted_df[metric_col]]
                     
-                grade_color_map = {'A': '#14B8A6', 'B': '#5EEAD4', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
+                grade_color_map = {'A': '#10B981', 'B': '#34D399', 'C': '#FBBF24', 'D': '#F97316', 'F': '#F43F5E'}
                 
                 fig = px.bar(
                     sorted_df, y=facility_col, x=metric_col, orientation='h', color='Grade', 
@@ -1190,7 +1190,7 @@ if view_mode == "District View":
                 fig.update_traces(textposition='outside', textangle=0, textfont=dict(color="#0F172A", size=12, weight=700), cliponaxis=False)
                 st.plotly_chart(fig, use_container_width=True)
 
-                st.markdown("<hr style='margin: 24px 0; border-color: #CBD5E1;'>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin: 24px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
                 st.markdown("<h4 style='color:#0F172A; margin-bottom:16px; font-weight:800;'>Facility Drill-Down</h4>", unsafe_allow_html=True)
                 
                 drill_options = filtered[facility_col].tolist()
@@ -1209,21 +1209,19 @@ if view_mode == "District View":
                     if drill_trend:
                         dt_df = pd.DataFrame(drill_trend)
                         
-                        fig_dt = px.bar(dt_df, x='Date', y='Patients', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
+                        # HEART MONITOR STEP LINE CHART
+                        fig_dt = px.line(dt_df, x='Date', y='Patients', markers=True, line_shape='hv', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
                         fig_dt.update_traces(
-                            marker_color='#06B6D4', 
-                            text=dt_df['Patients'],
-                            textposition='outside',
-                            textfont=dict(color="#0F172A", weight=700),
-                            cliponaxis=False
+                            line_color='#1E3A8A', 
+                            line_width=3, 
+                            marker=dict(size=8, color='#FFFFFF', line=dict(width=2, color='#1E3A8A'))
                         )
                         
                         dt_layout = PLOTLY_LAYOUT.copy()
-                        # FIX: Removed nticks=6 which was causing duplicate 1, 2 labels on small ranges
                         dt_layout.update(dict(
                             height=300,
                             xaxis=dict(showgrid=False, type='category'), 
-                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickformat="d", rangemode="tozero"),
+                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickformat="d", tick0=0, dtick=1, rangemode="tozero"),
                             margin=dict(l=40, r=10, t=50, b=10)
                         ))
                         fig_dt.update_layout(**dt_layout)
@@ -1247,7 +1245,7 @@ if view_mode == "District View":
             heatmap_df['Total'] = heatmap_df.sum(axis=1)
             heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
             
-            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F0F9FF'], [0.1, '#BAE6FD'], [1, '#0284C7']], labels=dict(x="Date", y="", color="Patients"))
+            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#EFF6FF'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
             fig_h.update_traces(xgap=2, ygap=2)
             
             hm_layout = PLOTLY_LAYOUT.copy()
@@ -1276,7 +1274,7 @@ if view_mode == "District View":
         <div class="report-header">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
                 <div class="report-title" style="margin-bottom: 0;">District Report Card — {selected_district_zm}</div>
-                <div style="background-color: #ECFEFF; color: #0891B2; padding: 8px 20px; border-radius: 30px; font-weight: 700; font-size: 14px; border: 1px solid #A5F3FC; display: flex; align-items: center; gap: 8px;">
+                <div style="background-color: #EFF6FF; color: #1E3A8A; padding: 8px 20px; border-radius: 30px; font-weight: 700; font-size: 14px; border: 1px solid #BFDBFE; display: flex; align-items: center; gap: 8px;">
                     <span class="material-symbols-rounded" style="font-size:18px;">local_hospital</span> <span>Total Spokes: {stats['num_facilities']}</span>
                 </div>
             </div>
@@ -1289,13 +1287,13 @@ if view_mode == "District View":
             <div class="metric-card"><div class="metric-label">Total Patients</div><div class="metric-value">{stats['total']:,}</div></div>
             <div class="metric-card"><div class="metric-label">Weighted Avg / Day</div><div class="metric-value">{stats['weighted_avg']}</div></div>
             <div class="metric-card"><div class="metric-label">Facility Uptime</div><div class="metric-value">{calc_uptime(stats)}%</div></div>
-            <div class="metric-card" style="background-color:#E2E8F0;"><div class="metric-label">District Grade</div><div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div></div>
+            <div class="metric-card" style="background-color:#F8FAFC;"><div class="metric-label">District Grade</div><div><span class="grade-badge grade-{d_grade}">{d_grade}</span></div></div>
         </div>
         ''', unsafe_allow_html=True)
 
         st.markdown("""
         <div style="text-align: center; margin-top: 16px; margin-bottom: 24px;">
-            <div style="display: inline-flex; gap: 20px; font-size: 13px; font-weight: 600; color: #475569; background-color: #F8FAFC; padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); align-items: center; border: 1px solid #CBD5E1;">
+            <div style="display: inline-flex; gap: 20px; font-size: 13px; font-weight: 600; color: #475569; background-color: #FFFFFF; padding: 10px 20px; border-radius: 30px; box-shadow: 0 4px 12px rgba(15,23,42,0.05); align-items: center; border: 1px solid #E2E8F0;">
                 <span style="color: #64748B; font-weight: 800; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px;">Grade Legend:</span>
                 <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#10B981; border-radius:4px;"></span> A</div>
                 <div style="display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width:14px; height:14px; background-color:#34D399; border-radius:4px;"></span> B</div>
@@ -1584,7 +1582,7 @@ elif view_mode == "State View":
                     <div class="metric-icon"><span class="material-symbols-rounded">hub</span></div>
                 </div>
                 <div class="metric-value" style="font-size: 32px; margin-bottom: 4px;">
-                    <span style="color: #06B6D4;">{total_active}</span> 
+                    <span style="color: #1E3A8A;">{total_active}</span> 
                     <span style="font-size: 16px; color:#64748B; font-weight:600; margin-left: 4px;">Active</span>
                 </div>
                 <div class="metric-trend" style="margin-top: 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
@@ -1613,7 +1611,6 @@ elif view_mode == "State View":
         s_tab1, s_tab2, s_tab3 = st.tabs(["District Leaderboard", "ZM Leaderboard", "District vs District"])
         
         with s_tab1:
-            # FIX: Replaced the radio buttons with the dropdown UI to match ZM View
             c1, c2 = st.columns([2, 1])
             with c1: 
                 state_metric_label = st.selectbox("Sort By:", ["Total Patient Count", "Weighted Avg", "Uptime %"], key="state_sort_col")
@@ -1770,7 +1767,7 @@ elif view_mode == "State View":
                     with col1: 
                         st.markdown(f'''
                         <div class="battle-card battle-card-green">
-                            <div class="battle-title" style="color: #06B6D4;">{district_a_display}</div>
+                            <div class="battle-title" style="color: #1E3A8A;">{district_a_display}</div>
                             <div class="battle-row"><span>Total Patients</span> <span style="{get_style(sa['total'], sb['total'])}">{sa['total']:,}</span></div>
                             <div class="battle-row"><span>Weighted Avg / Day</span> <span style="{get_style(sa['weighted_avg'], sb['weighted_avg'])}">{sa['weighted_avg']}</span></div>
                             <div class="battle-row"><span>Facility Uptime</span> <span style="{get_style(a_uptime, b_uptime)}">{a_uptime}%</span></div>
@@ -1812,8 +1809,8 @@ elif view_mode == "State View":
                     ])
                     
                     # Also fixed the comparison chart to use linear shapes
-                    fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, line_shape='linear', 
-                                    color_discrete_map={district_a_display: '#06B6D4', district_b_display: '#DC2626'})
+                    fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, line_shape='hv', 
+                                    color_discrete_map={district_a_display: '#1E3A8A', district_b_display: '#DC2626'})
                     fig_c.update_traces(connectgaps=True, marker=dict(size=8))
                     
                     cmp_layout = PLOTLY_LAYOUT.copy()
@@ -1822,7 +1819,7 @@ elif view_mode == "State View":
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                         xaxis=dict(showgrid=False, tickformat="%d %b"), 
                         # Also applied the integer y-axis fix to the state comparison chart
-                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickformat="d", rangemode="tozero")
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', tickformat="d", tick0=0, dtick=1, rangemode="tozero")
                     ))
                     fig_c.update_layout(**cmp_layout)
                     st.plotly_chart(fig_c, use_container_width=True)
