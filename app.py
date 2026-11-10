@@ -166,21 +166,22 @@ st.markdown("""
         min-height: 72px !important;
     }
     
-    /* The Segmented Control Track */
+    /* The Segmented Control Track -> Now a Tab Bar */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
-        background-color: #F1F5F9 !important; 
-        border: 1px solid #E2E8F0 !important; 
-        border-radius: 12px !important; 
-        padding: 4px !important; 
-        gap: 4px !important;
+        background-color: transparent !important; 
+        border: none !important; 
+        border-bottom: 2px solid #E2E8F0 !important;
+        border-radius: 0 !important; 
+        padding: 0 !important; 
+        gap: 24px !important;
         flex-wrap: nowrap !important;
     }
 
     /* The Individual Tabs */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 8px 16px !important; 
+        padding: 8px 0px !important; 
         margin: 0 !important; 
-        border-radius: 8px !important;
+        border-radius: 0 !important;
         transition: all 0.2s ease !important;
         cursor: pointer !important;
         background-color: transparent !important;
@@ -195,25 +196,23 @@ st.markdown("""
 
     /* Tab Text Styling (Inactive) */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label p {
-        font-size: 13px !important;
+        font-size: 14px !important;
         font-weight: 600 !important;
-        color: #475569 !important;
+        color: #64748B !important;
         margin: 0 !important;
         transition: color 0.2s ease !important;
     }
 
     /* Hover State for Inactive Tabs */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label:hover {
-        background-color: rgba(255, 255, 255, 0.4) !important;
-    }
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label:hover p {
         color: #0F172A !important;
     }
 
-    /* ACTIVE TAB (The Floating White Pill) */
+    /* ACTIVE TAB (The Underline) */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-        background-color: #FFFFFF !important; 
-        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.05), 0 1px 2px rgba(15, 23, 42, 0.1) !important; 
+        border-bottom: 3px solid #1E3A8A !important;
+        background-color: transparent !important; 
+        box-shadow: none !important; 
     }
     
     /* Active Tab Text */
@@ -781,7 +780,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v72.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v73.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -803,7 +802,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v72.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v73.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -888,7 +887,23 @@ def _zm_aggregates(state_df):
 if SPREADSHEET_URL == "YOUR_PUBLISHED_XLSX_URL_HERE":
     st.error("Please insert your Published Google Sheets URL in the code.")
     st.stop()
-    
+
+# Setup Data Fetch with Refresh Capability
+if 'data_timestamp' not in st.session_state:
+    st.session_state.data_timestamp = datetime.now()
+
+@st.cache_data(ttl=3600, show_spinner="Fetching live data from Google Sheets...")
+def fetch_google_sheet(url):
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        # Update timestamp on successful fetch
+        st.session_state.data_timestamp = datetime.now()
+        return response.content
+    except Exception as e:
+        st.error(f"Failed to connect to Google Sheets: {e}")
+        return None
+
 file_bytes = fetch_google_sheet(SPREADSHEET_URL)
 
 if file_bytes is None:
@@ -939,7 +954,21 @@ with col_nav:
     view_mode = st.radio("Navigation", _NAV_OPTS, key='nav_radio', horizontal=True, label_visibility="collapsed")
 
 with col_time_ctrl:
-    time_filter = st.selectbox("TIME RANGE", ["Full History", "Past Week", "Past 2 Weeks", "Past Month", "Select Dates..."], label_visibility="visible")
+    # Sub-columns for Refresh + Time Range
+    tc1, tc2 = st.columns([1, 3], vertical_alignment="bottom")
+    
+    with tc1:
+        if st.button("↻ Refresh", use_container_width=True):
+            fetch_google_sheet.clear()
+            st.rerun()
+            
+    with tc2:
+        time_filter = st.selectbox("TIME RANGE", ["Full History", "Past Week", "Past 2 Weeks", "Past Month", "Select Dates..."], label_visibility="visible")
+        
+    # Last Updated Indicator
+    sync_time_str = st.session_state.data_timestamp.strftime('%I:%M %p')
+    st.markdown(f"<div style='font-size: 10px; color: #64748B; text-align: right; margin-top: 4px;'>🟢 Last Synced: {sync_time_str}</div>", unsafe_allow_html=True)
+
     start_date, end_date = None, None
     if time_filter == "Select Dates...":
         c1, c2 = st.columns(2)
