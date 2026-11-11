@@ -608,6 +608,8 @@ def get_facility_mask(df, facility_col):
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('JAIL', na=False)
     mask &= ~df[facility_col].astype(str).str.strip().str.lower().isin(['nan', 'none', ''])
     mask &= ~df[facility_col].astype(str).str.lower().str.contains('prepared|signature|verified|report', na=False)
+    # FIX: Facility names must contain at least one alphabetical character to filter out stray numbers (like "6")
+    mask &= df[facility_col].astype(str).str.contains('[a-zA-Z]', regex=True, na=False)
     return mask
 
 def process_district_df(df, time_filter, start_date=None, end_date=None, window_offset=0):
@@ -782,7 +784,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v77.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v79.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -804,7 +806,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v77.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v79.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1234,20 +1236,24 @@ if view_mode == "District View":
                     if drill_trend:
                         dt_df = pd.DataFrame(drill_trend)
                         
-                        # HEART MONITOR STEP LINE CHART
-                        fig_dt = px.line(dt_df, x='Date', y='Patients', markers=True, line_shape='hv', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
+                        # CHANGED: Back to a clean Bar Chart
+                        fig_dt = px.bar(dt_df, x='Date', y='Patients', text='Patients', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
                         fig_dt.update_traces(
-                            line_color='#1E3A8A', 
-                            line_width=3, 
-                            marker=dict(size=8, color='#FAFAF9', line=dict(width=2, color='#1E3A8A'))
+                            marker_color='#1E3A8A', 
+                            textposition='outside',
+                            textfont=dict(color="#1C1917", weight=700),
+                            cliponaxis=False
                         )
                         
                         dt_layout = PLOTLY_LAYOUT.copy()
-                        # FIX: Force dtick=1 to eliminate duplicate Y-axis labels
+                        # DYNAMIC TICKS: Prevent overlapping numbers based on max value
+                        max_y = dt_df['Patients'].max() if not dt_df.empty else 0
+                        tick_step = 1 if max_y <= 5 else (2 if max_y <= 20 else 5)
+                        
                         dt_layout.update(dict(
                             height=300,
                             xaxis=dict(showgrid=False, type='category'), 
-                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', tickformat="d", dtick=1, rangemode="tozero"),
+                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', tickformat="d", dtick=tick_step, rangemode="tozero"),
                             margin=dict(l=40, r=10, t=50, b=10)
                         ))
                         fig_dt.update_layout(**dt_layout)
@@ -1814,18 +1820,20 @@ elif view_mode == "State View":
                         get_trend(pb, b_obj_to_col, district_b_display, all_dates_objs)
                     ])
                     
-                    # Also fixed the comparison chart to use linear shapes
                     fig_c = px.line(combined, x='Date', y='Patients', color='District', markers=True, line_shape='hv', 
                                     color_discrete_map={district_a_display: '#1E3A8A', district_b_display: '#DC2626'})
                     fig_c.update_traces(connectgaps=True, marker=dict(size=8))
+                    
+                    # DYNAMIC TICKS for State View comparison
+                    max_y_cmp = combined['Patients'].max() if not combined.empty else 0
+                    tick_step_cmp = 1 if max_y_cmp <= 5 else (2 if max_y_cmp <= 20 else 5)
                     
                     cmp_layout = PLOTLY_LAYOUT.copy()
                     cmp_layout.update(dict(
                         height=350, margin=dict(l=40, r=10, t=40, b=40),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                         xaxis=dict(showgrid=False, tickformat="%d %b"), 
-                        # Also applied the integer y-axis fix to the state comparison chart
-                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', tickformat="d", nticks=6, rangemode="tozero")
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', tickformat="d", dtick=tick_step_cmp, rangemode="tozero")
                     ))
                     fig_c.update_layout(**cmp_layout)
                     st.plotly_chart(fig_c, use_container_width=True)
