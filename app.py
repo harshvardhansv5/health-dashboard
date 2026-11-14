@@ -110,12 +110,24 @@ st.markdown("""
 
     /* Dataframes (Terminal Style) */
     div[data-testid="stDataFrame"] {
-        background-color: transparent !important;
+        background-color: #09090B !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
         border-radius: 12px !important;
     }
-    div[data-testid="stDataFrame"] * { font-family: 'JetBrains Mono', monospace !important; }
+    div[data-testid="stDataFrame"] * { 
+        font-family: 'JetBrains Mono', monospace !important; 
+        color: #F8FAFC !important;
+    }
+    div[data-testid="stDataFrame"] th {
+        background-color: #1E293B !important;
+        color: #00E5FF !important;
+        border-bottom: 1px solid rgba(0, 229, 255, 0.2) !important;
+    }
     [data-testid="stDataFrameColumnMenu"] { display: none !important; }
+    
+    /* Force progress bars in dataframe to be cyan */
+    div[data-testid="stDataFrame"] div[role="progressbar"] > div { background-color: rgba(0, 229, 255, 0.2) !important; }
+    div[data-testid="stDataFrame"] div[role="progressbar"] > div > div { background-color: #00E5FF !important; box-shadow: 0 0 10px rgba(0,229,255,0.5) !important; }
 
     /* Custom Watchlist */
     .watchlist-item {
@@ -452,7 +464,7 @@ def district_grade(plot_df):
     return reverse_map[max(1, min(5, int(rounded_grade)))]
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v84.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v85.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -470,7 +482,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v84.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v85.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -557,7 +569,15 @@ with col_title:
     <div class="hud-header">
         <div style="display: flex; align-items: center; gap: 12px;">
             <div style="width: 36px; height: 36px; background: rgba(0, 229, 255, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 229, 255, 0.3);">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" style="width: 20px; height: 20px;"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                <!-- MICROSCOPE SVG -->
+                <svg viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 22px; height: 22px;">
+                    <path d="M6 18h8" />
+                    <path d="M3 22h18" />
+                    <path d="M14 22a7 7 0 1 0 0-14h-1" />
+                    <path d="M9 14h2" />
+                    <path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z" />
+                    <path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3" />
+                </svg>
             </div>
             <div>
                 <div style="font-family: 'JetBrains Mono'; font-size: 14px; font-weight: 800; color: #F8FAFC; letter-spacing: 1px;">BIHAR COMMAND</div>
@@ -839,14 +859,61 @@ if view_mode == "District View":
 elif view_mode == "State View":
     st.markdown("<h2 style='font-size:20px; margin-bottom:16px;'>Statewide Overview</h2>", unsafe_allow_html=True)
     state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+    all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
     
-    if not state_df.empty:
+    if not state_df.empty and not all_fac_df.empty:
+        total_active = state_df['Active Spokes'].sum()
+        total_pending = len(all_fac_df[all_fac_df['Status'] == 'Pending Launch'])
+        total_operational = len(all_fac_df) - total_pending
+        total_failures = total_operational - total_active
+        reporting_districts = state_df[state_df['Days Reported'] > 0]
+        avg_state_uptime = round(reporting_districts['Uptime %'].mean(), 1) if not reporting_districts.empty else 0.0
+        
+        # RESTORED KPI CARDS
+        st.markdown(f'''
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+            <div class="kpi-card">
+                <div class="kpi-label">Network Status</div>
+                <div class="kpi-value neon-cyan">{total_active} <span style="font-size:14px; color:#64748B;">Active</span></div>
+                <div class="kpi-sub" style="display:flex; gap:12px; margin-top:8px;">
+                    <span style="color:#FF0055;">{total_failures} Failures</span>
+                    <span style="color:#FFD500;">{total_pending} Pending</span>
+                </div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">Statewide Avg Uptime</div>
+                <div class="kpi-value neon-lime">{avg_state_uptime}%</div>
+                <div class="kpi-sub">Across all operational facilities</div>
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+
         s_tab1, s_tab2 = st.tabs(["District Leaderboard", "Compare Districts"])
+        
         with s_tab1:
+            # RESTORED BAR CHART
+            st.markdown("<h4 style='font-size:16px; margin-bottom:12px;'>Top 5 / Bottom 5 Districts (Total Patients)</h4>", unsafe_allow_html=True)
+            sorted_dist = state_df.sort_values('Total Patients', ascending=True)
+            top5 = sorted_dist.tail(5)
+            bottom5 = sorted_dist.head(5)
+            chart_data = pd.concat([bottom5, top5]).drop_duplicates()
+            
+            fig_s = px.bar(chart_data, y='District', x='Total Patients', orientation='h', text='Total Patients')
+            fig_s.update_traces(marker_color='#00E5FF', textposition='outside', textfont=dict(color="#FFF", weight=700))
+            s_layout = PLOTLY_LAYOUT.copy()
+            s_layout.update(dict(height=350, yaxis=dict(showgrid=False, tickfont=dict(color="#F8FAFC")), xaxis=dict(showgrid=True, gridcolor='rgba(255,255,255,0.05)'), margin=dict(l=20, r=20, t=10, b=10)))
+            fig_s.update_layout(**s_layout)
+            st.plotly_chart(fig_s, use_container_width=True)
+
+            # RESTORED TABLE (WITH DARK CSS)
             lb_df = state_df.sort_values('Total Patients', ascending=False).reset_index(drop=True)
             lb_df['Rank'] = lb_df.index + 1
             lb_df['District'] = lb_df.apply(lambda row: f"{'🥇' if row['Rank']==1 else '🥈' if row['Rank']==2 else '🥉' if row['Rank']==3 else ''} {row['District']}".strip(), axis=1)
-            st.dataframe(lb_df[['Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']], use_container_width=True, hide_index=True, column_config={"Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)})
+            
+            st.dataframe(lb_df[['Rank', 'District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']], use_container_width=True, hide_index=True, column_config={
+                "Rank": st.column_config.TextColumn("Rank", width="small"),
+                "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100)
+            })
 
         with s_tab2:
             col_a, col_b = st.columns(2)
@@ -873,7 +940,7 @@ elif view_mode == "State View":
                 ''', unsafe_allow_html=True)
 
 # ==============================================================================
-# VIEW: ZM VIEW (RACE TRACK)
+# VIEW: ZM VIEW
 # ==============================================================================
 elif view_mode == "ZM View":
     st.markdown("<h2 style='font-size:20px; margin-bottom:16px;'>Zone Manager Leaderboard</h2>", unsafe_allow_html=True)
@@ -893,8 +960,8 @@ elif view_mode == "ZM View":
             st.markdown(f'''
             <div class="race-track">
                 <div class="race-label">
-                    <span>{rank+1}. {zm}</span>
-                    <span style="color: {color};">{val:,} {"pts" if zm_metric == "Total Patients" else "%"}</span>
+                    <span>{rank+1}. {zm} <span style="color:#64748B; margin-left:8px;">({m['Districts']} districts)</span></span>
+                    <span style="color: {color};">{val:,} {"pts" if zm_metric == "Total Patients" else "%"} <span style="color:#64748B; font-size:11px; margin-left:8px;">Avg: {m['Weighted Avg']}</span></span>
                 </div>
                 <div class="race-bar-bg">
                     <div class="race-bar-fill" style="width: {width_pct}%; background-color: {color}; color: {color};"></div>
@@ -910,9 +977,65 @@ elif view_mode in ["Active Spokes", "Inactive Spokes"]:
     all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
     
     if not all_fac_df.empty:
+        # RESTORED KPI CARDS
         if view_mode == "Active Spokes":
-            df_view = all_fac_df[all_fac_df['Total Patients'] > 0].sort_values('Total Patients', ascending=False)
-        else:
-            df_view = all_fac_df[all_fac_df['Total Patients'] == 0].sort_values('Last Sample Date', ascending=True)
+            active_df = all_fac_df[all_fac_df['Total Patients'] > 0].copy()
+            total_pending = len(all_fac_df[all_fac_df['Status'] == 'Pending Launch'])
+            total_operational = len(all_fac_df) - total_pending
             
-        st.dataframe(df_view[['District', 'Facility', 'Grade', 'Total Patients', 'Uptime %', 'Last Sample Date', 'Primary Reason']], use_container_width=True, hide_index=True)
+            st.markdown(f'''
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                <div class="kpi-card">
+                    <div class="kpi-label">Active Spokes Shown</div>
+                    <div class="kpi-value neon-cyan">{len(active_df)} <span style="font-size:14px; color:#64748B;">/ {total_operational} Operational</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Total Patients</div>
+                    <div class="kpi-value">{active_df['Total Patients'].sum():,}</div>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+            
+            # Filters
+            col1, col2 = st.columns(2)
+            with col1: dist_filter = st.multiselect("Filter by District", sorted(active_df['District'].unique()), default=[])
+            with col2: grade_filter = st.multiselect("Filter by Grade", ["A", "B", "C", "D", "F"], default=[])
+            if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
+            if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
+            
+            active_df = active_df.sort_values('Total Patients', ascending=False)
+            st.dataframe(active_df[['District', 'Facility', 'Grade', 'Total Patients', 'Uptime %', 'Last Sample Date']], use_container_width=True, hide_index=True)
+            
+        else: # Inactive Spokes
+            inactive_df = all_fac_df[all_fac_df['Total Patients'] == 0].copy()
+            op_failures = inactive_df[inactive_df['Status'] == 'Operational'].reset_index(drop=True)
+            pending_launch = inactive_df[inactive_df['Status'] == 'Pending Launch'].reset_index(drop=True)
+            
+            st.markdown(f'''
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">
+                <div class="kpi-card" style="border-top: 2px solid #FF0055;">
+                    <div class="kpi-label" style="color: #FF0055 !important;">Operational Failures</div>
+                    <div class="kpi-value neon-magenta">{len(op_failures)}</div>
+                </div>
+                <div class="kpi-card" style="border-top: 2px solid #FFD500;">
+                    <div class="kpi-label" style="color: #FFD500 !important;">Pending Launch</div>
+                    <div class="kpi-value" style="color: #FFD500 !important;">{len(pending_launch)}</div>
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
+            
+            z_tab1, z_tab2 = st.tabs([f"🔴 True Operational Failures ({len(op_failures)})", f"🚧 Pending Launch ({len(pending_launch)})"])
+            with z_tab1:
+                if not op_failures.empty:
+                    op_failures['SortDate'] = pd.to_datetime(op_failures['Last Sample Date'], errors='coerce')
+                    op_failures = op_failures.sort_values(by=['SortDate', 'Last Sample Date'], ascending=[True, True], na_position='first').drop(columns=['SortDate'])
+                    display_tracker = op_failures[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                    display_tracker['Primary Reason'] = display_tracker['Primary Reason'].apply(format_reason)
+                    styled_tracker = display_tracker.style.map(style_reason, subset=['Primary Reason'])
+                    st.dataframe(styled_tracker, use_container_width=True, hide_index=True)
+                else: st.success("✅ Excellent! No operational facilities found with 0 patients.")
+            
+            with z_tab2:
+                if not pending_launch.empty:
+                    st.dataframe(pending_launch[['District', 'Facility', 'Last Sample Date']], use_container_width=True, hide_index=True)
+                else: st.success("✅ All facilities have launched!")
