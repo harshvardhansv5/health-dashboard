@@ -151,6 +151,25 @@ st.markdown("""
     .zm-name { color: #0F172A !important; font-size: 16px; font-weight: 800; margin-right: 8px; }
     .zm-zone { color: #0F62FE !important; font-size: 14px; font-weight: 600; }
 
+    /* Fix for ZM Profile Button visibility */
+    div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button {
+        background-color: #F8FAFC !important;
+        color: #0F62FE !important;
+        border: 1px solid #E2E8F0 !important;
+        border-radius: 10px !important;
+        font-weight: 700 !important;
+        font-size: 13px !important;
+        height: 36px !important;
+        transition: all 0.2s ease !important;
+        padding: 0px 16px !important;
+        width: 100% !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button:hover {
+        background-color: #EFF6FF !important;
+        border-color: #0F62FE !important;
+        color: #0043CE !important;
+    }
+
     /* --- MODERN PAGE HEADERS --- */
     .page-header-container { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; margin-top: 8px; }
     .page-icon-container { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; border-radius: 14px; background-color: #002D9C; color: #FFFFFF; border: 1px solid #0F62FE; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
@@ -348,25 +367,6 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(15, 98, 254, 0.3) !important;
     }
 
-    /* Ghost Button for ZM Profile */
-    div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button {
-        background-color: #FFFFFF !important;
-        color: #0F172A !important;
-        border: 1px solid #E2E8F0 !important;
-        border-radius: 10px !important;
-        font-weight: 600 !important;
-        font-size: 13px !important;
-        height: 36px !important;
-        transition: all 0.2s ease !important;
-        padding: 0px 16px !important;
-        width: 100% !important;
-    }
-    div[data-testid="stHorizontalBlock"]:has(.zm-ribbon-text) div[data-testid="stButton"] > button:hover {
-        background-color: #EFF6FF !important;
-        border-color: #0F62FE !important;
-        color: #0F62FE !important;
-    }
-
     /* Compact Download Buttons */
     div[data-testid="stDownloadButton"] > button {
         background-color: #FFFFFF !important;
@@ -392,10 +392,10 @@ st.markdown("""
         font-size: 14px !important;
     }
     button[data-baseweb="tab"] p { font-weight: 600 !important; }
-    button[aria-selected="true"] { color: #0F172A !important; }
-    button[aria-selected="true"] p { color: #0F172A !important; font-weight: 800 !important; }
+    button[aria-selected="true"] { color: #FFFFFF !important; }
+    button[aria-selected="true"] p { color: #FFFFFF !important; font-weight: 800 !important; }
     div[data-baseweb="tab-highlight"] { background-color: #0F62FE !important; height: 3px !important; border-radius: 3px !important; }
-    div[data-baseweb="tab-border"] { background-color: #E2E8F0 !important; }
+    div[data-baseweb="tab-border"] { background-color: #475569 !important; }
 
     /* --- STYLE THE EXPANDER (SOFT UI CARD) --- */
     div[data-testid="stExpander"] {
@@ -1002,14 +1002,15 @@ with col_time_ctrl:
     else:
         date_range_str = time_filter
 
+# PLOTLY LAYOUT WITH DARK THEME AND LIGHT TEXT
 PLOTLY_LAYOUT = dict(
-    template="plotly_white", 
-    font=dict(family="Inter, sans-serif", size=13, color="#475569"), 
-    title_font=dict(size=16, color="#0F172A", family="Inter, sans-serif", weight=700), 
+    template="plotly_dark", 
+    font=dict(family="Inter, sans-serif", size=13, color="#F8FAFC"), 
+    title_font=dict(size=16, color="#FFFFFF", family="Inter, sans-serif", weight=700), 
     plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
     margin=dict(l=10, r=10, t=60, b=10),
-    xaxis=dict(showgrid=False, linecolor='#CBD5E1'),
-    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#CBD5E1', linecolor='#CBD5E1')
+    xaxis=dict(showgrid=False, linecolor='#475569', tickfont=dict(color="#F8FAFC")),
+    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#475569', linecolor='#475569', tickfont=dict(color="#F8FAFC"))
 )
 
 # ==============================================================================
@@ -1208,7 +1209,7 @@ if view_mode == "District View":
                     sorted_df, y=facility_col, x=metric_col, orientation='h', color='Grade', 
                     color_discrete_map=grade_color_map, text=text_labels, 
                     category_orders={facility_col: sorted_df[facility_col].tolist()},
-                    title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#475569;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
+                    title=f"<b>{metric_option} per Facility</b><br><span style='font-size:13px;color:#94A3B8;font-weight:500;'>{selected_district_zm} District | {date_range_str}</span>"
                 )
                 
                 if metric_col == 'Average Patients': current_avg = new_weighted_avg
@@ -1218,27 +1219,27 @@ if view_mode == "District View":
                 fig.add_vline(
                     x=current_avg, 
                     line_dash="dash", 
-                    line_color="#0F172A", 
+                    line_color="#FFFFFF", 
                     line_width=2,
                     annotation_text=f" Avg: {current_avg}", 
                     annotation_position="top left",
-                    annotation_font=dict(size=12, color="#0F172A", weight=700)
+                    annotation_font=dict(size=12, color="#FFFFFF", weight=700)
                 )
                 
                 layout_dict = PLOTLY_LAYOUT.copy()
                 layout_dict.update(dict(
                     height=max(500, len(sorted_df) * 30),
-                    yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#0F172A", weight=600), automargin=True),
-                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', tickfont=dict(size=12, color="#475569")),
+                    yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#FFFFFF", weight=600), automargin=True),
+                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#475569', tickfont=dict(size=12, color="#F8FAFC")),
                     showlegend=False, xaxis_title=metric_option, yaxis_title="",
                     margin=dict(l=20, r=60, t=80, b=10), coloraxis_showscale=False
                 ))
                 fig.update_layout(**layout_dict)
-                fig.update_traces(textposition='outside', textangle=0, textfont=dict(color="#0F172A", size=12, weight=700), cliponaxis=False)
+                fig.update_traces(textposition='outside', textangle=0, textfont=dict(color="#FFFFFF", size=12, weight=700), cliponaxis=False)
                 st.plotly_chart(fig, use_container_width=True)
 
-                st.markdown("<hr style='margin: 24px 0; border-color: #E2E8F0;'>", unsafe_allow_html=True)
-                st.markdown("<h4 style='color:#0F172A; margin-bottom:16px; font-weight:800;'>Facility Drill-Down</h4>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin: 24px 0; border-color: #475569;'>", unsafe_allow_html=True)
+                st.markdown("<h4 style='color:#FFFFFF; margin-bottom:16px; font-weight:800;'>Facility Drill-Down</h4>", unsafe_allow_html=True)
                 
                 drill_options = filtered[facility_col].tolist()
                 selected_drill_facility = st.selectbox("Facility", drill_options, index=0 if drill_options else None, label_visibility="collapsed")
@@ -1260,7 +1261,7 @@ if view_mode == "District View":
                         fig_dt.update_traces(
                             line_color='#0F62FE', 
                             line_width=3, 
-                            marker=dict(size=8, color='#FFFFFF', line=dict(width=2, color='#0F62FE'))
+                            marker=dict(size=8, color='#001141', line=dict(width=2, color='#0F62FE'))
                         )
                         
                         dt_layout = PLOTLY_LAYOUT.copy()
@@ -1270,39 +1271,39 @@ if view_mode == "District View":
                         dt_layout.update(dict(
                             height=300,
                             xaxis=dict(showgrid=False, type='category'), 
-                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', tickformat="d", dtick=tick_step_dt, rangemode="tozero"),
+                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#475569', tickformat="d", dtick=tick_step_dt, rangemode="tozero"),
                             margin=dict(l=40, r=10, t=50, b=10)
                         ))
                         fig_dt.update_layout(**dt_layout)
                         st.plotly_chart(fig_dt, use_container_width=True)
 
-        st.markdown("<h4 style='color:#0F172A; margin-top:24px; margin-bottom:16px; font-weight:800;'>Monthly Patient Volume</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#FFFFFF; margin-top:24px; margin-bottom:16px; font-weight:800;'>Monthly Patient Volume</h4>", unsafe_allow_html=True)
         monthly_df = get_district_monthly_trend(df_raw, facility_col)
         
         if not monthly_df.empty:
             fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
-            fig_m.update_traces(marker_color='#0F62FE', texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
+            fig_m.update_traces(marker_color='#0F62FE', texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#FFFFFF', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
-            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
+            m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#475569', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
             fig_m.update_layout(**m_layout)
             st.plotly_chart(fig_m, use_container_width=True)
             st.caption("ℹ️ *Note: The most recent month may show lower volume as it represents month-to-date data only.*")
 
-        st.markdown("<h4 style='color:#0F172A; margin-top:24px; margin-bottom:16px; font-weight:800;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#FFFFFF; margin-top:24px; margin-bottom:16px; font-weight:800;'>Spoke Heatmap</h4>", unsafe_allow_html=True)
         if stats['active_date_cols']:
             heatmap_df = plot_df.set_index(facility_col)[stats['active_date_cols']].copy()
             heatmap_df['Total'] = heatmap_df.sum(axis=1)
             heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
             
-            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F8FAFC'], [0.1, '#E2E8F0'], [1, '#0F62FE']], labels=dict(x="Date", y="", color="Patients"))
+            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#1E293B'], [0.1, '#334155'], [1, '#0F62FE']], labels=dict(x="Date", y="", color="Patients"))
             fig_h.update_traces(xgap=2, ygap=2)
             
             hm_layout = PLOTLY_LAYOUT.copy()
             hm_layout.update(dict(
                 height=max(400, len(heatmap_df) * 35),
-                yaxis=dict(tickfont=dict(size=12, color="#0F172A", weight=600)),
-                xaxis=dict(tickfont=dict(size=11, color="#475569"), tickangle=-45),
-                coloraxis_colorbar=dict(title="Patients", thickness=20),
+                yaxis=dict(tickfont=dict(size=12, color="#FFFFFF", weight=600)),
+                xaxis=dict(tickfont=dict(size=11, color="#F8FAFC"), tickangle=-45),
+                coloraxis_colorbar=dict(title="Patients", thickness=20, tickfont=dict(color="#FFFFFF")),
                 margin=dict(l=10, r=10, t=10, b=60)
             ))
             fig_h.update_layout(**hm_layout)
@@ -1353,7 +1354,7 @@ if view_mode == "District View":
         </div>
         """, unsafe_allow_html=True)
 
-        st.markdown("<h4 style='color:#0F172A; margin-top:16px; margin-bottom:16px; font-weight:800;'>Spoke Scorecard</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#FFFFFF; margin-top:16px; margin-bottom:16px; font-weight:800;'>Spoke Scorecard</h4>", unsafe_allow_html=True)
         display = pd.DataFrame()
         display['Facility'] = scorecard[facility_col]
         display['Grade'] = scorecard['Grade'].apply(grade_emoji)
@@ -1491,7 +1492,7 @@ if view_mode == "District View":
                 st.info("These facilities will automatically move to 'Active' as soon as their first data column is added.")
 
     with d_tab4:
-        st.markdown("<h4 style='color:#0F172A; margin-bottom:16px; font-weight:800;'>Hub Logistics & Distance Mapping</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color:#FFFFFF; margin-bottom:16px; font-weight:800;'>Hub Logistics & Distance Mapping</h4>", unsafe_allow_html=True)
         dist_col = find_distance_column(df_raw)
         
         if dist_col:
@@ -1546,7 +1547,7 @@ if view_mode == "District View":
                     texttemplate='%{text:.1f} km', 
                     textposition='outside',
                     textangle=0,
-                    textfont=dict(color="#0F172A", weight=700),
+                    textfont=dict(color="#FFFFFF", weight=700),
                     cliponaxis=False
                 )
                 
@@ -1554,18 +1555,18 @@ if view_mode == "District View":
                 fig_dist.add_vline(
                     x=avg_dist, 
                     line_dash="dash", 
-                    line_color="#475569", 
+                    line_color="#FFFFFF", 
                     line_width=2,
                     annotation_text=f" Avg: {avg_dist:.1f} km", 
                     annotation_position="top right",
-                    annotation_font=dict(size=12, color="#475569", weight=700)
+                    annotation_font=dict(size=12, color="#FFFFFF", weight=700)
                 )
                 
                 dist_layout = PLOTLY_LAYOUT.copy()
                 dist_layout.update(dict(
                     height=max(400, len(valid_polar_df) * 35),
-                    yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=12, color="#0F172A", weight=600), automargin=True),
-                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', title="Distance (km)"),
+                    yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=12, color="#FFFFFF", weight=600), automargin=True),
+                    xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#475569', title="Distance (km)"),
                     showlegend=False,
                     margin=dict(l=20, r=60, t=60, b=20),
                     coloraxis_showscale=False
@@ -1771,7 +1772,7 @@ elif view_mode == "State View":
                         height=350, margin=dict(l=40, r=10, t=40, b=40),
                         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
                         xaxis=dict(showgrid=False, tickformat="%d %b"), 
-                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', tickformat="d", dtick=tick_step_cmp, rangemode="tozero")
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#475569', tickformat="d", dtick=tick_step_cmp, rangemode="tozero")
                     ))
                     fig_c.update_layout(**cmp_layout)
                     st.plotly_chart(fig_c, use_container_width=True)
@@ -1903,7 +1904,7 @@ elif view_mode == "ZM View":
                     with c2:
                         zm_sort_order = st.radio("Order:", ["Descending", "Ascending"], horizontal=True, key="zm_sort_order")
                     
-                    st.markdown(f"<h4 style='color:#0F172A; margin-top:16px; margin-bottom:16px; font-weight:800;'>District Breakdown</h4>", unsafe_allow_html=True)
+                    st.markdown(f"<h4 style='color:#FFFFFF; margin-top:16px; margin-bottom:16px; font-weight:800;'>District Breakdown</h4>", unsafe_allow_html=True)
                     display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
                     is_ascending = (zm_sort_order == "Ascending")
                     
@@ -1916,15 +1917,15 @@ elif view_mode == "ZM View":
                         "Weighted Avg": st.column_config.NumberColumn(format="%.1f")
                     })
                     
-                    st.markdown(f"<h4 style='color:#0F172A; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
+                    st.markdown(f"<h4 style='color:#FFFFFF; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
                     fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Blues', text='Total Patients', title="<b>Total Patients by District</b>")
-                    fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
+                    fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#FFFFFF', weight=700))
                     
                     zm_layout = PLOTLY_LAYOUT.copy()
                     zm_layout.update(dict(
                         height=400,
-                        xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#0F172A", weight=700)),
-                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#E2E8F0', title="Total Patients"),
+                        xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#FFFFFF", weight=700)),
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#475569', title="Total Patients"),
                         margin=dict(l=10, r=10, t=60, b=10)
                     ))
                     fig_zm.update_layout(**zm_layout)
@@ -2221,12 +2222,12 @@ elif view_mode == "Inactive Spokes":
             ''', unsafe_allow_html=True)
 
         if not op_failures.empty:
-            st.markdown("<h4 style='color:#0F172A; margin-top:16px; margin-bottom:16px; font-weight:800;'>Top Offending Districts (Operational Failures)</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color:#FFFFFF; margin-top:16px; margin-bottom:16px; font-weight:800;'>Top Offending Districts (Operational Failures)</h4>", unsafe_allow_html=True)
             district_counts = op_failures['District'].value_counts().head(5).reset_index()
             district_counts.columns = ['District', 'Failures']
             
             fig_off = px.bar(district_counts, x='Failures', y='District', orientation='h', text='Failures', title="<b>Top 5 Districts by Operational Failures</b>")
-            fig_off.update_traces(marker_color='#E11D48', textposition='outside', textangle=0, textfont=dict(color='#0F172A', weight=700))
+            fig_off.update_traces(marker_color='#E11D48', textposition='outside', textangle=0, textfont=dict(color='#FFFFFF', weight=700))
             
             off_layout = PLOTLY_LAYOUT.copy()
             off_layout.update(dict(height=300, showlegend=False, xaxis_title="Number of Facilities", yaxis_title="", margin=dict(l=10, r=20, t=60, b=10)))
