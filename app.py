@@ -608,7 +608,9 @@ def get_facility_mask(df, facility_col):
     mask &= ~df[facility_col].astype(str).str.upper().str.contains('JAIL', na=False)
     mask &= ~df[facility_col].astype(str).str.strip().str.lower().isin(['nan', 'none', ''])
     mask &= ~df[facility_col].astype(str).str.lower().str.contains('prepared|signature|verified|report', na=False)
-    # FIX: Facility names must contain at least one alphabetical character to filter out stray numbers (like "6")
+    # CRITICAL: Facility names must contain at least one letter.
+    # This filters out stray numeric rows (index leaks, footer numbers, etc.)
+    # DO NOT REMOVE — see project handoff, critical bug #5.
     mask &= df[facility_col].astype(str).str.contains('[a-zA-Z]', regex=True, na=False)
     return mask
 
@@ -784,7 +786,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v79.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v81.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -806,7 +808,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v79.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v81.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -887,6 +889,16 @@ def _zm_aggregates(state_df):
         }
     return out
 
+# --- HELPER FOR DYNAMIC Y-AXIS TICKS ---
+def get_tick_step(max_val):
+    if max_val <= 5: return 1
+    if max_val <= 20: return 2
+    if max_val <= 50: return 5
+    if max_val <= 100: return 10
+    if max_val <= 200: return 20
+    if max_val <= 500: return 50
+    return 100
+
 # --- MAIN AREA ---
 if SPREADSHEET_URL == "YOUR_PUBLISHED_XLSX_URL_HERE":
     st.error("Please insert your Published Google Sheets URL in the code.")
@@ -895,16 +907,6 @@ if SPREADSHEET_URL == "YOUR_PUBLISHED_XLSX_URL_HERE":
 # Setup Data Fetch with Refresh Capability
 if 'data_timestamp' not in st.session_state:
     st.session_state.data_timestamp = datetime.now()
-
-@st.cache_data(ttl=3600, show_spinner="Fetching live data from Google Sheets...")
-def fetch_google_sheet(url):
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        return response.content
-    except Exception as e:
-        st.error(f"Failed to connect to Google Sheets: {e}")
-        return None
 
 file_bytes = fetch_google_sheet(SPREADSHEET_URL)
 
@@ -1231,29 +1233,27 @@ if view_mode == "District View":
                     m2.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Uptime</div><div class='metric-icon'><span class='material-symbols-rounded'>check_circle</span></div></div><div class='metric-value'>{fac_row['Uptime %']}%</div></div>", unsafe_allow_html=True)
                     m3.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Zero Days</div><div class='metric-icon'><span class='material-symbols-rounded'>warning</span></div></div><div class='metric-value'>{fac_row['Zero Days']}</div></div>", unsafe_allow_html=True)
                     
-                    # FIX: Use 'c' (the formatted string key) instead of active_date_map[c] which is a raw datetime
                     drill_trend = [{'Date': c, 'Patients': fac_row[c]} for c in stats['active_date_cols']]
                     if drill_trend:
                         dt_df = pd.DataFrame(drill_trend)
                         
-                        # CHANGED: Back to a clean Bar Chart
-                        fig_dt = px.bar(dt_df, x='Date', y='Patients', text='Patients', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
+                        # HEART MONITOR STEP LINE CHART
+                        fig_dt = px.line(dt_df, x='Date', y='Patients', markers=True, line_shape='hv', title=f"<b>Daily Trend: {selected_drill_facility}</b>")
                         fig_dt.update_traces(
-                            marker_color='#1E3A8A', 
-                            textposition='outside',
-                            textfont=dict(color="#1C1917", weight=700),
-                            cliponaxis=False
+                            line_color='#1E3A8A', 
+                            line_width=3, 
+                            marker=dict(size=8, color='#FAFAF9', line=dict(width=2, color='#1E3A8A'))
                         )
                         
                         dt_layout = PLOTLY_LAYOUT.copy()
-                        # DYNAMIC TICKS: Prevent overlapping numbers based on max value
-                        max_y = dt_df['Patients'].max() if not dt_df.empty else 0
-                        tick_step = 1 if max_y <= 5 else (2 if max_y <= 20 else 5)
-                        
+                        # DYNAMIC Y-AXIS TICKS — prevents duplicate integer labels
+                        # AND avoids hundreds of gridlines for high-volume facilities
+                        max_y_dt = dt_df['Patients'].max() if not dt_df.empty else 0
+                        tick_step_dt = get_tick_step(max_y_dt if pd.notna(max_y_dt) else 0)
                         dt_layout.update(dict(
                             height=300,
                             xaxis=dict(showgrid=False, type='category'), 
-                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', tickformat="d", dtick=tick_step, rangemode="tozero"),
+                            yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', tickformat="d", dtick=tick_step_dt, rangemode="tozero"),
                             margin=dict(l=40, r=10, t=50, b=10)
                         ))
                         fig_dt.update_layout(**dt_layout)
@@ -1264,7 +1264,6 @@ if view_mode == "District View":
         
         if not monthly_df.empty:
             fig_m = px.bar(monthly_df, x='Month', y='Total Patients', text='Total Patients')
-            # FIX: Changed bars from pitch black to Navy Blue
             fig_m.update_traces(marker_color='#1E3A8A', texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#1C1917', weight=700))
             m_layout = PLOTLY_LAYOUT.copy()
             m_layout.update(dict(height=350, xaxis=dict(showgrid=False, type='category'), yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', title="Total Patients"), margin=dict(l=10, r=10, t=20, b=10)))
@@ -1484,9 +1483,19 @@ if view_mode == "District View":
             
             def clean_distance(val):
                 if pd.isna(val): return None
-                s = str(val).strip().replace(' ', '')
+                s = str(val).strip()
+                if s == '' or s.lower() in ('nan', 'none', '-', 'na', 'n/a'):
+                    return None
+                # Try direct numeric first
                 try: return float(s)
-                except ValueError: return DISTANCE_FALLBACK.get(str(val).strip(), None)
+                except ValueError: pass
+                # Strip common unit suffixes and symbols: "~45 km", "45kms", "45 Km"
+                cleaned = re.sub(r'[~<>≈]', '', s)
+                cleaned = re.sub(r'\s*(kms?|kilometers?|kilo\s*meters?|mi|miles?)\s*$', '', cleaned, flags=re.IGNORECASE)
+                cleaned = cleaned.strip()
+                try: return float(cleaned)
+                except ValueError:
+                    return DISTANCE_FALLBACK.get(s, None)
                     
             dist_data['Distance'] = dist_data['Raw_Distance'].apply(clean_distance)
             polar_df = pd.merge(scorecard[[facility_col, 'Grade', 'Uptime %', 'Average Patients']], 
@@ -1739,7 +1748,7 @@ elif view_mode == "State View":
                 
                 zm_lb = pd.DataFrame(rows).sort_values('Rank').reset_index(drop=True)
                 
-                if prev_zm is None:
+                if not prev_zm:
                     st.caption("ℹ️ Trend arrows require a comparison period. Select 'Past Week', 'Past 2 Weeks', 'Past Month', or 'Select Dates...' to enable.")
                 
                 st.dataframe(
@@ -1824,9 +1833,10 @@ elif view_mode == "State View":
                                     color_discrete_map={district_a_display: '#1E3A8A', district_b_display: '#DC2626'})
                     fig_c.update_traces(connectgaps=True, marker=dict(size=8))
                     
-                    # DYNAMIC TICKS for State View comparison
-                    max_y_cmp = combined['Patients'].max() if not combined.empty else 0
-                    tick_step_cmp = 1 if max_y_cmp <= 5 else (2 if max_y_cmp <= 20 else 5)
+                    # DYNAMIC Y-AXIS TICKS — prevents duplicate labels at small scales
+                    # and avoids hundreds of gridlines at large scales
+                    max_y_cmp = pd.to_numeric(combined['Patients'], errors='coerce').max() if not combined.empty else 0
+                    tick_step_cmp = get_tick_step(max_y_cmp if pd.notna(max_y_cmp) else 0)
                     
                     cmp_layout = PLOTLY_LAYOUT.copy()
                     cmp_layout.update(dict(
