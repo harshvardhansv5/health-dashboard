@@ -66,10 +66,10 @@ st.markdown("""
         margin-top: 10vh;
     }
     div[data-testid="stForm"] {
-        background-color: #FFFFFF !important;
+        background: linear-gradient(145deg, #FFFFFF, #F8FAFC) !important;
         border-radius: 24px !important;
         padding: 48px 40px !important;
-        box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.3) !important;
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
         border: 1px solid #E2E8F0 !important;
     }
     div[data-testid="stTextInput"] input {
@@ -85,6 +85,8 @@ st.markdown("""
         box-shadow: 0 0 0 1px #0F62FE !important;
         background-color: #FFFFFF !important;
     }
+    
+    /* LOGIN BUTTON - Fix for text visibility */
     div[data-testid="stFormSubmitButton"] > button {
         background-color: #0F62FE !important;
         color: #FFFFFF !important;
@@ -95,11 +97,16 @@ st.markdown("""
         height: 48px !important;
         box-shadow: 0 4px 12px rgba(15, 98, 254, 0.3) !important;
         margin-top: 16px !important;
+        transition: all 0.2s ease !important;
     }
     div[data-testid="stFormSubmitButton"] > button:hover {
         background-color: #0043CE !important;
         transform: translateY(-2px) !important;
         box-shadow: 0 6px 16px rgba(15, 98, 254, 0.4) !important;
+    }
+    /* Force all inner text elements of the login button to be white */
+    div[data-testid="stFormSubmitButton"] > button * {
+        color: #FFFFFF !important;
     }
     
     /* --- WHITE METRIC CARDS (POP AGAINST NAVY) --- */
@@ -313,6 +320,31 @@ st.markdown("""
         0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
         70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
         100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+    }
+
+    /* Fix for Refresh Button (make it a visible ghost button) */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stButton"] > button {
+        background-color: #0043CE !important;
+        color: #FFFFFF !important;
+        border: 1px solid #0F62FE !important;
+        border-radius: 12px !important;
+        height: 44px !important;
+        width: 100% !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stButton"] > button:hover {
+        background-color: #0F62FE !important;
+        border-color: #FFFFFF !important;
+    }
+    /* Force the refresh icon to be white */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stButton"] > button * {
+        color: #FFFFFF !important;
+        font-size: 18px !important;
+        margin: 0 !important;
     }
 
     /* Compare Battle Cards */
