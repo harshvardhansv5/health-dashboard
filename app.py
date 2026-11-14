@@ -610,7 +610,6 @@ def get_facility_mask(df, facility_col):
     mask &= ~df[facility_col].astype(str).str.lower().str.contains('prepared|signature|verified|report', na=False)
     # CRITICAL: Facility names must contain at least one letter.
     # This filters out stray numeric rows (index leaks, footer numbers, etc.)
-    # DO NOT REMOVE — see project handoff, critical bug #5.
     mask &= df[facility_col].astype(str).str.contains('[a-zA-Z]', regex=True, na=False)
     return mask
 
@@ -1246,8 +1245,7 @@ if view_mode == "District View":
                         )
                         
                         dt_layout = PLOTLY_LAYOUT.copy()
-                        # DYNAMIC Y-AXIS TICKS — prevents duplicate integer labels
-                        # AND avoids hundreds of gridlines for high-volume facilities
+                        # DYNAMIC Y-AXIS TICKS
                         max_y_dt = dt_df['Patients'].max() if not dt_df.empty else 0
                         tick_step_dt = get_tick_step(max_y_dt if pd.notna(max_y_dt) else 0)
                         dt_layout.update(dict(
@@ -1629,7 +1627,8 @@ elif view_mode == "State View":
         </div>
         ''', unsafe_allow_html=True)
         
-        s_tab1, s_tab2, s_tab3 = st.tabs(["District Leaderboard", "ZM Leaderboard", "District vs District"])
+        # ONLY 2 TABS NOW: District Leaderboard & District vs District
+        s_tab1, s_tab2 = st.tabs(["District Leaderboard", "District vs District"])
         
         with s_tab1:
             c1, c2 = st.columns([2, 1])
@@ -1676,93 +1675,8 @@ elif view_mode == "State View":
             with col_dl2:
                 st.download_button("📥 Download Leaderboard", data=buf_state.getvalue(), file_name="State_Leaderboard.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
             
+        # DISTRICT VS DISTRICT (formerly s_tab3, now s_tab2)
         with s_tab2:
-            zm_metric = st.radio("Rank ZMs by:", ["Uptime %", "Weighted Avg", "Total Patients"], horizontal=True, key="zm_lb_metric")
-            cur_zm = _zm_aggregates(state_df)
-            
-            prev_zm = None
-            if time_filter != "Full History":
-                try:
-                    if time_filter == "Select Dates..." and start_date and end_date:
-                        span = (end_date - start_date).days + 1
-                        prev_end = start_date - timedelta(days=1)
-                        prev_start = prev_end - timedelta(days=span - 1)
-                        prev_state_df = calculate_all_districts(
-                            tuple(available_sheets), file_bytes, "Select Dates...",
-                            prev_start, prev_end, window_offset=0
-                        )
-                    else:
-                        prev_state_df = calculate_all_districts(
-                            tuple(available_sheets), file_bytes, time_filter,
-                            None, None, window_offset=1
-                        )
-                    prev_zm = _zm_aggregates(prev_state_df) if not prev_state_df.empty else {}
-                except Exception:
-                    prev_zm = None
-            
-            if not cur_zm:
-                st.info("No ZM data available for the selected period.")
-            else:
-                cur_sorted = sorted(cur_zm.items(), key=lambda kv: kv[1][zm_metric], reverse=True)
-                cur_rank = {zm: i+1 for i, (zm, _) in enumerate(cur_sorted)}
-                prev_rank = {}
-                if prev_zm:
-                    prev_sorted = sorted(prev_zm.items(), key=lambda kv: kv[1][zm_metric], reverse=True)
-                    prev_rank = {zm: i+1 for i, (zm, _) in enumerate(prev_sorted)}
-                
-                rows = []
-                for zm, m in cur_zm.items():
-                    cur_v = m[zm_metric]
-                    prev_v = prev_zm.get(zm, {}).get(zm_metric) if prev_zm else None
-                    
-                    if prev_rank.get(zm):
-                        rd = prev_rank[zm] - cur_rank[zm]
-                        rank_delta = f"↑{rd}" if rd > 0 else (f"↓{abs(rd)}" if rd < 0 else "—")
-                    else:
-                        rank_delta = "—"
-                    
-                    if prev_v is None:
-                        trend = "—"
-                    elif prev_v == 0 and cur_v == 0:
-                        trend = "⚪ 0.0%"
-                    elif prev_v == 0 and cur_v > 0:
-                        trend = "🟢 NEW"
-                    else:
-                        pct = (cur_v - prev_v) / prev_v * 100
-                        if pct > 0.05: trend = f"🟢 +{pct:.1f}%"
-                        elif pct < -0.05: trend = f"🔴 {pct:.1f}%"
-                        else: trend = "⚪ 0.0%"
-                    
-                    rows.append({
-                        'Rank': cur_rank[zm],
-                        'ZM': zm,
-                        'Districts': m['Districts'],
-                        'Total Patients': m['Total Patients'],
-                        'Weighted Avg': m['Weighted Avg'],
-                        'Uptime %': m['Uptime %'],
-                        'Active Spokes': m['Active Spokes'],
-                        'Total Spokes': m['Total Spokes'],
-                        'Rank Δ': rank_delta,
-                        'Trend': trend,
-                    })
-                
-                zm_lb = pd.DataFrame(rows).sort_values('Rank').reset_index(drop=True)
-                
-                if not prev_zm:
-                    st.caption("ℹ️ Trend arrows require a comparison period. Select 'Past Week', 'Past 2 Weeks', 'Past Month', or 'Select Dates...' to enable.")
-                
-                st.dataframe(
-                    zm_lb, use_container_width=True, hide_index=True,
-                    column_config={
-                        "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100),
-                        "Total Patients": st.column_config.NumberColumn(format="%d"),
-                        "Weighted Avg": st.column_config.NumberColumn(format="%.1f"),
-                        "Rank Δ": st.column_config.TextColumn("Rank Δ", width="small"),
-                        "Trend": st.column_config.TextColumn("Trend", width="medium"),
-                    }
-                )
-
-        with s_tab3:
             col_empty1, ca, cb, col_empty2 = st.columns([1, 2, 2, 1])
             with ca: district_a_display = st.selectbox("District A", _DISPLAY_DISTRICTS, index=0, key='cmp_a')
             with cb: district_b_display = st.selectbox("District B", _DISPLAY_DISTRICTS, index=min(1, len(_DISPLAY_DISTRICTS) - 1), key='cmp_b')
@@ -1833,8 +1747,6 @@ elif view_mode == "State View":
                                     color_discrete_map={district_a_display: '#1E3A8A', district_b_display: '#DC2626'})
                     fig_c.update_traces(connectgaps=True, marker=dict(size=8))
                     
-                    # DYNAMIC Y-AXIS TICKS — prevents duplicate labels at small scales
-                    # and avoids hundreds of gridlines at large scales
                     max_y_cmp = pd.to_numeric(combined['Patients'], errors='coerce').max() if not combined.empty else 0
                     tick_step_cmp = get_tick_step(max_y_cmp if pd.notna(max_y_cmp) else 0)
                     
@@ -1861,217 +1773,311 @@ elif view_mode == "ZM View":
         </div>
         <div>
             <div class="page-title-text">Zone Manager View</div>
-            <div class="page-subtitle-text">Drill down into specific Zonal performance</div>
+            <div class="page-subtitle-text">Zonal leaderboard and specific manager drill-downs</div>
         </div>
     </div>
     """, unsafe_allow_html=True)
     
-    _zm_opts = sorted(ZM_DATA.keys())
-    if 'zm_view_target' in st.session_state:
-        _target = st.session_state.pop('zm_view_target')
-        if _target in _zm_opts:
-            st.session_state['zm_sel'] = _target
-        
-    selected_zm = st.selectbox("Select Zone Manager", _zm_opts, key='zm_sel')
-    zm_districts = list(ZM_DATA[selected_zm].keys())
+    # Create top-level tabs for ZM View
+    zm_drill_tab, zm_lb_tab = st.tabs(["🔍 Zone Drill-Down", "🏆 ZM Leaderboard"])
     
-    with st.spinner(f"Loading data for {selected_zm}..."):
-        state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
-        all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+    with zm_drill_tab:
+        _zm_opts = sorted(ZM_DATA.keys())
+        if 'zm_view_target' in st.session_state:
+            _target = st.session_state.pop('zm_view_target')
+            if _target in _zm_opts:
+                st.session_state['zm_sel'] = _target
+            
+        selected_zm = st.selectbox("Select Zone Manager", _zm_opts, key='zm_sel')
+        zm_districts = list(ZM_DATA[selected_zm].keys())
         
-        prev_state_df = None
-        if time_filter != "Full History":
-            if time_filter == "Select Dates..." and start_date and end_date:
-                span = (end_date - start_date).days + 1
-                prev_end = start_date - timedelta(days=1)
-                prev_start = prev_end - timedelta(days=span - 1)
-                prev_state_df = calculate_all_districts(tuple(available_sheets), file_bytes, "Select Dates...", prev_start, prev_end, window_offset=0)
+        with st.spinner(f"Loading data for {selected_zm}..."):
+            state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+            all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+            
+            prev_state_df = None
+            if time_filter != "Full History":
+                if time_filter == "Select Dates..." and start_date and end_date:
+                    span = (end_date - start_date).days + 1
+                    prev_end = start_date - timedelta(days=1)
+                    prev_start = prev_end - timedelta(days=span - 1)
+                    prev_state_df = calculate_all_districts(tuple(available_sheets), file_bytes, "Select Dates...", prev_start, prev_end, window_offset=0)
+                else:
+                    prev_state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, None, None, window_offset=1)
+            
+        if not state_df.empty and not all_fac_df.empty:
+            zm_df = state_df[state_df['District'].isin(zm_districts)].copy()
+            zm_fac_df = all_fac_df[all_fac_df['District'].isin(zm_districts)].copy()
+            
+            if zm_df.empty:
+                st.warning(f"No data available for {selected_zm}'s districts in the selected time range.")
             else:
-                prev_state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, None, None, window_offset=1)
-        
-    if not state_df.empty and not all_fac_df.empty:
-        zm_df = state_df[state_df['District'].isin(zm_districts)].copy()
-        zm_fac_df = all_fac_df[all_fac_df['District'].isin(zm_districts)].copy()
-        
-        if zm_df.empty:
-            st.warning(f"No data available for {selected_zm}'s districts in the selected time range.")
-        else:
-            total_patients = zm_df['Total Patients'].sum()
-            total_active = zm_df['Active Spokes'].sum()
-            total_facilities = zm_df['Facilities'].sum()
-            pending_zm = zm_fac_df[zm_fac_df['Status'] == 'Pending Launch']
-            total_pending = len(pending_zm)
-            total_operational = total_facilities - total_pending
-            
-            zone_fac_days = int((zm_df['Facilities'] * zm_df['Days Reported']).sum())
-            zone_weighted_avg = round(total_patients / zone_fac_days, 1) if zone_fac_days > 0 else 0.0
-            
-            avg_uptime = round(zm_df['Uptime %'].mean(), 1)
-            
-            if prev_state_df is not None and not prev_state_df.empty:
-                prev_zm_df = prev_state_df[prev_state_df['District'].isin(zm_districts)]
-                if not prev_zm_df.empty:
-                    p_total = prev_zm_df['Total Patients'].sum()
-                    p_fac_days = int((prev_zm_df['Facilities'] * prev_zm_df['Days Reported']).sum())
-                    p_avg = round(p_total / p_fac_days, 1) if p_fac_days > 0 else 0.0
-                    p_uptime = round(prev_zm_df['Uptime %'].mean(), 1)
-                    
-                    trend_patients = get_trend_html(total_patients, p_total)
-                    trend_avg = get_trend_html(zone_weighted_avg, p_avg)
-                    trend_uptime = get_trend_html(avg_uptime, p_uptime)
+                total_patients = zm_df['Total Patients'].sum()
+                total_active = zm_df['Active Spokes'].sum()
+                total_facilities = zm_df['Facilities'].sum()
+                pending_zm = zm_fac_df[zm_fac_df['Status'] == 'Pending Launch']
+                total_pending = len(pending_zm)
+                total_operational = total_facilities - total_pending
+                
+                zone_fac_days = int((zm_df['Facilities'] * zm_df['Days Reported']).sum())
+                zone_weighted_avg = round(total_patients / zone_fac_days, 1) if zone_fac_days > 0 else 0.0
+                
+                avg_uptime = round(zm_df['Uptime %'].mean(), 1)
+                
+                if prev_state_df is not None and not prev_state_df.empty:
+                    prev_zm_df = prev_state_df[prev_state_df['District'].isin(zm_districts)]
+                    if not prev_zm_df.empty:
+                        p_total = prev_zm_df['Total Patients'].sum()
+                        p_fac_days = int((prev_zm_df['Facilities'] * prev_zm_df['Days Reported']).sum())
+                        p_avg = round(p_total / p_fac_days, 1) if p_fac_days > 0 else 0.0
+                        p_uptime = round(prev_zm_df['Uptime %'].mean(), 1)
+                        
+                        trend_patients = get_trend_html(total_patients, p_total)
+                        trend_avg = get_trend_html(zone_weighted_avg, p_avg)
+                        trend_uptime = get_trend_html(avg_uptime, p_uptime)
+                    else:
+                        trend_patients = trend_avg = trend_uptime = "—"
                 else:
                     trend_patients = trend_avg = trend_uptime = "—"
-            else:
-                trend_patients = trend_avg = trend_uptime = "—"
-            
-            sub_districts = ['Barh', 'Danapur']
-            sub_count = len([d for d in zm_districts if d in sub_districts])
-            dist_count = len(zm_districts) - sub_count
-            total_units = len(zm_districts)
-            breakdown_text = f"{dist_count} Districts"
-            if sub_count > 0:
-                breakdown_text += f" & {sub_count} Sub-districts"
-            
-            st.markdown(f'''
-            <div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
-                <div class="metric-card">
-                    <div class="metric-header"><div class="metric-label">Coverage</div><div class="metric-icon"><span class="material-symbols-rounded">map</span></div></div>
-                    <div class="metric-value">{total_units}</div>
-                    <div class="metric-trend trend-neutral">Total Units</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header"><div class="metric-label">Weighted Avg / Day</div><div class="metric-icon"><span class="material-symbols-rounded">speed</span></div></div>
-                    <div class="metric-value">{zone_weighted_avg} {trend_avg}</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">hub</span></div></div>
-                    <div class="metric-value">{total_active} <span style="font-size:16px; color:#78716C; font-weight:600;">/ {total_operational} Operational</span></div>
-                    <div class="metric-trend trend-neutral">Operational Facilities</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-header"><div class="metric-label">Avg Zone Uptime</div><div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div></div>
-                    <div class="metric-value">{avg_uptime}% {trend_uptime}</div>
-                </div>
-            </div>
-            ''', unsafe_allow_html=True)
-            
-            op_failures_zm = zm_fac_df[(zm_fac_df['Total Patients'] == 0) & (zm_fac_df['Status'] == 'Operational')]
-            
-            zm_tab1, zm_tab2, zm_tab3, zm_tab4 = st.tabs([
-                "Zone Summary", 
-                f"🟢 Active Spokes ({total_active})", 
-                f"🔴 Inactive Spokes ({len(op_failures_zm)})",
-                f"🚧 Pending Launch ({total_pending})"
-            ])
-            
-            with zm_tab1:
-                c1, c2 = st.columns([2, 1])
-                with c1: 
-                    zm_sort_metric = st.selectbox("Sort By:", ["Uptime %", "Weighted Avg", "Total Patients"], key="zm_sort_col")
-                with c2:
-                    zm_sort_order = st.radio("Order:", ["Descending", "Ascending"], horizontal=True, key="zm_sort_order")
                 
-                st.markdown(f"<h4 style='color:#1C1917; margin-top:16px; margin-bottom:16px; font-weight:800;'>District Breakdown</h4>", unsafe_allow_html=True)
-                display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
-                is_ascending = (zm_sort_order == "Ascending")
+                sub_districts = ['Barh', 'Danapur']
+                sub_count = len([d for d in zm_districts if d in sub_districts])
+                dist_count = len(zm_districts) - sub_count
+                total_units = len(zm_districts)
+                breakdown_text = f"{dist_count} Districts"
+                if sub_count > 0:
+                    breakdown_text += f" & {sub_count} Sub-districts"
                 
-                sort_col = "Weighted Avg" if zm_sort_metric == "Weighted Avg" else zm_sort_metric
-                display_df = zm_df[display_cols].sort_values(by=[sort_col, 'Weighted Avg'], ascending=[is_ascending, is_ascending]).reset_index(drop=True)
+                st.markdown(f'''
+                <div class="metric-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    <div class="metric-card">
+                        <div class="metric-header"><div class="metric-label">Coverage</div><div class="metric-icon"><span class="material-symbols-rounded">map</span></div></div>
+                        <div class="metric-value">{total_units}</div>
+                        <div class="metric-trend trend-neutral">Total Units</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-header"><div class="metric-label">Weighted Avg / Day</div><div class="metric-icon"><span class="material-symbols-rounded">speed</span></div></div>
+                        <div class="metric-value">{zone_weighted_avg} {trend_avg}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">hub</span></div></div>
+                        <div class="metric-value">{total_active} <span style="font-size:16px; color:#78716C; font-weight:600;">/ {total_operational} Operational</span></div>
+                        <div class="metric-trend trend-neutral">Operational Facilities</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-header"><div class="metric-label">Avg Zone Uptime</div><div class="metric-icon"><span class="material-symbols-rounded">timeline</span></div></div>
+                        <div class="metric-value">{avg_uptime}% {trend_uptime}</div>
+                    </div>
+                </div>
+                ''', unsafe_allow_html=True)
                 
-                st.dataframe(display_df, use_container_width=True, hide_index=True, column_config={
+                op_failures_zm = zm_fac_df[(zm_fac_df['Total Patients'] == 0) & (zm_fac_df['Status'] == 'Operational')]
+                
+                zm_tab1, zm_tab2, zm_tab3, zm_tab4 = st.tabs([
+                    "Zone Summary", 
+                    f"🟢 Active Spokes ({total_active})", 
+                    f"🔴 Inactive Spokes ({len(op_failures_zm)})",
+                    f"🚧 Pending Launch ({total_pending})"
+                ])
+                
+                with zm_tab1:
+                    c1, c2 = st.columns([2, 1])
+                    with c1: 
+                        zm_sort_metric = st.selectbox("Sort By:", ["Uptime %", "Weighted Avg", "Total Patients"], key="zm_sort_col")
+                    with c2:
+                        zm_sort_order = st.radio("Order:", ["Descending", "Ascending"], horizontal=True, key="zm_sort_order")
+                    
+                    st.markdown(f"<h4 style='color:#1C1917; margin-top:16px; margin-bottom:16px; font-weight:800;'>District Breakdown</h4>", unsafe_allow_html=True)
+                    display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
+                    is_ascending = (zm_sort_order == "Ascending")
+                    
+                    sort_col = "Weighted Avg" if zm_sort_metric == "Weighted Avg" else zm_sort_metric
+                    display_df = zm_df[display_cols].sort_values(by=[sort_col, 'Weighted Avg'], ascending=[is_ascending, is_ascending]).reset_index(drop=True)
+                    
+                    st.dataframe(display_df, use_container_width=True, hide_index=True, column_config={
+                        "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100),
+                        "Total Patients": st.column_config.NumberColumn(format="%d"),
+                        "Weighted Avg": st.column_config.NumberColumn(format="%.1f")
+                    })
+                    
+                    st.markdown(f"<h4 style='color:#1C1917; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
+                    fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients', title="<b>Total Patients by District</b>")
+                    fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#1C1917', weight=700))
+                    
+                    zm_layout = PLOTLY_LAYOUT.copy()
+                    zm_layout.update(dict(
+                        height=400,
+                        xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#1C1917", weight=700)),
+                        yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', title="Total Patients"),
+                        margin=dict(l=10, r=10, t=60, b=10)
+                    ))
+                    fig_zm.update_layout(**zm_layout)
+                    st.plotly_chart(fig_zm, use_container_width=True)
+
+                with zm_tab2:
+                    active_zm = zm_fac_df[zm_fac_df['Total Patients'] > 0].copy()
+                    if active_zm.empty:
+                        st.info("No active spokes in this zone for the selected time range.")
+                    else:
+                        active_zm = active_zm.sort_values(by=['Uptime %', 'Total Patients'], ascending=[False, False]).reset_index(drop=True)
+                        
+                        def style_grade(val):
+                            if val in ['A', 'B']: return 'background-color: #ECFDF5; color: #047857; font-weight: bold;'
+                            elif val in ['C', 'D']: return 'background-color: #FEF08A; color: #854D0E; font-weight: bold;'
+                            elif val == 'F': return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
+                            return ''
+                            
+                        dynamic_total_label = f"Total Patients ({time_filter})"
+                        if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
+                        
+                        display_active = active_zm[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
+                        display_active = display_active.rename(columns={'Total Patients': dynamic_total_label})
+                        styled_active = display_active.style.map(style_grade, subset=['Grade'])
+                        
+                        st.dataframe(styled_active, use_container_width=True, hide_index=True, column_config={
+                            "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
+                            "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
+                            "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                            dynamic_total_label: st.column_config.NumberColumn(dynamic_total_label, format="%d")
+                        })
+
+                with zm_tab3:
+                    if op_failures_zm.empty:
+                        st.success("✅ Excellent! No inactive spokes in this zone.")
+                    else:
+                        op_failures_zm = op_failures_zm.sort_values(by=['District', 'Facility']).reset_index(drop=True)
+                        op_failures_zm['Primary Reason'] = op_failures_zm['Primary Reason'].apply(format_reason)
+                        
+                        display_inactive = op_failures_zm[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                        styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
+                        
+                        st.dataframe(styled_inactive, use_container_width=True, hide_index=True, column_config={
+                            "District": st.column_config.TextColumn("District", width="medium"),
+                            "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                            "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                            "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                        })
+                        
+                        buf = io.BytesIO()
+                        with pd.ExcelWriter(buf, engine='openpyxl') as writer:
+                            display_inactive.to_excel(writer, index=False, sheet_name='Follow-Up List')
+                        
+                        col_dl1, col_dl2 = st.columns([8, 2])
+                        with col_dl2:
+                            st.download_button(
+                                label="🚨 Download ZM Follow-up", data=buf.getvalue(),
+                                file_name=f"{selected_zm}_Followup.xlsx",
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
+                            )
+
+                with zm_tab4:
+                    if pending_zm.empty:
+                        st.success("✅ All facilities in this zone have launched!")
+                    else:
+                        pending_zm = pending_zm.sort_values(by=['District', 'Facility']).reset_index(drop=True)
+                        
+                        display_pending = pending_zm[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
+                        styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
+                        
+                        st.dataframe(styled_pending, use_container_width=True, hide_index=True, column_config={
+                            "District": st.column_config.TextColumn("District", width="medium"),
+                            "Facility": st.column_config.TextColumn("Facility Name", width="large"),
+                            "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
+                            "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
+                        })
+                        st.info("These facilities will automatically move to 'Operational' as soon as their first data column is added.")
+        else:
+            st.warning("Could not load statewide or facility data. Try refreshing, or check the Google Sheet connection.")
+            
+    # NEW: ZM LEADERBOARD TAB (Moved from State View)
+    with zm_lb_tab:
+        with st.spinner("Loading ZM Leaderboard..."):
+            state_df_lb = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+            
+        zm_metric = st.radio("Rank ZMs by:", ["Uptime %", "Weighted Avg", "Total Patients"], horizontal=True, key="zm_lb_metric")
+        cur_zm = _zm_aggregates(state_df_lb)
+        
+        prev_zm = None
+        if time_filter != "Full History":
+            try:
+                if time_filter == "Select Dates..." and start_date and end_date:
+                    span = (end_date - start_date).days + 1
+                    prev_end = start_date - timedelta(days=1)
+                    prev_start = prev_end - timedelta(days=span - 1)
+                    prev_state_df_lb = calculate_all_districts(
+                        tuple(available_sheets), file_bytes, "Select Dates...",
+                        prev_start, prev_end, window_offset=0
+                    )
+                else:
+                    prev_state_df_lb = calculate_all_districts(
+                        tuple(available_sheets), file_bytes, time_filter,
+                        None, None, window_offset=1
+                    )
+                prev_zm = _zm_aggregates(prev_state_df_lb) if not prev_state_df_lb.empty else {}
+            except Exception:
+                prev_zm = None
+        
+        if not cur_zm:
+            st.info("No ZM data available for the selected period.")
+        else:
+            cur_sorted = sorted(cur_zm.items(), key=lambda kv: kv[1][zm_metric], reverse=True)
+            cur_rank = {zm: i+1 for i, (zm, _) in enumerate(cur_sorted)}
+            prev_rank = {}
+            if prev_zm:
+                prev_sorted = sorted(prev_zm.items(), key=lambda kv: kv[1][zm_metric], reverse=True)
+                prev_rank = {zm: i+1 for i, (zm, _) in enumerate(prev_sorted)}
+            
+            rows = []
+            for zm, m in cur_zm.items():
+                cur_v = m[zm_metric]
+                prev_v = prev_zm.get(zm, {}).get(zm_metric) if prev_zm else None
+                
+                if prev_rank.get(zm):
+                    rd = prev_rank[zm] - cur_rank[zm]
+                    rank_delta = f"↑{rd}" if rd > 0 else (f"↓{abs(rd)}" if rd < 0 else "—")
+                else:
+                    rank_delta = "—"
+                
+                if prev_v is None:
+                    trend = "—"
+                elif prev_v == 0 and cur_v == 0:
+                    trend = "⚪ 0.0%"
+                elif prev_v == 0 and cur_v > 0:
+                    trend = "🟢 NEW"
+                else:
+                    pct = (cur_v - prev_v) / prev_v * 100
+                    if pct > 0.05: trend = f"🟢 +{pct:.1f}%"
+                    elif pct < -0.05: trend = f"🔴 {pct:.1f}%"
+                    else: trend = "⚪ 0.0%"
+                
+                rows.append({
+                    'Rank': cur_rank[zm],
+                    'ZM': zm,
+                    'Districts': m['Districts'],
+                    'Total Patients': m['Total Patients'],
+                    'Weighted Avg': m['Weighted Avg'],
+                    'Uptime %': m['Uptime %'],
+                    'Active Spokes': m['Active Spokes'],
+                    'Total Spokes': m['Total Spokes'],
+                    'Rank Δ': rank_delta,
+                    'Trend': trend,
+                })
+            
+            zm_lb = pd.DataFrame(rows).sort_values('Rank').reset_index(drop=True)
+            
+            if not prev_zm:
+                st.caption("ℹ️ Trend arrows require a comparison period. Select 'Past Week', 'Past 2 Weeks', 'Past Month', or 'Select Dates...' to enable.")
+            
+            st.dataframe(
+                zm_lb, use_container_width=True, hide_index=True,
+                column_config={
                     "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100),
                     "Total Patients": st.column_config.NumberColumn(format="%d"),
-                    "Weighted Avg": st.column_config.NumberColumn(format="%.1f")
-                })
-                
-                st.markdown(f"<h4 style='color:#1C1917; margin-top:24px; margin-bottom:16px; font-weight:800;'>District Comparison</h4>", unsafe_allow_html=True)
-                fig_zm = px.bar(display_df, x='District', y='Total Patients', color='Uptime %', color_continuous_scale='Teal', text='Total Patients', title="<b>Total Patients by District</b>")
-                fig_zm.update_traces(texttemplate='%{text:,}', textposition='outside', textangle=0, textfont=dict(color='#1C1917', weight=700))
-                
-                zm_layout = PLOTLY_LAYOUT.copy()
-                zm_layout.update(dict(
-                    height=400,
-                    xaxis=dict(showgrid=False, tickfont=dict(size=13, color="#1C1917", weight=700)),
-                    yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', title="Total Patients"),
-                    margin=dict(l=10, r=10, t=60, b=10)
-                ))
-                fig_zm.update_layout(**zm_layout)
-                st.plotly_chart(fig_zm, use_container_width=True)
-
-            with zm_tab2:
-                active_zm = zm_fac_df[zm_fac_df['Total Patients'] > 0].copy()
-                if active_zm.empty:
-                    st.info("No active spokes in this zone for the selected time range.")
-                else:
-                    active_zm = active_zm.sort_values(by=['Uptime %', 'Total Patients'], ascending=[False, False]).reset_index(drop=True)
-                    
-                    def style_grade(val):
-                        if val in ['A', 'B']: return 'background-color: #ECFDF5; color: #047857; font-weight: bold;'
-                        elif val in ['C', 'D']: return 'background-color: #FEF08A; color: #854D0E; font-weight: bold;'
-                        elif val == 'F': return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
-                        return ''
-                        
-                    dynamic_total_label = f"Total Patients ({time_filter})"
-                    if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
-                    
-                    display_active = active_zm[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
-                    display_active = display_active.rename(columns={'Total Patients': dynamic_total_label})
-                    styled_active = display_active.style.map(style_grade, subset=['Grade'])
-                    
-                    st.dataframe(styled_active, use_container_width=True, hide_index=True, column_config={
-                        "Uptime %": st.column_config.NumberColumn("Uptime %", format="%.1f%%"),
-                        "Avg / Day": st.column_config.NumberColumn("Avg / Day", format="%.1f"),
-                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
-                        dynamic_total_label: st.column_config.NumberColumn(dynamic_total_label, format="%d")
-                    })
-
-            with zm_tab3:
-                if op_failures_zm.empty:
-                    st.success("✅ Excellent! No inactive spokes in this zone.")
-                else:
-                    op_failures_zm = op_failures_zm.sort_values(by=['District', 'Facility']).reset_index(drop=True)
-                    op_failures_zm['Primary Reason'] = op_failures_zm['Primary Reason'].apply(format_reason)
-                    
-                    display_inactive = op_failures_zm[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
-                    styled_inactive = display_inactive.style.map(style_reason, subset=['Primary Reason'])
-                    
-                    st.dataframe(styled_inactive, use_container_width=True, hide_index=True, column_config={
-                        "District": st.column_config.TextColumn("District", width="medium"),
-                        "Facility": st.column_config.TextColumn("Facility Name", width="large"),
-                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
-                        "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
-                    })
-                    
-                    buf = io.BytesIO()
-                    with pd.ExcelWriter(buf, engine='openpyxl') as writer:
-                        display_inactive.to_excel(writer, index=False, sheet_name='Follow-Up List')
-                    
-                    col_dl1, col_dl2 = st.columns([8, 2])
-                    with col_dl2:
-                        st.download_button(
-                            label="🚨 Download ZM Follow-up", data=buf.getvalue(),
-                            file_name=f"{selected_zm}_Followup.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True
-                        )
-
-            with zm_tab4:
-                if pending_zm.empty:
-                    st.success("✅ All facilities in this zone have launched!")
-                else:
-                    pending_zm = pending_zm.sort_values(by=['District', 'Facility']).reset_index(drop=True)
-                    
-                    display_pending = pending_zm[['District', 'Facility', 'Last Sample Date', 'Primary Reason']].copy()
-                    styled_pending = display_pending.style.map(style_reason, subset=['Primary Reason'])
-                    
-                    st.dataframe(styled_pending, use_container_width=True, hide_index=True, column_config={
-                        "District": st.column_config.TextColumn("District", width="medium"),
-                        "Facility": st.column_config.TextColumn("Facility Name", width="large"),
-                        "Last Sample Date": st.column_config.TextColumn("Last Sample Date", width="medium"),
-                        "Primary Reason": st.column_config.TextColumn("Primary Reason", width="large"),
-                    })
-                    st.info("These facilities will automatically move to 'Operational' as soon as their first data column is added.")
-    else:
-        st.warning("Could not load statewide or facility data. Try refreshing, or check the Google Sheet connection.")
+                    "Weighted Avg": st.column_config.NumberColumn(format="%.1f"),
+                    "Rank Δ": st.column_config.TextColumn("Rank Δ", width="small"),
+                    "Trend": st.column_config.TextColumn("Trend", width="medium"),
+                }
+            )
 
 # ==============================================================================
 # VIEW: ACTIVE SPOKES
