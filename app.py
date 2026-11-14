@@ -68,7 +68,7 @@ st.markdown("""
         opacity: 0.5;
     }
     .kpi-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: #64748B !important; font-weight: 800; margin-bottom: 8px; }
-    .kpi-value { font-family: 'JetBrains Mono', monospace !important; font-size: 32px; font-weight: 700; color: #FFFFFF !important; line-height: 1; }
+    .kpi-value { font-family: 'JetBrains Mono', monospace !important; font-size: 28px; font-weight: 700; color: #FFFFFF !important; line-height: 1; }
     .kpi-sub { font-size: 12px; color: #64748B !important; margin-top: 8px; font-weight: 600; }
 
     /* HUD Command Bar */
@@ -128,17 +128,6 @@ st.markdown("""
     /* Force progress bars in dataframe to be cyan */
     div[data-testid="stDataFrame"] div[role="progressbar"] > div { background-color: rgba(0, 229, 255, 0.2) !important; }
     div[data-testid="stDataFrame"] div[role="progressbar"] > div > div { background-color: #00E5FF !important; box-shadow: 0 0 10px rgba(0,229,255,0.5) !important; }
-
-    /* Custom Watchlist */
-    .watchlist-item {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .watchlist-item:last-child { border-bottom: none; }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
-    .dot-green { background-color: #00FF94; box-shadow: 0 0 8px #00FF94; }
-    .dot-red { background-color: #FF0055; box-shadow: 0 0 8px #FF0055; }
-    .dot-yellow { background-color: #FFD500; box-shadow: 0 0 8px #FFD500; }
 
     /* ZM Race Track */
     .race-track { margin-bottom: 16px; }
@@ -464,7 +453,7 @@ def district_grade(plot_df):
     return reverse_map[max(1, min(5, int(rounded_grade)))]
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v85.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v86.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -482,7 +471,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v85.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v86.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -571,12 +560,7 @@ with col_title:
             <div style="width: 36px; height: 36px; background: rgba(0, 229, 255, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(0, 229, 255, 0.3);">
                 <!-- MICROSCOPE SVG -->
                 <svg viewBox="0 0 24 24" fill="none" stroke="#00E5FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 22px; height: 22px;">
-                    <path d="M6 18h8" />
-                    <path d="M3 22h18" />
-                    <path d="M14 22a7 7 0 1 0 0-14h-1" />
-                    <path d="M9 14h2" />
-                    <path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z" />
-                    <path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3" />
+                    <path d="M6 18h8" /><path d="M3 22h18" /><path d="M14 22a7 7 0 1 0 0-14h-1" /><path d="M9 14h2" /><path d="M9 12a2 2 0 0 1-2-2V6h6v4a2 2 0 0 1-2 2Z" /><path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3" />
                 </svg>
             </div>
             <div>
@@ -928,13 +912,13 @@ elif view_mode == "State View":
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
                     <div class="kpi-card" style="border-top: 2px solid #00E5FF;">
                         <div class="kpi-label" style="color: #00E5FF !important;">{dist_a}</div>
-                        <div class="kpi-value">{sa['Total Patients']:,} <span style="font-size:12px; color:#64748B;">pts</span></div>
-                        <div class="kpi-sub">Uptime: {sa['Uptime %']}% | Avg: {sa['Weighted Avg']}</div>
+                        <div class="kpi-value">{sa['Total Patients']:,} <span style="font-size:12px; color:#64748B;">Patients</span></div>
+                        <div class="kpi-sub">Uptime: {sa['Uptime %']}% | Weighted Avg: {sa['Weighted Avg']}</div>
                     </div>
                     <div class="kpi-card" style="border-top: 2px solid #FF0055;">
                         <div class="kpi-label" style="color: #FF0055 !important;">{dist_b}</div>
-                        <div class="kpi-value">{sb['Total Patients']:,} <span style="font-size:12px; color:#64748B;">pts</span></div>
-                        <div class="kpi-sub">Uptime: {sb['Uptime %']}% | Avg: {sb['Weighted Avg']}</div>
+                        <div class="kpi-value">{sb['Total Patients']:,} <span style="font-size:12px; color:#64748B;">Patients</span></div>
+                        <div class="kpi-sub">Uptime: {sb['Uptime %']}% | Weighted Avg: {sb['Weighted Avg']}</div>
                     </div>
                 </div>
                 ''', unsafe_allow_html=True)
@@ -943,31 +927,87 @@ elif view_mode == "State View":
 # VIEW: ZM VIEW
 # ==============================================================================
 elif view_mode == "ZM View":
-    st.markdown("<h2 style='font-size:20px; margin-bottom:16px;'>Zone Manager Leaderboard</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='font-size:20px; margin-bottom:16px;'>Zone Manager View</h2>", unsafe_allow_html=True)
     state_df_lb = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
-    zm_metric = st.radio("Rank by:", ["Total Patients", "Uptime %"], horizontal=True)
     
-    cur_zm = _zm_aggregates(state_df_lb)
-    if cur_zm:
-        sorted_zm = sorted(cur_zm.items(), key=lambda kv: kv[1][zm_metric], reverse=True)
-        max_val = max(m[zm_metric] for _, m in sorted_zm) if sorted_zm else 1
+    # RESTORED TWO TABS
+    zm_drill_tab, zm_lb_tab = st.tabs(["🔍 Zone Drill-Down", "🏆 ZM Leaderboard"])
+    
+    with zm_drill_tab:
+        _zm_opts = sorted(ZM_DATA.keys())
+        selected_zm = st.selectbox("Select Zone Manager", _zm_opts, key='zm_sel')
+        zm_districts = list(ZM_DATA[selected_zm].keys())
         
-        for rank, (zm, m) in enumerate(sorted_zm):
-            val = m[zm_metric]
-            width_pct = (val / max_val) * 100
-            color = "#00FF94" if rank == 0 else "#00E5FF" if rank < 3 else "#FF8C00" if rank < 6 else "#FF0055"
+        zm_df = state_df_lb[state_df_lb['District'].isin(zm_districts)].copy()
+        if zm_df.empty:
+            st.warning(f"No data available for {selected_zm}'s districts in the selected time range.")
+        else:
+            total_patients = zm_df['Total Patients'].sum()
+            total_active = zm_df['Active Spokes'].sum()
+            total_facilities = zm_df['Facilities'].sum()
             
+            zone_fac_days = int((zm_df['Facilities'] * zm_df['Days Reported']).sum())
+            zone_weighted_avg = round(total_patients / zone_fac_days, 1) if zone_fac_days > 0 else 0.0
+            avg_uptime = round(zm_df['Uptime %'].mean(), 1)
+            
+            # RESTORED KPI CARDS WITH WEIGHTED AVG
             st.markdown(f'''
-            <div class="race-track">
-                <div class="race-label">
-                    <span>{rank+1}. {zm} <span style="color:#64748B; margin-left:8px;">({m['Districts']} districts)</span></span>
-                    <span style="color: {color};">{val:,} {"pts" if zm_metric == "Total Patients" else "%"} <span style="color:#64748B; font-size:11px; margin-left:8px;">Avg: {m['Weighted Avg']}</span></span>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; margin-top:16px;">
+                <div class="kpi-card">
+                    <div class="kpi-label">Coverage</div>
+                    <div class="kpi-value">{len(zm_districts)}</div>
+                    <div class="kpi-sub">Districts</div>
                 </div>
-                <div class="race-bar-bg">
-                    <div class="race-bar-fill" style="width: {width_pct}%; background-color: {color}; color: {color};"></div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Weighted Avg / Day</div>
+                    <div class="kpi-value">{zone_weighted_avg}</div>
+                    <div class="kpi-sub">Efficiency score</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Active Spokes</div>
+                    <div class="kpi-value">{total_active} <span style="font-size:14px; color:#64748B;">/ {total_facilities}</span></div>
+                    <div class="kpi-sub">Operational facilities</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-label">Avg Zone Uptime</div>
+                    <div class="kpi-value neon-lime">{avg_uptime}%</div>
+                    <div class="kpi-sub">Reliability score</div>
                 </div>
             </div>
             ''', unsafe_allow_html=True)
+            
+            st.markdown(f"<h4 style='font-size:16px; margin-bottom:12px;'>District Breakdown — {selected_zm}</h4>", unsafe_allow_html=True)
+            st.dataframe(zm_df[['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']], use_container_width=True, hide_index=True, column_config={
+                "Uptime %": st.column_config.ProgressColumn(format="%.1f%%", min_value=0, max_value=100),
+                "Total Patients": st.column_config.NumberColumn(format="%d"),
+                "Weighted Avg": st.column_config.NumberColumn(format="%.1f")
+            })
+
+    with zm_lb_tab:
+        zm_metric = st.radio("Rank by:", ["Total Patients", "Uptime %"], horizontal=True)
+        cur_zm = _zm_aggregates(state_df_lb)
+        
+        if cur_zm:
+            sorted_zm = sorted(cur_zm.items(), key=lambda kv: kv[1][zm_metric], reverse=True)
+            max_val = max(m[zm_metric] for _, m in sorted_zm) if sorted_zm else 1
+            
+            for rank, (zm, m) in enumerate(sorted_zm):
+                val = m[zm_metric]
+                width_pct = (val / max_val) * 100
+                color = "#00FF94" if rank == 0 else "#00E5FF" if rank < 3 else "#FF8C00" if rank < 6 else "#FF0055"
+                
+                # NO MORE "PTS" - NOW SAYS "PATIENTS"
+                st.markdown(f'''
+                <div class="race-track">
+                    <div class="race-label">
+                        <span>{rank+1}. {zm} <span style="color:#64748B; margin-left:8px;">({m['Districts']} districts)</span></span>
+                        <span style="color: {color};">{val:,} {"Patients" if zm_metric == "Total Patients" else "%"} <span style="color:#64748B; font-size:11px; margin-left:8px;">| Weighted Avg: {m['Weighted Avg']}</span></span>
+                    </div>
+                    <div class="race-bar-bg">
+                        <div class="race-bar-fill" style="width: {width_pct}%; background-color: {color}; color: {color};"></div>
+                    </div>
+                </div>
+                ''', unsafe_allow_html=True)
 
 # ==============================================================================
 # VIEW: ACTIVE / INACTIVE SPOKES
