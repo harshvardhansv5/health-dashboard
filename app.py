@@ -39,6 +39,15 @@ st.markdown("""
     /* Global Text Override (Outside Cards) */
     h1, h2, h3, h4, h5, h6, p, .stMarkdown { color: #F8FAFC !important; }
     
+    /* --- FIX FOR LOGIN FORM TEXT --- */
+    div[data-testid="stForm"] h2, 
+    div[data-testid="stForm"] p {
+        color: #0F172A !important;
+    }
+    div[data-testid="stForm"] p {
+        color: #475569 !important;
+    }
+    
     /* Remove Sidebar entirely */
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
