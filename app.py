@@ -194,10 +194,14 @@ st.markdown("""
         align-items: center !important;
         padding-left: 0 !important;
     }
-
-    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY (The Bulletproof Way) */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label input[type="radio"] + div {
+    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY (Bulletproof) */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:not(:has(p)) {
         display: none !important;
+    }
+
+    /* Make sure the label can hold the underline */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
+        padding-bottom: 8px !important;
     }
 
     /* Tab Text Styling (Inactive) */
