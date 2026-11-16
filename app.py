@@ -681,6 +681,17 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
             }
         active_dates = sorted_dates
 
+    # --- NEW LOGIC: EXCLUDE SUNDAYS FOR METRICS ---
+    # 6 corresponds to Sunday in pandas dayofweek (0=Monday, 6=Sunday)
+    op_dates = [d for d in active_dates if d.dayofweek != 6]
+    num_op_days = len(op_dates)
+    
+    # Fallback in case the time range only consists of Sundays
+    if num_op_days == 0:
+        op_dates = active_dates
+        num_op_days = len(active_dates)
+    # -----------------------------------------------
+
     text_records = []
     def is_text_note(x):
         if not isinstance(x, str): return False
@@ -701,8 +712,10 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
 
     plot_df = clean_df[[facility_col] + active_dates].copy()
     plot_df['Total Patients'] = plot_df[active_dates].sum(axis=1)
-    plot_df['Average Patients'] = plot_df[active_dates].mean(axis=1).round(1)
-    plot_df['Zero Days'] = (plot_df[active_dates] == 0).sum(axis=1)
+    
+    # Use num_op_days for averages and zero days
+    plot_df['Average Patients'] = (plot_df['Total Patients'] / num_op_days).round(1) if num_op_days > 0 else 0
+    plot_df['Zero Days'] = (plot_df[op_dates] == 0).sum(axis=1)
     
     max_allowed_date = active_dates[-1] if active_dates else (sorted_dates[-1] if sorted_dates else None)
 
@@ -720,11 +733,11 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
     
     district_total = int(plot_df['Total Patients'].sum())
     num_facilities = len(plot_df)
-    num_days = len(active_dates)
-    weighted_avg = round(district_total / (num_facilities * num_days), 1) if num_facilities > 0 and num_days > 0 else 0
+    
+    weighted_avg = round(district_total / (num_facilities * num_op_days), 1) if num_facilities > 0 and num_op_days > 0 else 0
     total_zero = int(plot_df['Zero Days'].sum())
     
-    if num_days > 0: plot_df['Uptime %'] = ((num_days - plot_df['Zero Days']) / num_days * 100).round(1)
+    if num_op_days > 0: plot_df['Uptime %'] = ((num_op_days - plot_df['Zero Days']) / num_op_days * 100).round(1)
     else: plot_df['Uptime %'] = 0
         
     col_map = {d: d.strftime('%d %b %y') for d in active_dates}
@@ -733,7 +746,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
         
     return plot_df, None, {
         'total': district_total, 'weighted_avg': weighted_avg, 'zero_days': total_zero,
-        'num_facilities': num_facilities, 'num_days': num_days, 'facility_col': facility_col,
+        'num_facilities': num_facilities, 'num_days': num_op_days, 'facility_col': facility_col, # num_days is now Op Days
         'active_date_cols': [col_map[d] for d in active_dates], 'active_date_map': active_date_map,
         'text_records': text_records, 'active_facilities': active_facilities,
         'total_absolute_facilities': total_absolute_facilities
@@ -764,7 +777,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v82.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v84.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -786,7 +799,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v82.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v84.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -1347,7 +1360,7 @@ def render_district_view(time_filter, start_date, end_date, date_range_str, file
                     <span class="material-symbols-rounded" style="font-size:18px;">local_hospital</span> <span>Total Spokes: {stats['num_facilities']}</span>
                 </div>
             </div>
-            <div class="report-meta"><strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; <strong>Period:</strong> {period_str} ({stats["num_days"]} days)</div>
+            <div class="report-meta"><strong>ZM:</strong> {zm_name_for_district} &nbsp;|&nbsp; <strong>Hub:</strong> {selected_hub_zm} &nbsp;|&nbsp; <strong>Period:</strong> {period_str} ({stats["num_days"]} op. days)</div>
         </div>
         ''', unsafe_allow_html=True)
         
@@ -2362,7 +2375,7 @@ st.markdown("<br>", unsafe_allow_html=True)
 with st.expander(":material/info: Metric Definitions & Grading System"):
     st.markdown("""
     **📊 Weighted Avg / Day**
-    Total patients divided by total facility-days (Total Facilities × Total Days). This is the truest measure of daily efficiency, as it prevents a facility that was only open for 1 day with 50 patients from skewing the district's average.
+    Total patients divided by total operational facility-days (Total Facilities × Operational Days). This is the truest measure of daily efficiency, as it prevents a facility that was only open for 1 day with 50 patients from skewing the district's average.
     
     **⏱️ Uptime %**
     The percentage of possible facility-days where the patient count was greater than zero. A higher percentage means the facility is consistently operational.
