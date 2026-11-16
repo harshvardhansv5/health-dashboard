@@ -40,9 +40,10 @@ st.markdown("""
     [data-testid="stSidebar"] { display: none !important; }
     [data-testid="collapsedControl"] { display: none !important; }
 
-    /* --- HIDE UGLY DATAFRAME COLUMN MENUS --- */
+    /* --- HIDE DEFAULT DATAFRAME TOOLBARS --- */
     [data-testid="stDataFrameColumnMenu"] { display: none !important; }
     [data-testid="stDataFrame"] div[role="columnheader"] { cursor: pointer !important; }
+    [data-testid="stElementToolbar"] { display: none !important; }
 
     /* --- FORCE NAVY PROGRESS BARS --- */
     div[data-testid="stProgress"] > div > div > div { background-color: #1E3A8A !important; }
@@ -51,43 +52,45 @@ st.markdown("""
 
     /* --- LOGIN SPECIFIC CSS --- */
     div[data-testid="stHorizontalBlock"]:has(> div > div[data-testid="stForm"]) {
-        margin-top: 10vh;
+        margin-top: 12vh;
     }
     div[data-testid="stForm"] {
         background-color: #FAFAF9 !important;
-        border-radius: 24px !important;
-        padding: 48px 40px !important;
-        box-shadow: 0 12px 32px -8px rgba(28, 25, 23, 0.08) !important;
+        border-radius: 28px !important;
+        padding: 56px 48px !important;
+        box-shadow: 0 24px 48px -12px rgba(28, 25, 23, 0.15) !important;
         border: 1px solid #E7E5E4 !important;
     }
     div[data-testid="stTextInput"] input {
         background-color: #F5F5F4 !important;
-        border: 1px solid #D6D3D1 !important;
-        border-radius: 10px !important;
-        padding: 12px 16px !important;
+        border: 1.5px solid #D6D3D1 !important;
+        border-radius: 12px !important;
+        padding: 16px 20px !important;
         color: #1C1917 !important;
-        font-size: 14px !important;
+        font-size: 15px !important;
+        transition: all 0.2s ease !important;
     }
     div[data-testid="stTextInput"] input:focus {
         border-color: #1E3A8A !important;
-        box-shadow: 0 0 0 1px #1E3A8A !important;
+        box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.15) !important;
         background-color: #FAFAF9 !important;
     }
     div[data-testid="stFormSubmitButton"] > button {
         background-color: #1E3A8A !important;
         color: #FFFFFF !important;
         border: none !important;
-        border-radius: 10px !important;
+        border-radius: 12px !important;
         font-weight: 700 !important;
-        font-size: 15px !important;
-        height: 48px !important;
-        box-shadow: 0 4px 12px rgba(30, 58, 138, 0.2) !important;
-        margin-top: 16px !important;
+        font-size: 16px !important;
+        height: 56px !important;
+        box-shadow: 0 8px 16px rgba(30, 58, 138, 0.25) !important;
+        margin-top: 24px !important;
+        transition: all 0.2s ease !important;
     }
     div[data-testid="stFormSubmitButton"] > button:hover {
         background-color: #1E40AF !important;
         transform: translateY(-2px) !important;
-        box-shadow: 0 6px 16px rgba(30, 58, 138, 0.3) !important;
+        box-shadow: 0 12px 24px rgba(30, 58, 138, 0.35) !important;
     }
 
     /* --- HERO DECK CARDS (Warm Off-White) --- */
@@ -192,7 +195,8 @@ st.markdown("""
     }
 
     /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child,
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-of-type {
         display: none !important;
     }
 
@@ -283,14 +287,6 @@ st.markdown("""
         100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(30, 58, 138, 0); }
     }
 
-    /* Compare Battle Cards */
-    .battle-card { background-color: #FAFAF9; border: 1px solid #E7E5E4; border-radius: 20px; padding: 24px; box-shadow: 0 4px 12px -2px rgba(28, 25, 23, 0.05); margin-bottom: 16px; }
-    .battle-card-green { border-top: 6px solid #1E3A8A; }
-    .battle-card-red { border-top: 6px solid #DC2626; }
-    .battle-title { font-size: 18px; font-weight: 800; margin-bottom: 16px; color: #1C1917; }
-    .battle-row { display: flex; justify-content: space-between; border-bottom: 1px solid #E7E5E4; padding: 12px 0; font-size: 14px; color: #57534E; font-weight: 500;}
-    .battle-row:last-child { border-bottom: none; }
-
     /* --- PREMIUM INPUTS & DROPDOWNS --- */
     div[data-testid="stSelectbox"] { margin-bottom: 0px; }
     div[data-testid="stSelectbox"] div[role="combobox"] { 
@@ -302,6 +298,12 @@ st.markdown("""
     div[data-testid="stSelectbox"] div[role="combobox"]:focus-within { box-shadow: 0 0 0 2px #1E3A8A inset !important; background-color: #FAFAF9 !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] * { color: #1C1917 !important; font-weight: 600 !important; font-size: 14px !important; }
     div[data-testid="stSelectbox"] div[role="combobox"] svg { fill: #1E3A8A !important; width: 16px !important; height: 16px !important;}
+    
+    /* Style the Dropdown Popup Menu */
+    div[data-baseweb="popover"] { background-color: #FAFAF9 !important; border-radius: 12px !important; box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important; border: 1px solid #E7E5E4 !important; }
+    div[data-baseweb="popover"] div[role="listbox"] { background-color: #FAFAF9 !important; border-radius: 12px !important; padding: 6px !important; }
+    div[data-baseweb="popover"] div[role="option"] { border-radius: 8px !important; color: #1C1917 !important; font-weight: 500 !important; }
+    div[data-baseweb="popover"] div[role="option"]:hover, div[data-baseweb="popover"] div[role="option"][aria-selected="true"] { background-color: #F5F5F4 !important; color: #1E3A8A !important; font-weight: 700 !important; }
     
     label[data-testid="stWidgetLabel"] p { color: #78716C !important; font-weight: 700 !important; font-size: 11px !important; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px !important;}
 
@@ -430,9 +432,9 @@ if not st.session_state.authenticated:
     with col2:
         with st.form("login_form"):
             st.markdown("""
-            <div style="text-align: center; margin-bottom: 32px;">
-                <div style="display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 56px; background-color: #FEF2F2; border-radius: 16px; margin-bottom: 16px; border: 1px solid #FECACA;">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 32px; height: 32px;">
+            <div style="text-align: center; margin-bottom: 40px;">
+                <div style="display: inline-flex; align-items: center; justify-content: center; width: 64px; height: 64px; background-color: #FEF2F2; border-radius: 20px; margin-bottom: 24px; border: 1px solid #FECACA; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.1);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#DC2626" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width: 36px; height: 36px;">
                         <path d="M6 18h8" />
                         <path d="M3 22h18" />
                         <path d="M14 22a7 7 0 1 0 0-14h-1" />
@@ -441,13 +443,13 @@ if not st.session_state.authenticated:
                         <path d="M12 6V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3" />
                     </svg>
                 </div>
-                <h2 style="color:#1C1917; font-size: 28px; font-weight: 800; margin-bottom: 8px;">Secure Login</h2>
-                <p style="color:#57534E; font-size: 14px; margin: 0;">Enter the password to access the Bihar Health Dashboard.</p>
+                <h2 style="color:#1C1917; font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 12px;">Bihar Health Command Center</h2>
+                <p style="color:#57534E; font-size: 15px; font-weight: 500; margin: 0;">Enter access credentials to proceed.</p>
             </div>
             """, unsafe_allow_html=True)
             
-            pwd = st.text_input("Password", type="password", label_visibility="collapsed")
-            submit = st.form_submit_button("Login", use_container_width=True)
+            pwd = st.text_input("Password", type="password", placeholder="Enter password...", label_visibility="collapsed")
+            submit = st.form_submit_button("Login to Dashboard", icon=":material/lock:", use_container_width=True)
             
         if submit:
             if pwd == "BiharHealth2026!":
@@ -675,7 +677,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
         }
 
     active_dates = sorted_dates
-    if time_filter == "Select Dates..." and start_date and end_date:
+    if time_filter == "Custom Range" and start_date and end_date:
         active_dates = [d for d in sorted_dates if start_date <= d.date() <= end_date]
     else:
         windows = {"Past Week": 7, "Past 2 Weeks": 15, "Past Month": 30}
@@ -686,7 +688,7 @@ def process_district_df(df, time_filter, start_date=None, end_date=None, window_
             active_dates = sorted_dates[start_idx:end_idx] if end_idx > 0 else []
         
     if not active_dates:
-        if window_offset > 0 or time_filter == "Select Dates...":
+        if window_offset > 0 or time_filter == "Custom Range":
             plot_df = df[[facility_col]].copy()
             plot_df['Total Patients'] = 0
             plot_df['Average Patients'] = 0.0
@@ -785,7 +787,7 @@ def district_grade(plot_df):
 def grade_emoji(g): return {"A": "🟢 A", "B": "🟢 B", "C": "🟡 C", "D": "🟠 D", "F": "🔴 F"}.get(g, g)
 
 @st.cache_data(show_spinner=False)
-def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v81.0"):
+def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, window_offset=0, _cache_buster="v82.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     data = []
     for sheet in sheet_names_tuple:
@@ -807,7 +809,7 @@ def calculate_all_districts(sheet_names_tuple, file_bytes, time_filter, start_da
     return pd.DataFrame(data)
 
 @st.cache_data(show_spinner=False)
-def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v81.0"):
+def get_all_facility_data(sheet_names_tuple, file_bytes, time_filter, start_date=None, end_date=None, _cache_buster="v82.0"):
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     all_data = []
     for sheet in sheet_names_tuple:
@@ -966,10 +968,16 @@ with col_time_ctrl:
             st.rerun()
             
     with tc2:
-        time_filter = st.selectbox("TIME RANGE", ["Full History", "Past Week", "Past 2 Weeks", "Past Month", "Select Dates..."], label_visibility="visible")
+        # Reordered options chronologically, default to Full History (index 3)
+        time_filter = st.selectbox(
+            "TIME RANGE", 
+            ["Past Week", "Past 2 Weeks", "Past Month", "Full History", "Custom Range"], 
+            index=3,
+            label_visibility="visible"
+        )
 
     start_date, end_date = None, None
-    if time_filter == "Select Dates...":
+    if time_filter == "Custom Range":
         c1, c2 = st.columns(2)
         with c1:
             start_date = st.date_input("Start", value=pd.Timestamp.now() - timedelta(days=7), label_visibility="collapsed")
@@ -1042,12 +1050,12 @@ if view_mode == "District View":
     prev_stats = None
     prev_plot_df = None
     if time_filter != "Full History":
-        if time_filter == "Select Dates..." and start_date and end_date:
+        if time_filter == "Custom Range" and start_date and end_date:
             span = (end_date - start_date).days + 1
             prev_end = start_date - timedelta(days=1)
             prev_start = prev_end - timedelta(days=span - 1)
             prev_plot_df, _, prev_stats = process_district_df(
-                df_raw, "Select Dates...", prev_start, prev_end, window_offset=0
+                df_raw, "Custom Range", prev_start, prev_end, window_offset=0
             )
         else:
             prev_plot_df, _, prev_stats = process_district_df(
@@ -1443,7 +1451,7 @@ if view_mode == "District View":
                     return ''
                     
                 dynamic_total_label = f"Total Patients ({time_filter})"
-                if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
+                if time_filter == "Custom Range": dynamic_total_label = f"Total Patients ({date_range_str})"
                 
                 display_active = active_df[[facility_col, 'Grade', 'Uptime %', 'Average Patients', 'Last Sample Date', 'Total Patients']].copy()
                 display_active = display_active.rename(columns={facility_col: 'Facility', 'Average Patients': 'Avg / Day', 'Total Patients': dynamic_total_label})
@@ -1794,11 +1802,11 @@ elif view_mode == "ZM View":
             
             prev_state_df = None
             if time_filter != "Full History":
-                if time_filter == "Select Dates..." and start_date and end_date:
+                if time_filter == "Custom Range" and start_date and end_date:
                     span = (end_date - start_date).days + 1
                     prev_end = start_date - timedelta(days=1)
                     prev_start = prev_end - timedelta(days=span - 1)
-                    prev_state_df = calculate_all_districts(tuple(available_sheets), file_bytes, "Select Dates...", prev_start, prev_end, window_offset=0)
+                    prev_state_df = calculate_all_districts(tuple(available_sheets), file_bytes, "Custom Range", prev_start, prev_end, window_offset=0)
                 else:
                     prev_state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, None, None, window_offset=1)
             
@@ -1925,7 +1933,7 @@ elif view_mode == "ZM View":
                             return ''
                             
                         dynamic_total_label = f"Total Patients ({time_filter})"
-                        if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
+                        if time_filter == "Custom Range": dynamic_total_label = f"Total Patients ({date_range_str})"
                         
                         display_active = active_zm[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
                         display_active = display_active.rename(columns={'Total Patients': dynamic_total_label})
@@ -1997,12 +2005,12 @@ elif view_mode == "ZM View":
         prev_zm = None
         if time_filter != "Full History":
             try:
-                if time_filter == "Select Dates..." and start_date and end_date:
+                if time_filter == "Custom Range" and start_date and end_date:
                     span = (end_date - start_date).days + 1
                     prev_end = start_date - timedelta(days=1)
                     prev_start = prev_end - timedelta(days=span - 1)
                     prev_state_df_lb = calculate_all_districts(
-                        tuple(available_sheets), file_bytes, "Select Dates...",
+                        tuple(available_sheets), file_bytes, "Custom Range",
                         prev_start, prev_end, window_offset=0
                     )
                 else:
@@ -2063,7 +2071,7 @@ elif view_mode == "ZM View":
             zm_lb = pd.DataFrame(rows).sort_values('Rank').reset_index(drop=True)
             
             if not prev_zm:
-                st.caption("ℹ️ Trend arrows require a comparison period. Select 'Past Week', 'Past 2 Weeks', 'Past Month', or 'Select Dates...' to enable.")
+                st.caption("ℹ️ Trend arrows require a comparison period. Select 'Past Week', 'Past 2 Weeks', 'Past Month', or 'Custom Range' to enable.")
             
             st.dataframe(
                 zm_lb, use_container_width=True, hide_index=True,
@@ -2098,16 +2106,25 @@ elif view_mode == "Active Spokes":
     if not all_fac_df.empty:
         active_df = all_fac_df[all_fac_df['Total Patients'] > 0].copy()
         
-        # Calculate operational denominator dynamically
-        total_pending = len(all_fac_df[all_fac_df['Status'] == 'Pending Launch'])
-        total_operational = len(all_fac_df) - total_pending
-        
         col1, col2, col3 = st.columns([2, 2, 2])
         with col1:
+            # Filter-aware metric calculation
+            if dist_filter:
+                base_filtered = all_fac_df[(all_fac_df['District'].isin(dist_filter)) & (all_fac_df['Status'] == 'Operational')]
+            else:
+                base_filtered = all_fac_df[all_fac_df['Status'] == 'Operational']
+                
+            total_operational_filtered = len(base_filtered)
+            
+            # Apply grade filter for the numerator (Active count shown)
+            display_active_filtered = active_df.copy()
+            if dist_filter: display_active_filtered = display_active_filtered[display_active_filtered['District'].isin(dist_filter)]
+            if grade_filter: display_active_filtered = display_active_filtered[display_active_filtered['Grade'].isin(grade_filter)]
+            
             st.markdown(f'''
-            <div class="metric-card" style="padding: 16px; margin-bottom: 0; height: 100%; display: flex; justify-content: center;">
-                <div class="metric-header"><div class="metric-label">Active Spokes Shown</div><div class="metric-icon"><span class="material-symbols-rounded">visibility</span></div></div>
-                <div class="metric-value">{len(active_df)} <span style="font-size:16px; color:#78716C; font-weight:600;">/ {total_operational} Operational</span></div>
+            <div class="metric-card" style="padding: 16px; margin-bottom: 0; height: 100%; display: flex; justify-content: flex-start; justify-content: center;">
+                <div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">visibility</span></div></div>
+                <div class="metric-value">{len(display_active_filtered)} <span style="font-size:16px; color:#78716C; font-weight:600; margin-left: 4px;">/ {total_operational_filtered} Operational</span></div>
             </div>
             ''', unsafe_allow_html=True)
         with col2:
@@ -2126,11 +2143,11 @@ elif view_mode == "Active Spokes":
             elif val == 'F': return 'background-color: #FECDD3; color: #991B1B; font-weight: bold;'
             return ''
             
-        if time_filter == "Select Dates..." and start_date == end_date:
+        if time_filter == "Custom Range" and start_date == end_date:
             dynamic_total_label = f"Total Patients ({start_date.strftime('%d %b %Y')})"
         else:
             dynamic_total_label = f"Total Patients ({time_filter})"
-            if time_filter == "Select Dates...": dynamic_total_label = f"Total Patients ({date_range_str})"
+            if time_filter == "Custom Range": dynamic_total_label = f"Total Patients ({date_range_str})"
 
         display_active = active_df[['District', 'Facility', 'Grade', 'Uptime %', 'Avg / Day', 'Last Sample Date', 'Total Patients']].copy()
         display_active = display_active.rename(columns={'Total Patients': dynamic_total_label})
