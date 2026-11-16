@@ -194,9 +194,8 @@ st.markdown("""
         align-items: center !important;
     }
 
-    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child,
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-of-type {
+    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY (Keep the Text) */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child:not(:has(p)) {
         display: none !important;
     }
 
