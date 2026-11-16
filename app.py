@@ -159,7 +159,7 @@ st.markdown("""
     .grade-D { background-color: #FED7AA; color: #9A3412; border: 1px solid #FDBA74; }
     .grade-F { background-color: #FECDD3; color: #991B1B; border: 1px solid #FDA4AF; }
 
-    /* --- COMMAND BAR & NAVIGATION --- */
+    /* --- COMMAND BAR & NAVIGATION (st.pills) --- */
     div[data-testid="stHorizontalBlock"]:has(.app-header) {
         background-color: #FAFAF9 !important;
         border: 1px solid #E7E5E4 !important;
@@ -171,67 +171,36 @@ st.markdown("""
         min-height: 72px !important;
     }
     
-    /* The Segmented Control Track -> Now a Tab Bar */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] {
-        background-color: transparent !important; 
-        border: none !important; 
-        border-bottom: 2px solid #E7E5E4 !important;
-        border-radius: 0 !important; 
-        padding: 0 !important; 
-        gap: 24px !important;
-        flex-wrap: nowrap !important;
-    }
-
-    /* The Individual Tabs */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding: 8px 0px !important; 
-        margin: 0 !important; 
-        border-radius: 0 !important;
-        transition: all 0.2s ease !important;
-        cursor: pointer !important;
+    /* Style the st.pills container to look like our tabs */
+    div[data-testid="stPills"] > div {
         background-color: transparent !important;
-        display: flex !important;
-        align-items: center !important;
-        padding-left: 0 !important;
-    }
-
-    
-    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY (The "Has Input" Hack) */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:has(input) {
-        display: none !important;
+        border: none !important;
+        padding: 0 !important;
+        gap: 8px !important;
     }
     
-    /* Remove the left padding that was meant for the circle, and add bottom padding for the underline */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
-        padding-left: 0px !important;
-        padding-bottom: 8px !important;
-    }
-
-
-    /* Tab Text Styling (Inactive) */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label p {
+    /* The individual pill buttons */
+    div[data-testid="stPills"] button {
+        background-color: transparent !important;
+        border: 1px solid transparent !important;
+        color: #78716C !important;
         font-size: 14px !important;
         font-weight: 600 !important;
-        color: #78716C !important;
-        margin: 0 !important;
-        transition: color 0.2s ease !important;
-    }
-
-    /* Hover State for Inactive Tabs */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label:hover p {
-        color: #1C1917 !important;
-    }
-
-    /* ACTIVE TAB (The Underline) */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) {
-        border-bottom: 3px solid #1E3A8A !important;
-        background-color: transparent !important; 
-        box-shadow: none !important; 
+        padding: 6px 16px !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease !important;
     }
     
-    /* Active Tab Text */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label[data-baseweb="radio"]:has(input:checked) p {
+    div[data-testid="stPills"] button:hover {
         color: #1C1917 !important;
+        background-color: #F5F5F4 !important;
+    }
+
+    /* Active pill */
+    div[data-testid="stPills"] button[aria-selected="true"] {
+        background-color: #EFF6FF !important;
+        color: #1E3A8A !important;
+        border-color: #BFDBFE !important;
         font-weight: 800 !important;
     }
 
@@ -960,11 +929,22 @@ with col_title:
 
 with col_nav:
     _NAV_OPTS = ["District View", "State View", "ZM View", "Active Spokes", "Inactive Spokes"]
+    
+    # Streamlit's native Pills component - No CSS hacks needed!
+    if 'nav_pills' not in st.session_state:
+        st.session_state.nav_pills = "District View"
     if 'view_mode_override' in st.session_state:
         _override = st.session_state.pop('view_mode_override')
         if _override in _NAV_OPTS:
-            st.session_state['nav_radio'] = _override
-    view_mode = st.radio("Navigation", _NAV_OPTS, key='nav_radio', horizontal=True, label_visibility="collapsed")
+            st.session_state.nav_pills = _override
+            
+    view_mode = st.pills(
+        "Navigation", 
+        _NAV_OPTS, 
+        selection_mode="single", 
+        key="nav_pills", 
+        label_visibility="collapsed"
+    )
 
 with col_time_ctrl:
     # Sub-columns for Refresh + Time Range
