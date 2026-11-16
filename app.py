@@ -1161,8 +1161,16 @@ if view_mode == "District View":
         ''', unsafe_allow_html=True)
         
         c1, c2 = st.columns([3, 1.5], vertical_alignment="bottom")
-        with c1: metric_option = st.radio("Metric:", ("Average Patients", "Total Patients", "Uptime %"), horizontal=True, key="d2")
-        with c2: sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d3")
+        with c1: 
+            metric_option = st.pills(
+                "Metric:", 
+                ("Average Patients", "Total Patients", "Uptime %"), 
+                selection_mode="single", 
+                default="Average Patients",
+                key="d2"
+            )
+        with c2: 
+            sort_option = st.selectbox("Sort:", ["Highest to Lowest", "Lowest to Highest"], key="d3")
         
         metric_col = {'Average Patients': 'Average Patients', 'Total Patients': 'Total Patients', 'Uptime %': 'Uptime %'}[metric_option]
         filtered = filtered_base.copy()
@@ -1628,7 +1636,13 @@ elif view_mode == "State View":
             with c1: 
                 state_metric_label = st.selectbox("Sort By:", ["Total Patient Count", "Weighted Avg", "Uptime %"], key="state_sort_col")
             with c2:
-                state_sort_order = st.radio("Order:", ["Descending", "Ascending"], horizontal=True, key="state_sort_order")
+                state_sort_order = st.pills(
+                    "Order:", 
+                    ["Descending", "Ascending"], 
+                    selection_mode="single", 
+                    default="Descending", 
+                    key="state_sort_order"
+                )
                 
             state_metric_col = {"Total Patient Count": "Total Patients", "Weighted Avg": "Weighted Avg", "Uptime %": "Uptime %"}[state_metric_label]
             
@@ -1878,7 +1892,13 @@ elif view_mode == "ZM View":
                     with c1: 
                         zm_sort_metric = st.selectbox("Sort By:", ["Uptime %", "Weighted Avg", "Total Patients"], key="zm_sort_col")
                     with c2:
-                        zm_sort_order = st.radio("Order:", ["Descending", "Ascending"], horizontal=True, key="zm_sort_order")
+                        zm_sort_order = st.pills(
+                            "Order:", 
+                            ["Descending", "Ascending"], 
+                            selection_mode="single", 
+                            default="Descending", 
+                            key="zm_sort_order"
+                        )
                     
                     st.markdown(f"<h4 style='color:#1C1917; margin-top:16px; margin-bottom:16px; font-weight:800;'>District Breakdown</h4>", unsafe_allow_html=True)
                     display_cols = ['District', 'Total Patients', 'Weighted Avg', 'Uptime %', 'Facilities', 'Active Spokes']
@@ -1987,7 +2007,13 @@ elif view_mode == "ZM View":
         with st.spinner("Loading ZM Leaderboard..."):
             state_df_lb = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
             
-        zm_metric = st.radio("Rank ZMs by:", ["Uptime %", "Weighted Avg", "Total Patients"], horizontal=True, key="zm_lb_metric")
+        zm_metric = st.pills(
+            "Rank ZMs by:", 
+            ["Uptime %", "Weighted Avg", "Total Patients"], 
+            selection_mode="single", 
+            default="Uptime %", 
+            key="zm_lb_metric"
+        )
         cur_zm = _zm_aggregates(state_df_lb)
         
         prev_zm = None
