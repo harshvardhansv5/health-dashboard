@@ -192,10 +192,11 @@ st.markdown("""
         background-color: transparent !important;
         display: flex !important;
         align-items: center !important;
+        padding-left: 0 !important;
     }
 
-    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
+    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY (The Bulletproof Way) */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label input[type="radio"] + div {
         display: none !important;
     }
 
@@ -2193,6 +2194,14 @@ elif view_mode == "Inactive Spokes":
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not all_fac_df.empty:
+        # NEW: FILTER BY DISTRICT
+        col_filter, _ = st.columns([2, 4])
+        with col_filter:
+            dist_filter_inactive = st.multiselect("Filter by District", sorted(all_fac_df['District'].unique()), default=[])
+            
+        if dist_filter_inactive:
+            all_fac_df = all_fac_df[all_fac_df['District'].isin(dist_filter_inactive)]
+            
         inactive_df = all_fac_df[all_fac_df['Total Patients'] == 0].copy()
         op_failures = inactive_df[inactive_df['Status'] == 'Operational'].reset_index(drop=True)
         pending_launch = inactive_df[inactive_df['Status'] == 'Pending Launch'].reset_index(drop=True)
