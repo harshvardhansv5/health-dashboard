@@ -953,6 +953,7 @@ with col_time_ctrl:
     with tc1:
         if st.button("↻", help="Force refresh data from Google Sheets", use_container_width=True):
             fetch_google_sheet.clear()
+            st.toast("Data refreshed live from Google Sheets!", icon="✅")
             st.rerun()
             
     with tc2:
@@ -989,10 +990,33 @@ PLOTLY_LAYOUT = dict(
     yaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', linecolor='#D6D3D1')
 )
 
+# --- ST.DIALOG: ZONE MANAGER PROFILE ---
+@st.dialog("Zone Manager Profile")
+def show_zm_profile(zm_name, zm_districts):
+    st.markdown(f"### {zm_name}")
+    with st.spinner("Loading ZM data..."):
+        state_df = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
+        
+    zm_df = state_df[state_df['District'].isin(zm_districts)]
+    if not zm_df.empty:
+        total_patients = zm_df['Total Patients'].sum()
+        avg_uptime = zm_df['Uptime %'].mean()
+        
+        c1, c2 = st.columns(2)
+        c1.metric("Total Patients", f"{total_patients:,}")
+        c2.metric("Avg Uptime", f"{avg_uptime:.1f}%")
+        
+        st.markdown("#### District Breakdown")
+        st.dataframe(zm_df[['District', 'Total Patients', 'Uptime %', 'Active Spokes', 'Facilities']], hide_index=True, use_container_width=True)
+    else:
+        st.warning("No data available for this period.")
+
 # ==============================================================================
-# VIEW: DISTRICT VIEW
+# FRAGMENT VIEWS (Partial Reruns)
 # ==============================================================================
-if view_mode == "District View":
+
+@st.fragment
+def render_district_view(time_filter, start_date, end_date, date_range_str, file_bytes, available_sheets):
     col_d, col_h, col_chk = st.columns([3, 3, 2], vertical_alignment="bottom")
     
     with col_d: 
@@ -1019,9 +1043,7 @@ if view_mode == "District View":
         ''', unsafe_allow_html=True)
     with col_btn:
         if st.button("View Profile →", use_container_width=True):
-            st.session_state.zm_view_target = zm_name_for_district
-            st.session_state.view_mode_override = "ZM View"
-            st.rerun()
+            show_zm_profile(display_zm, list(ZM_DATA[zm_name_for_district].keys()))
 
     target_district = DISTRICT_MAP.get(selected_district_zm, selected_district_zm)
     sheet_to_load = next((s for s in available_sheets if s.lower() == selected_district_zm.lower() or s.lower() == target_district.lower()), None)
@@ -1031,6 +1053,7 @@ if view_mode == "District View":
     if not sheet_to_load:
         st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**"); st.stop()
         
+    xls = pd.ExcelFile(io.BytesIO(file_bytes))
     df_raw = read_sheet_robust(xls, sheet_to_load)
     plot_df, _, stats = process_district_df(df_raw, time_filter, start_date, end_date)
     
@@ -1050,7 +1073,7 @@ if view_mode == "District View":
                 df_raw, time_filter, None, None, window_offset=1
             )
         
-    if plot_df is None: st.error(f"Could not process data."); st.stop()
+    if plot_df is None: st.error(f"Could not process data."); return
     facility_col = stats['facility_col']
 
     total_active = stats['active_facilities']
@@ -1568,10 +1591,9 @@ if view_mode == "District View":
         else:
             st.warning("⚠️ The distance column could not be found in this district's sheet. Cannot render the Hub Logistics chart.")
 
-# ==============================================================================
-# VIEW: STATE VIEW
-# ==============================================================================
-elif view_mode == "State View":
+
+@st.fragment
+def render_state_view(time_filter, start_date, end_date, date_range_str, file_bytes, available_sheets):
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container">
@@ -1628,7 +1650,6 @@ elif view_mode == "State View":
         </div>
         ''', unsafe_allow_html=True)
         
-        # ONLY 2 TABS NOW: District Leaderboard & District vs District
         s_tab1, s_tab2 = st.tabs(["District Leaderboard", "District vs District"])
         
         with s_tab1:
@@ -1682,7 +1703,6 @@ elif view_mode == "State View":
             with col_dl2:
                 st.download_button("📥 Download Leaderboard", data=buf_state.getvalue(), file_name="State_Leaderboard.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", use_container_width=True)
             
-        # DISTRICT VS DISTRICT (formerly s_tab3, now s_tab2)
         with s_tab2:
             col_empty1, ca, cb, col_empty2 = st.columns([1, 2, 2, 1])
             with ca: district_a_display = st.selectbox("District A", _DISPLAY_DISTRICTS, index=0, key='cmp_a')
@@ -1692,6 +1712,7 @@ elif view_mode == "State View":
             district_b_sheet = _DISPLAY_TO_SHEET.get(district_b_display, district_b_display)
             
             if district_a_sheet and district_b_sheet:
+                xls = pd.ExcelFile(io.BytesIO(file_bytes))
                 df_a = read_sheet_robust(xls, district_a_sheet); df_b = read_sheet_robust(xls, district_b_sheet)
                 pa, ra, sa = process_district_df(df_a, time_filter, start_date, end_date)
                 pb, rb, sb = process_district_df(df_b, time_filter, start_date, end_date)
@@ -1769,10 +1790,9 @@ elif view_mode == "State View":
     else:
         st.warning("No district data available for the selected time range.")
 
-# ==============================================================================
-# VIEW: ZM VIEW
-# ==============================================================================
-elif view_mode == "ZM View":
+
+@st.fragment
+def render_zm_view(time_filter, start_date, end_date, date_range_str, file_bytes, available_sheets):
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container">
@@ -1790,10 +1810,6 @@ elif view_mode == "ZM View":
     
     with zm_drill_tab:
         _zm_opts = sorted(ZM_DATA.keys())
-        if 'zm_view_target' in st.session_state:
-            _target = st.session_state.pop('zm_view_target')
-            if _target in _zm_opts:
-                st.session_state['zm_sel'] = _target
             
         selected_zm = st.selectbox("Select Zone Manager", _zm_opts, key='zm_sel')
         zm_districts = list(ZM_DATA[selected_zm].keys())
@@ -2002,7 +2018,7 @@ elif view_mode == "ZM View":
         else:
             st.warning("Could not load statewide or facility data. Try refreshing, or check the Google Sheet connection.")
             
-    # NEW: ZM LEADERBOARD TAB (Moved from State View)
+    # ZM LEADERBOARD TAB
     with zm_lb_tab:
         with st.spinner("Loading ZM Leaderboard..."):
             state_df_lb = calculate_all_districts(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
@@ -2098,10 +2114,9 @@ elif view_mode == "ZM View":
                 }
             )
 
-# ==============================================================================
-# VIEW: ACTIVE SPOKES
-# ==============================================================================
-elif view_mode == "Active Spokes":
+
+@st.fragment
+def render_active_spokes(time_filter, start_date, end_date, date_range_str, file_bytes, available_sheets):
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container">
@@ -2188,10 +2203,9 @@ elif view_mode == "Active Spokes":
     else:
         st.warning("Could not load facility data.")
 
-# ==============================================================================
-# VIEW: INACTIVE SPOKES
-# ==============================================================================
-elif view_mode == "Inactive Spokes":
+
+@st.fragment
+def render_inactive_spokes(time_filter, start_date, end_date, date_range_str, file_bytes, available_sheets):
     st.markdown("""
     <div class="page-header-container">
         <div class="page-icon-container">
@@ -2208,7 +2222,7 @@ elif view_mode == "Inactive Spokes":
         all_fac_df = get_all_facility_data(tuple(available_sheets), file_bytes, time_filter, start_date, end_date)
         
     if not all_fac_df.empty:
-        # NEW: FILTER BY DISTRICT
+        # FILTER BY DISTRICT
         col_filter, _ = st.columns([2, 4])
         with col_filter:
             dist_filter_inactive = st.multiselect("Filter by District", sorted(all_fac_df['District'].unique()), default=[])
@@ -2315,6 +2329,21 @@ elif view_mode == "Inactive Spokes":
                 st.success("✅ All facilities have launched!")
     else:
         st.warning("Could not load facility data.")
+
+
+# ==============================================================================
+# ROUTING
+# ==============================================================================
+if view_mode == "District View":
+    render_district_view(time_filter, start_date, end_date, date_range_str, file_bytes, available_sheets)
+elif view_mode == "State View":
+    render_state_view(time_filter, start_date, end_date, date_range_str, file_bytes, available_sheets)
+elif view_mode == "ZM View":
+    render_zm_view(time_filter, start_date, end_date, date_range_str, file_bytes, available_sheets)
+elif view_mode == "Active Spokes":
+    render_active_spokes(time_filter, start_date, end_date, date_range_str, file_bytes, available_sheets)
+elif view_mode == "Inactive Spokes":
+    render_inactive_spokes(time_filter, start_date, end_date, date_range_str, file_bytes, available_sheets)
 
 # --- GLOBAL DEFINITIONS EXPANDER ---
 st.markdown("<br>", unsafe_allow_html=True)
