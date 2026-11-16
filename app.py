@@ -1051,7 +1051,7 @@ def render_district_view(time_filter, start_date, end_date, date_range_str, file
         sheet_to_load = next((s for s in available_sheets if selected_district_zm.lower() in s.lower() or s.lower() in selected_district_zm.lower() or target_district.lower() in s.lower() or s.lower() in target_district.lower()), None)
             
     if not sheet_to_load:
-        st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**"); st.stop()
+        st.warning(f"⏳ **Data Not Yet Available for {selected_district_zm}**"); return
         
     xls = pd.ExcelFile(io.BytesIO(file_bytes))
     df_raw = read_sheet_robust(xls, sheet_to_load)
@@ -1167,7 +1167,7 @@ def render_district_view(time_filter, start_date, end_date, date_range_str, file
             </div>
             <div class="metric-card">
                 <div class="metric-header">
-                    <div class="metric-label">Weighted Avg / Day</div>
+                    <div class="metric-label" title="Total patients divided by total facility-days. Dilutes when new facilities are added.">Weighted Avg / Day <span style="font-size:10px; color:#A8A29E;">ⓘ</span></div>
                     <div class="metric-icon"><span class="material-symbols-rounded">speed</span></div>
                 </div>
                 <div class="metric-value">{new_weighted_avg} {trend_avg}</div>
@@ -1239,17 +1239,19 @@ def render_district_view(time_filter, start_date, end_date, date_range_str, file
                     yaxis=dict(autorange="reversed", showgrid=False, tickfont=dict(size=13, color="#1C1917", weight=600), automargin=True),
                     xaxis=dict(showgrid=True, gridwidth=1, gridcolor='#D6D3D1', tickfont=dict(size=12, color="#57534E")),
                     showlegend=False, xaxis_title=metric_option, yaxis_title="",
-                    margin=dict(l=20, r=60, t=80, b=10), coloraxis_showscale=False
+                    margin=dict(l=60, r=60, t=80, b=10), coloraxis_showscale=False
                 ))
                 fig.update_layout(**layout_dict)
                 fig.update_traces(textposition='outside', textangle=0, textfont=dict(color="#1C1917", size=12, weight=700), cliponaxis=False)
                 st.plotly_chart(fig, use_container_width=True)
 
                 st.markdown("<hr style='margin: 24px 0; border-color: #D6D3D1;'>", unsafe_allow_html=True)
-                st.markdown("<h4 style='color:#1C1917; margin-bottom:16px; font-weight:800;'>Facility Drill-Down</h4>", unsafe_allow_html=True)
                 
-                drill_options = filtered[facility_col].tolist()
-                selected_drill_facility = st.selectbox("Facility", drill_options, index=0 if drill_options else None, label_visibility="collapsed")
+                d1, d2 = st.columns([1, 2])
+                with d1:
+                    st.markdown("<h4 style='color:#1C1917; margin-bottom:16px; font-weight:800;'>Facility Drill-Down</h4>", unsafe_allow_html=True)
+                    drill_options = filtered[facility_col].tolist()
+                    selected_drill_facility = st.selectbox("Facility", drill_options, index=0 if drill_options else None, label_visibility="collapsed")
                 
                 if selected_drill_facility:
                     fac_row = plot_df[plot_df[facility_col] == selected_drill_facility].iloc[0]
@@ -1259,7 +1261,17 @@ def render_district_view(time_filter, start_date, end_date, date_range_str, file
                     m2.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Uptime</div><div class='metric-icon'><span class='material-symbols-rounded'>check_circle</span></div></div><div class='metric-value'>{fac_row['Uptime %']}%</div></div>", unsafe_allow_html=True)
                     m3.markdown(f"<div class='metric-card'><div class='metric-header'><div class='metric-label'>Zero Days</div><div class='metric-icon'><span class='material-symbols-rounded'>warning</span></div></div><div class='metric-value'>{fac_row['Zero Days']}</div></div>", unsafe_allow_html=True)
                     
-                    drill_trend = [{'Date': c, 'Patients': fac_row[c]} for c in stats['active_date_cols']]
+                    # Fix missing dates in the drill-down trend
+                    drill_trend = []
+                    if stats['active_date_cols']:
+                        start_dt = pd.to_datetime(stats['active_date_cols'][0], format='%d %b %y')
+                        end_dt = pd.to_datetime(stats['active_date_cols'][-1], format='%d %b %y')
+                        full_dates = pd.date_range(start=start_dt, end=end_dt)
+                        for d in full_dates:
+                            col_name = d.strftime('%d %b %y')
+                            val = fac_row[col_name] if col_name in stats['active_date_cols'] else 0
+                            drill_trend.append({'Date': col_name, 'Patients': val})
+
                     if drill_trend:
                         dt_df = pd.DataFrame(drill_trend)
                         
@@ -1302,7 +1314,7 @@ def render_district_view(time_filter, start_date, end_date, date_range_str, file
             heatmap_df['Total'] = heatmap_df.sum(axis=1)
             heatmap_df = heatmap_df.sort_values(by='Total', ascending=True).drop(columns=['Total'])
             
-            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#F5F5F4'], [0.1, '#E7E5E4'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
+            fig_h = px.imshow(heatmap_df, aspect='auto', color_continuous_scale=[[0, '#E2E8F0'], [0.1, '#CBD5E1'], [1, '#1E3A8A']], labels=dict(x="Date", y="", color="Patients"))
             fig_h.update_traces(xgap=2, ygap=2)
             
             hm_layout = PLOTLY_LAYOUT.copy()
