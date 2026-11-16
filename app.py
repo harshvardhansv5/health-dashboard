@@ -194,15 +194,19 @@ st.markdown("""
         align-items: center !important;
         padding-left: 0 !important;
     }
-    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY (Bulletproof) */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:not(:has(p)) {
+
+    
+    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY (The "Has Input" Hack) */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:has(input) {
         display: none !important;
     }
-
-    /* Make sure the label can hold the underline */
+    
+    /* Remove the left padding that was meant for the circle, and add bottom padding for the underline */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label {
+        padding-left: 0px !important;
         padding-bottom: 8px !important;
     }
+
 
     /* Tab Text Styling (Inactive) */
     div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label p {
