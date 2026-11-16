@@ -194,8 +194,8 @@ st.markdown("""
         align-items: center !important;
     }
 
-    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY (Keep the Text) */
-    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child:not(:has(p)) {
+    /* HIDE THE DEFAULT RADIO CIRCLE COMPLETELY */
+    div[data-testid="stHorizontalBlock"]:has(.app-header) div[data-testid="stRadio"] div[role="radiogroup"] label > div:first-child {
         display: none !important;
     }
 
@@ -2106,26 +2106,8 @@ elif view_mode == "Active Spokes":
         active_df = all_fac_df[all_fac_df['Total Patients'] > 0].copy()
         
         col1, col2, col3 = st.columns([2, 2, 2])
-        with col1:
-            # Filter-aware metric calculation
-            if dist_filter:
-                base_filtered = all_fac_df[(all_fac_df['District'].isin(dist_filter)) & (all_fac_df['Status'] == 'Operational')]
-            else:
-                base_filtered = all_fac_df[all_fac_df['Status'] == 'Operational']
-                
-            total_operational_filtered = len(base_filtered)
-            
-            # Apply grade filter for the numerator (Active count shown)
-            display_active_filtered = active_df.copy()
-            if dist_filter: display_active_filtered = display_active_filtered[display_active_filtered['District'].isin(dist_filter)]
-            if grade_filter: display_active_filtered = display_active_filtered[display_active_filtered['Grade'].isin(grade_filter)]
-            
-            st.markdown(f'''
-            <div class="metric-card" style="padding: 16px; margin-bottom: 0; height: 100%; display: flex; justify-content: flex-start; justify-content: center;">
-                <div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">visibility</span></div></div>
-                <div class="metric-value">{len(display_active_filtered)} <span style="font-size:16px; color:#78716C; font-weight:600; margin-left: 4px;">/ {total_operational_filtered} Operational</span></div>
-            </div>
-            ''', unsafe_allow_html=True)
+        
+        # DEFINE FILTERS FIRST (Fixes the NameError bug)
         with col2:
             dist_filter = st.multiselect("Filter by District", sorted(active_df['District'].unique()), default=[])
         with col3:
@@ -2133,6 +2115,22 @@ elif view_mode == "Active Spokes":
             
         if dist_filter: active_df = active_df[active_df['District'].isin(dist_filter)]
         if grade_filter: active_df = active_df[active_df['Grade'].isin(grade_filter)]
+        
+        # NOW CALCULATE METRICS BASED ON FILTERS
+        with col1:
+            if dist_filter:
+                base_filtered = all_fac_df[(all_fac_df['District'].isin(dist_filter)) & (all_fac_df['Status'] == 'Operational')]
+            else:
+                base_filtered = all_fac_df[all_fac_df['Status'] == 'Operational']
+                
+            total_operational_filtered = len(base_filtered)
+            
+            st.markdown(f'''
+            <div class="metric-card" style="padding: 16px; margin-bottom: 0; height: 100%; display: flex; justify-content: flex-start; justify-content: center;">
+                <div class="metric-header"><div class="metric-label">Active Spokes</div><div class="metric-icon"><span class="material-symbols-rounded">visibility</span></div></div>
+                <div class="metric-value">{len(active_df)} <span style="font-size:16px; color:#78716C; font-weight:600; margin-left: 4px;">/ {total_operational_filtered} Operational</span></div>
+            </div>
+            ''', unsafe_allow_html=True)
         
         active_df = active_df.sort_values(by=['Uptime %', 'Total Patients'], ascending=[False, False]).reset_index(drop=True)
         
